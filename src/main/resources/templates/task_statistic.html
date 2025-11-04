@@ -1,0 +1,58 @@
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+
+        table {
+            width: 50%;
+            border-collapse: collapse;
+            margin: 50px auto;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour</p>
+    <p>Le job <span th:text="${job.getId()}"></span> de type=<span th:text="${jobType}"></span> avec
+        le statut actuel <span th:text="${taskStatistic.getActualJobStatus()}"></span> contient
+        <span th:text="${taskStatistic.getTilesCount()}"></span> tiles en tout.</p>
+    <p>Les statistiques du job id=<span th:text="${job.getId()}"></span> sont les suivantes.</p>
+    <table>
+        <thead>
+        <tr>
+            <th>Progression status</th>
+            <th>Health status statistics</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="taskStatus : ${taskStatistic.getTaskStatusStatistics()}">
+            <td th:text="${taskStatus.getProgression()}"></td>
+            <td>
+                <ul th:each="taskStatusHealth : ${taskStatus.getHealthStatusStatistics()}">
+                    <li>
+                        <span th:text="${taskStatusHealth.getHealthStatus()}"></span> :
+                        <span th:text="${taskStatusHealth.getCount()}"></span>
+                    </li>
+                </ul>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p>Cordialement.</p>
+</section>
+</body>
+</html>

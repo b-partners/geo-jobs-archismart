@@ -1,0 +1,1 @@
+alter table "parcel_detection_task_entity" rename to "parcel_detection_task";

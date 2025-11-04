@@ -1,0 +1,1 @@
+drop table if exists "detection_task_status";

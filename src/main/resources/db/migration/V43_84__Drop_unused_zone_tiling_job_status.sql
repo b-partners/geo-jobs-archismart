@@ -1,0 +1,1 @@
+drop table if exists "zone_tiling_job_status";

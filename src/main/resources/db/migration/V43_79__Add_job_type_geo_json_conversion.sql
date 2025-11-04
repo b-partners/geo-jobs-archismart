@@ -1,0 +1,1 @@
+alter type job_type add value if not exists 'GEO_JSON_CONVERSION';

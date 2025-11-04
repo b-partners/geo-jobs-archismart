@@ -1,0 +1,1 @@
+drop table if exists "tiling_task_status";

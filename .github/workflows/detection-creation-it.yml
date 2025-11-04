@@ -1,0 +1,134 @@
+name: Detection creation IT
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+env:
+  API_URL: ${{ secrets.DETECTION_API_URL }}
+  API_KEY: ${{ secrets.DETECTION_API_KEY }}
+  IN_STATUS_PAGE_ID: ${{ secrets.INSTATUS_PAGE_ID }}
+  IN_STATUS_API_KEY: ${{ secrets.INSTATUS_API_KEY }}
+  IN_STATUS_500_TMPL_ID: ${{ secrets.INSTATUS_500_TMPL_ID }}
+  IN_STATUS_RESOLVE_500_TMPL_ID: ${{ secrets.INSTATUS_RESOLVE_500_TMPL_ID }}
+
+jobs:
+  detection-creation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate detection_e2_id and store inside file
+        run: |
+          detection_e2_id=$(uuidgen)
+          echo "$detection_e2_id" > detection_e2_id.txt
+          echo "detection_e2_id=$detection_e2_id" >> $GITHUB_ENV
+          echo "Generated detection_e2_id: '$detection_e2_id'"
+
+      - name: Cache detection_e2_id for next run
+        uses: actions/cache@v4
+        with:
+          path: detection_e2_id.txt
+          key: detection_e2_id-cache-${{ runner.os }}-${{ github.sha }}
+
+      - name: Send POST /detections/* request
+        run: |
+          http_code=$(curl -s -w "%{http_code}" -X POST "$API_URL/detections/$detection_e2_id" \
+          -H "Content-Type: application/json" \
+          -H "x-api-key: $API_KEY" \
+          --data "@.github/workflows/detection-request.json" \
+          -o >(tee detection-response.json))
+          
+          echo "HTTP Response Code: $http_code"
+          
+          if [ "${http_code:-0}" -ne 200 ]; then
+            echo "Response Body:"
+              cat detection-response.json
+            exit 1
+          fi
+
+      - name: Send POST /detections/*/sync request
+        if: false
+        run: |
+          detection_sync_e2_id=$(uuidgen)
+          echo "Generated detection_sync_e2_id: '$detection_sync_e2_id'"
+          response_file="detection-response.json"
+          
+          http_code=$(curl -s -w "%{http_code}" -X POST "$API_URL/detections/$detection_sync_e2_id/sync" \
+          -H "Content-Type: application/json" \
+          -H "x-api-key: $API_KEY" \
+          --data "@.github/workflows/detection-request-sync.json" \
+          -o "$response_file")
+          
+          echo "HTTP Response Code: $http_code"
+          echo "Response Body:"
+              cat $response_file
+          
+          if [ "${http_code:-0}" -ne 200 ]; then
+            echo "Response Body:"
+              cat $response_file
+            exit 1
+          fi
+          
+          stepName=$(jq -r '.step.name' "$response_file")
+          progression=$(jq -r '.step.status.progression' "$response_file")
+          health=$(jq -r '.step.status.health' "$response_file")
+          vgg_file_url=$(jq -r '.geoJsonZone[0].properties.vgg_file_url' "$response_file")
+          original_image_url=$(jq -r '.geoJsonZone[0].properties.original_image_url' "$response_file")
+          
+          errors=""
+          
+          if [[ "$stepName" != "MACHINE_DETECTION" ]]; then
+            errors+=" detection is not in step MACHINE_DETECTION but : $stepName"$'\n'
+          fi
+
+          if [[ "$progression" != "FINISHED" ]]; then
+            errors+=" detection progression is not FINISHED but : $progression"$'\n'
+          fi
+
+          if [[ "$vgg_file_url" == "null" || -z "$vgg_file_url" ]]; then
+            errors+=" vgg_file_url is actually null or empty"$'\n'
+          fi
+
+          if [[ "$original_image_url" == "null" || -z "$original_image_url" ]]; then
+            errors+=" original_image_url is actually null or empty"$'\n'
+          fi
+          
+          incident_list=$(curl -s -X GET "https://api.instatus.com/v1/$IN_STATUS_PAGE_ID/incidents" \
+            -H "Authorization: Bearer $IN_STATUS_API_KEY")
+            incident_lines=$(echo "$incident_list" | jq -r '
+            .[]
+            | select(.status != "RESOLVED" and
+            (.name == "Internal server error"))
+            | "\(.id)|\(.name)|\(.status)"')
+          
+          if [[ -n "$errors" ]]; then
+            if [[ -n "$incident_lines" ]]; then
+              while IFS='|' read -r id incident_name incident_status; do
+                echo "Incident : $incident_name ($incident_status)"
+                if [ "$incident_name" != "Internal Server Error" ]; then
+                  in_status_response=$(curl -s -o in-status-response.json -w "%{http_code}" -X POST $in_status_api_url/v1/$IN_STATUS_PAGE_ID/incidents/$IN_STATUS_500_TMPL_ID \
+                  -H "Authorization: Bearer $IN_STATUS_API_KEY")
+                  incident_id=$(jq -r '.id' in-status-response.json)
+                  echo "InStatus incident identifier: '$incident_id'"
+                  exit 1
+                fi
+              done <<< "$incident_lines"
+            fi
+            echo "Response contains unexpected values :"
+            echo "$errors"
+            exit 1
+          else
+            if [[ -n "$incident_lines" ]]; then
+              while IFS='|' read -r id incident_name incident_status; do
+                if [[ "$incident_name" == "Internal server error" ]]; then
+                  curl -s -o /dev/null -X POST $in_status_api_url/v2/$IN_STATUS_PAGE_ID/incidents/"$id"/incident-updates/$IN_STATUS_RESOLVE_500_TMPL_ID \
+                  -H "Authorization: Bearer $IN_STATUS_API_KEY"
+                  echo "Resolving internal server error incident : $id"
+                fi
+              done <<< "$incident_lines"
+            fi
+          fi

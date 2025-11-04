@@ -1,0 +1,26 @@
+name: Reboot geoserver instance
+
+on:
+  # schedule:
+    # - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  reboot-geoserver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      AWS_REGION: eu-west-3
+      GEOSERVER_INSTANCE_ID: ${{secrets.GEOSERVER_INSTANCE_ID}}
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+
+      - uses: hei-school/aws-credentials-setter@v1.0.3
+        with:
+          secrets: ${{ toJSON(secrets) }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: Reboot geoserver instance
+        run: aws ec2 reboot-instances --instance-ids ${{env.GEOSERVER_INSTANCE_ID}}

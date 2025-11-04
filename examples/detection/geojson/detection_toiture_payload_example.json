@@ -1,0 +1,43 @@
+{
+  "emailReceiver": "your.email@mail.com",
+  "zoneName": "your.zone.name",
+  "geoServerProperties": null,
+  "detectableObjectModel": {
+    "modelName": "BP_TOITURE"
+  },
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                -0.2498,
+                46.6517
+              ],
+              [
+                -0.2489,
+                46.6517
+              ],
+              [
+                -0.2489,
+                46.6523
+              ],
+              [
+                -0.2498,
+                46.6523
+              ],
+              [
+                -0.2498,
+                46.6517
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

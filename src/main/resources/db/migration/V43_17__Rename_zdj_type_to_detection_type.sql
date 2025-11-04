@@ -1,0 +1,1 @@
+ALTER TABLE zone_detection_job RENAME COLUMN type to detection_type;

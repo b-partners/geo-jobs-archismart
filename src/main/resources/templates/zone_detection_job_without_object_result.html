@@ -1,0 +1,32 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour,</p>
+    <div th:if="${detection != null}">
+        <p>La détection portant l'identifiant <span th:text="${detection.endToEndId}"></span> effectuée sur la zone
+            <span th:text="${detection.zoneName}"></span> n'a permis de trouver aucun objet
+            correspondant à la liste d'objets suivante, contenu dans le modèle de détection <strong
+                    th:text="${detection.detectableObjectModel.getModelName()}"></strong> :</p>
+    </div>
+    <div th:unless="${detection != null}">
+        <p>La détection machine portant l'identifiant <span th:text="${zoneDetectionJob.id}"></span> effectuée sur la
+            zone <span th:text="${zoneDetectionJob.zoneName}"></span> n'a permis de trouver aucun objet
+            correspondant à la liste d'objets suivante :</p>
+    </div>
+    <ul>
+        <li th:each="detectableType : ${detectableTypes}">
+            <span th:text="${detectableType.name()}"></span>
+        </li>
+    </ul>
+    <p>Cordialement.</p>
+    <p>L'équipe BirdIA.</p>
+</section>
+</body>
+</html>

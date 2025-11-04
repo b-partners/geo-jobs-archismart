@@ -1,0 +1,1 @@
+alter type detectable_type add value 'BACKGROUND';

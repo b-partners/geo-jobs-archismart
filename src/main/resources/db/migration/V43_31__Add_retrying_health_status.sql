@@ -1,0 +1,1 @@
+alter type health_status add value if not exists 'RETRYING';

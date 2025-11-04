@@ -1,0 +1,3 @@
+-- note(varchar-implicit-cast-to-progression-and-health)
+--CREATE CAST (varchar AS progression_status) WITH INOUT AS IMPLICIT;
+--CREATE CAST (varchar AS health_status) WITH INOUT AS IMPLICIT;

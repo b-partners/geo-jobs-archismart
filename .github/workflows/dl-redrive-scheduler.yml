@@ -1,0 +1,86 @@
+name: Redrive DLQ to its source
+
+on:
+  # schedule:
+    #- cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      branch:
+        type: choice
+        required: false
+        description: 'Redrive which env dead letters?'
+        default: 'preprod'
+        options:
+          - 'prod'
+          - 'preprod'
+
+jobs:
+  dlq-redrive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      AWS_REGION: eu-west-3
+      ENV: ${{ github.event.inputs.branch || 'preprod' }}
+      ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+
+      - uses: hei-school/aws-credentials-setter@v1.0.3
+        with:
+          secrets: ${{ toJSON(secrets) }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: Redrive DLQ 1
+        run: |
+          RESPONSE=$(aws sqs receive-message \
+          --queue-url https://sqs.eu-west-3.amazonaws.com/${{ env.ACCOUNT_ID }}/${{ env.ENV }}-1-geo-jobs-dl)
+
+          if [[ -n "$RESPONSE" && $(echo "$RESPONSE" | jq '.Messages | length > 0' -e) ]]; then
+            echo "Messages found. Starting to redrive them to their source."
+            aws sqs start-message-move-task \
+            --source-arn arn:aws:sqs:eu-west-3:${{ env.ACCOUNT_ID }}:${{ env.ENV }}-1-geo-jobs-dl
+          else
+            echo "No messages found. Do not redrive."
+          fi
+
+      - name: Redrive DLQ 2
+        run: |
+          RESPONSE=$(aws sqs receive-message \
+          --queue-url https://sqs.eu-west-3.amazonaws.com/${{ env.ACCOUNT_ID }}/${{ env.ENV }}-2-geo-jobs-dl)
+
+          if [[ -n "$RESPONSE" && $(echo "$RESPONSE" | jq '.Messages | length > 0' -e) ]]; then
+            echo "Messages found. Starting to redrive them to their source."
+            aws sqs start-message-move-task \
+            --source-arn arn:aws:sqs:eu-west-3:${{ env.ACCOUNT_ID }}:${{ env.ENV }}-2-geo-jobs-dl
+          else
+            echo "No messages found. Do not redrive."
+          fi
+
+
+      - name: Redrive DLQ 3
+        run: |
+          RESPONSE=$(aws sqs receive-message \
+          --queue-url https://sqs.eu-west-3.amazonaws.com/${{ env.ACCOUNT_ID }}/${{ env.ENV }}-3-geo-jobs-dl)
+
+          if [[ -n "$RESPONSE" && $(echo "$RESPONSE" | jq '.Messages | length > 0' -e) ]]; then
+            echo "Messages found. Starting to redrive them to their source."
+            aws sqs start-message-move-task \
+            --source-arn arn:aws:sqs:eu-west-3:${{ env.ACCOUNT_ID }}:${{ env.ENV }}-3-geo-jobs-dl
+          else
+            echo "No messages found. Do not redrive."
+          fi
+
+      - name: Redrive DLQ 4
+        run: |
+          RESPONSE=$(aws sqs receive-message \
+          --queue-url https://sqs.eu-west-3.amazonaws.com/${{ env.ACCOUNT_ID }}/${{ env.ENV }}-4-geo-jobs-dl)
+
+          if [[ -n "$RESPONSE" && $(echo "$RESPONSE" | jq '.Messages | length > 0' -e) ]]; then
+            echo "Messages found. Starting to redrive them to their source."
+            aws sqs start-message-move-task \
+            --source-arn arn:aws:sqs:eu-west-3:${{ env.ACCOUNT_ID }}:${{ env.ENV }}-4-geo-jobs-dl
+          else
+            echo "No messages found. Do not redrive."
+          fi

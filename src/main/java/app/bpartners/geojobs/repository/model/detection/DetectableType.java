@@ -1,0 +1,59 @@
+package app.bpartners.geojobs.repository.model.detection;
+
+import lombok.Getter;
+
+@Getter
+public enum DetectableType {
+  ROAD(0), // TODO
+  TOITURE_REVETEMENT(0),
+  PANNEAU_PHOTOVOLTAIQUE(0),
+  PISCINE(4000),
+  PASSAGE_PIETON(20_000),
+  ARBRE(0),
+  TROTTOIR(0),
+  LINE(0),
+  ESPACE_VERT(0),
+  VOIE_CARROSSABLE(0),
+  PARKING(0),
+  MOISISSURE_COULEUR(0),
+  MOISISSURE_CLAIR(0),
+  MOISISSURE_NOIRCIE(0),
+  MOISISSURE(0),
+  USURE_LEGER(0),
+  USURE_IMPORTANTE(0),
+  USURE(0),
+  FISSURE_CASSURE(0),
+  OBSTACLE(0),
+  CHEMINEE(0),
+  HUMIDITE_CLAIR(0),
+  HUMIDITE_INTENSE(0),
+  HUMIDITE(0),
+  RISQUE_FEU(0),
+  VELUX(0),
+  BATI_TUILES(0),
+  BATI_BETON(0),
+  BATI_ARDOISE(0),
+  BATI_AUTRES(0),
+  TOMBE(4000),
+  BACKGROUND(0),
+  ESPACE_VERT_PARKING(0), // TODO: to delete and separate
+  ARBRE_INDIVIDUALISE(0),
+  CANOPE(0),
+  ESPACE_ARBORE(0),
+  BATI(0),
+  SURFACES_ARTIFICIALISEES(0),
+  SURFACES_PERMEABLES(0),
+  PISTES_CYCLABLES(0),
+  SYMBOLES_CYCLABLES(0),
+  MARQUAGES_VOIRIES(0),
+  CIMETIERE(0),
+  TOMBE_SIMPLE(0),
+  TOMBE_DOUBLE(0),
+  TOMBE_NON_GEOMETRIQUE(0);
+
+  private int minAreaThreshold;
+
+  DetectableType(int minAreaThreshold) {
+    this.minAreaThreshold = minAreaThreshold;
+  }
+}

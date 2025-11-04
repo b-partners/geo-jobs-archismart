@@ -1,0 +1,1 @@
+alter table "detectable_object_type" drop constraint if exists detectable_object_type_object_id_fkey;

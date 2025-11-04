@@ -1,0 +1,21 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour,</p>
+    <p>Lors du traitement de la détection de toiture portant l'identifiant <strong
+            th:text="${detection.getEndToEndId()}"></strong>,
+        <span th:text="${failedTasks.size()}"></span> adresses n'ont pas pas pu être traitées correctement.</p>
+    <p>Ces adresses non traitées, ainsi que le fichier excel initialement soumis, sont disponibles en pièces jointes de
+        ce mail.</p>
+    <p>Cordialement.</p>
+    <p>L'équipe BirdIA.</p>
+</section>
+</body>
+</html>
