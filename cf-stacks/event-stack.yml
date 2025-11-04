@@ -49,25 +49,25 @@ Resources:
   DeadLetterQueue1:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName:  !Join ['' , [!Ref Env , -1-geo-jobs-dl]]
+      QueueName:  !Join ['' , [!Ref Env , -1-geo-jobs-howdenre-dl]]
       SqsManagedSseEnabled: false
 
   DeadLetterQueue2:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Join [ '' , [ !Ref Env , -2-geo-jobs-dl ] ]
+      QueueName: !Join [ '' , [ !Ref Env , -2-geo-jobs-howdenre-dl ] ]
       SqsManagedSseEnabled: false
 
   DeadLetterQueue3:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Join [ '' , [ !Ref Env , -3-geo-jobs-dl ] ]
+      QueueName: !Join [ '' , [ !Ref Env , -3-geo-jobs-howdenre-dl ] ]
       SqsManagedSseEnabled: false
 
   DeadLetterQueue4:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Join [ '' , [ !Ref Env , -4-geo-jobs-dl ] ]
+      QueueName: !Join [ '' , [ !Ref Env , -4-geo-jobs-howdenre-dl ] ]
       SqsManagedSseEnabled: false
 
   MailboxQueuePolicy:
