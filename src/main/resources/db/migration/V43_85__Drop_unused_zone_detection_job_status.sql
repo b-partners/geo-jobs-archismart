@@ -1,0 +1,1 @@
+drop table if exists "zone_detection_job_status";

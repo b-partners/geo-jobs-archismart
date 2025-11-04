@@ -1,0 +1,9 @@
+{
+  "emailReceiver": "your.email@mail.com",
+  "zoneName": "your.zone.name",
+  "geoServerProperties": null,
+  "detectableObjectModel": {
+    "modelName": "BP_TOITURE"
+  },
+  "geoJsonZone": null
+}

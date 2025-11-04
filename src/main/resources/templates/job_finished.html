@@ -1,0 +1,16 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour</p>
+    <p>Le job de type <span th:text="${job.getStatus().getJobType()}"></span> portant l'ID <span th:text="${job.id}"></span> est términée avec statut : <span th:text="${status}"></span>.</p>
+    <p>Cordialement</p>
+</section>
+</body>
+</html>

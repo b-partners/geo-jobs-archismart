@@ -1,0 +1,28 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour,</p>
+    <div th:if="${detection != null}">
+        <p>Une erreur est survenue lors du traitement de la détection portant l'ID <span
+                th:text="${detection.endToEndId}"></span> à l'étape 2 sur 4 : RÉCUPÉRATION DES IMAGES.</p>
+    </div>
+    <div th:unless="${detection != null}">
+        <p>Une erreur est survenue lors du traitement du ZoneTilingJob portant l'ID <span
+                th:text="${failedJob.id}"></span>.</p>
+    </div>
+    <p>Veuillez réessayer plus tard ou nous contacter par email à l'adresse
+        <a href="mailto:contact@birdia.fr">contact@birdia.fr</a> ou au numéro 01 84 80 31 69 pour toutes
+        informations supplémentaires.
+    </p>
+    <p>Cordialement,</p>
+    <p>L'équipe BirdIA.</p>
+</section>
+</body>
+</html>

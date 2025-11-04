@@ -1,0 +1,61 @@
+compute:
+  api_gateway_timeout: null
+  frontal_function_invocation_method: lambda-url
+  frontal_function_timeout: 300
+  frontal_memory: 2048
+  with_queues_nb: 3
+  worker_1_batch: 5
+  worker_1_memory: 1024
+  worker_2_batch: 5
+  worker_2_memory: 1024
+  worker_3_memory: 1024
+  worker_4_memory: 10240
+  worker_function_1_timeout: 900
+  worker_function_2_timeout: 900
+  worker_function_3_timeout: 900
+  worker_function_4_timeout: 900
+concurrency:
+  frontal_reserved_concurrent_executions_nb: null
+  worker_1_reserved_concurrent_executions_nb: 2
+  worker_2_reserved_concurrent_executions_nb: 2
+  worker_3_reserved_concurrent_executions_nb: 2
+  worker_4_reserved_concurrent_executions_nb: 2
+database:
+  with_database: None
+emailing:
+  ses_source: lou@bpartners.app
+gen_api_client:
+  aws_account_id: 'null'
+  codeartifact_domain_name: 'null'
+  codeartifact_repository_name: 'null'
+  ts_client_api_url_env_var_name: ''
+  ts_client_default_openapi_server_url: ''
+  with_gen_clients: 'true'
+  with_publish_to_npm_registry: 'false'
+general:
+  app_name: geo-jobs
+  cli_version: 20.0.6
+  custom_java_deps: poja-custom-java-deps.txt
+  custom_java_env_vars: poja-custom-java-env-vars.txt
+  custom_java_repositories: poja-custom-java-repositories.txt
+  package_full_name: app.bpartners.geojobs
+  poja_domain_owner: 088312068315
+  poja_python_repository_domain: python-numer-tech
+  poja_python_repository_name: numer-python-store
+  with_snapstart: 'true'
+integration:
+  with_codeql: 'true'
+  with_file_storage: 'true'
+  with_sentry: 'true'
+  with_sonar: 'true'
+  with_swagger_ui: 'false'
+networking:
+  region: eu-west-3
+  ssm_sg_id: /bpartners-imagery/sg/id
+  ssm_subnet1_id: /bpartners-imagery/private/subnet1/id
+  ssm_subnet2_id: /bpartners-imagery/private/subnet2/id
+  with_own_vpc: 'true'
+scheduled_tasks: null
+testing:
+  jacoco_min_coverage: '0.8'
+  java_facade_it: FacadeIT

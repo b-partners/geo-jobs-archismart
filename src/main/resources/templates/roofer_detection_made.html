@@ -1,0 +1,102 @@
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .info {
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .info p {
+            margin: 0.5rem 0;
+        }
+
+        .info strong {
+            color: #2c3e50;
+        }
+
+        .highlight {
+            background-color: #f0f4ff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+        }
+
+        .signature {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #4b5563;
+        }
+
+        .signature a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .signature a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="email-content">
+    <h1>Bonjour,</h1>
+
+    <p>Vous trouverez ci-dessous les détails de l’analyse de toiture effectuée par :</p>
+
+    <div class="info">
+        <p><strong>Nom :</strong> <span th:text="${firstName} + ' ' + ${lastName}" class="highlight"></span></p>
+        <p><strong>Téléphone :</strong> <span th:text="${phoneNumber}" class="highlight"></span></p>
+        <p><strong>Email :</strong> <span th:text="${email}" class="highlight"></span></p>
+        <p><strong>Adresse :</strong> <span th:text="${address}" class="highlight"></span></p>
+        <p><strong>Le :</strong> <span th:text="${creationDatetime}" class="highlight"></span></p>
+    </div>
+
+    <p>Veuillez trouver en pièce jointe le rapport complet de l’analyse.</p>
+
+    <div class="footer">
+        Bien cordialement,<br>
+        <div class="signature">
+            <strong>L'équipe BirdIA</strong><br>
+            BirdIA<br>
+            14 rue Soleillet, 75020 Paris<br>
+            01 84 80 31 69<br>
+            07 58 21 18 53<br>
+            <a href="https://www.birdia.fr">https://www.birdia.fr</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour,</p>
+    <p>La duplication du job <span th:text="${originalJob.describe()}"></span> a été effectué avec succès le <span th:text="${duplicatedJob.getSubmissionInstant()}"></span>.</p>
+    <p>
+        Voici le nouveau job dupliqué : <span th:text="${duplicatedJob.describe()}"></span>
+    </p>
+    <p>Cordialement.</p>
+</section>
+</body>
+</html>

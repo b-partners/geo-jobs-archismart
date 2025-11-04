@@ -1,0 +1,1 @@
+alter table "zone_tiling_task" rename geometry to feature;

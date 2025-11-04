@@ -1,0 +1,416 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: geo-jobs - Event
+
+Parameters:
+  Env:
+    Type: String
+
+Resources:
+  MailboxQueue1:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ['' , [!Ref Env , -1-geo-jobs]]
+      VisibilityTimeout: 901 #note(sqs-visibility): WorkerFunction1.Timeout + 1
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue1.Arn
+        maxReceiveCount: 5
+      SqsManagedSseEnabled: false
+
+  MailboxQueue2:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -2-geo-jobs ] ]
+      VisibilityTimeout: 901 #note(sqs-visibility): WorkerFunction2.Timeout + 1
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue2.Arn
+        maxReceiveCount: 9
+      SqsManagedSseEnabled: false
+
+  MailboxQueue3:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -3-geo-jobs ] ]
+      VisibilityTimeout: 901 #note(sqs-visibility): WorkerFunction2.Timeout + 1
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue3.Arn
+        maxReceiveCount: 9
+      SqsManagedSseEnabled: false
+
+  MailboxQueue4:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -4-geo-jobs ] ]
+      VisibilityTimeout: 901 #note(sqs-visibility): WorkerFunction2.Timeout + 1
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue4.Arn
+        maxReceiveCount: 9
+      SqsManagedSseEnabled: false
+
+  DeadLetterQueue1:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName:  !Join ['' , [!Ref Env , -1-geo-jobs-dl]]
+      SqsManagedSseEnabled: false
+
+  DeadLetterQueue2:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -2-geo-jobs-dl ] ]
+      SqsManagedSseEnabled: false
+
+  DeadLetterQueue3:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -3-geo-jobs-dl ] ]
+      SqsManagedSseEnabled: false
+
+  DeadLetterQueue4:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join [ '' , [ !Ref Env , -4-geo-jobs-dl ] ]
+      SqsManagedSseEnabled: false
+
+  MailboxQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MailboxQueue1
+        - !Ref MailboxQueue2
+        - !Ref MailboxQueue3
+        - !Ref MailboxQueue4
+      PolicyDocument:
+        Version: "2008-10-17"
+        Id: "MailboxQueue_Policy"
+        Statement:
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue1.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue2.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue3.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue4.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue1.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Condition:
+              ArnEquals:
+                AWS:SourceArn: !GetAtt EventBridgeRule1.Arn
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue2.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Condition:
+              ArnEquals:
+                AWS:SourceArn: !GetAtt EventBridgeRule2.Arn
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue3.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Condition:
+              ArnEquals:
+                AWS:SourceArn: !GetAtt EventBridgeRule3.Arn
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt MailboxQueue4.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Condition:
+              ArnEquals:
+                AWS:SourceArn: !GetAtt EventBridgeRule4.Arn
+
+  DeadLetterQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref DeadLetterQueue1
+        - !Ref DeadLetterQueue2
+        - !Ref DeadLetterQueue3
+        - !Ref DeadLetterQueue4
+      PolicyDocument:
+        Version: "2008-10-17"
+        Id: "DeadLetterQueue_Policy"
+        Statement:
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt DeadLetterQueue1.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt DeadLetterQueue2.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt DeadLetterQueue3.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+          - Action:
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt DeadLetterQueue4.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+
+  MailboxQueue1SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join ['' , [/geo-jobs/ , !Ref Env , /1/sqs/mailbox-queue-url]]
+      Type: String
+      Value: !Ref MailboxQueue1
+
+  MailboxQueue1SSMArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join ['' , [/geo-jobs/ , !Ref Env , /1/sqs/mailbox-queue-arn]]
+      Type: String
+      Value: !GetAtt MailboxQueue1.Arn
+
+  MailboxQueue2SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /2/sqs/mailbox-queue-url ] ]
+      Type: String
+      Value: !Ref MailboxQueue2
+
+  MailboxQueue2SSMArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /2/sqs/mailbox-queue-arn ] ]
+      Type: String
+      Value: !GetAtt MailboxQueue2.Arn
+
+  MailboxQueue3SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /3/sqs/mailbox-queue-url ] ]
+      Type: String
+      Value: !Ref MailboxQueue3
+
+  MailboxQueue3SSMArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /3/sqs/mailbox-queue-arn ] ]
+      Type: String
+      Value: !GetAtt MailboxQueue3.Arn
+
+  MailboxQueue4SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /4/sqs/mailbox-queue-url ] ]
+      Type: String
+      Value: !Ref MailboxQueue4
+
+  MailboxQueue4SSMArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /4/sqs/mailbox-queue-arn ] ]
+      Type: String
+      Value: !GetAtt MailboxQueue4.Arn
+
+  DeadLetterQueue1SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join ['' , [/geo-jobs/ , !Ref Env , /1/sqs/dead-letter-queue-url]]
+      Type: String
+      Value: !Ref DeadLetterQueue1
+
+  DeadLetterQueue1ArnSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /1/sqs/dead-letter-queue-arn ] ]
+      Type: String
+      Value: !GetAtt DeadLetterQueue1.Arn
+
+  DeadLetterQueue2SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /2/sqs/dead-letter-queue-url ] ]
+      Type: String
+      Value: !Ref DeadLetterQueue1
+
+  DeadLetterQueue2ArnSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /2/sqs/dead-letter-queue-arn ] ]
+      Type: String
+      Value: !GetAtt DeadLetterQueue1.Arn
+
+  DeadLetterQueue3SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /3/sqs/dead-letter-queue-url ] ]
+      Type: String
+      Value: !Ref DeadLetterQueue1
+
+  DeadLetterQueue3ArnSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /3/sqs/dead-letter-queue-arn ] ]
+      Type: String
+      Value: !GetAtt DeadLetterQueue1.Arn
+
+  DeadLetterQueue4SSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /4/sqs/dead-letter-queue-url ] ]
+      Type: String
+      Value: !Ref DeadLetterQueue1
+
+  DeadLetterQueue4ArnSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '' , [ /geo-jobs/ , !Ref Env , /4/sqs/dead-letter-queue-arn ] ]
+      Type: String
+      Value: !GetAtt DeadLetterQueue1.Arn
+
+  EventBridgeBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Join ['', [!Ref Env, -geo-jobs]]
+
+  EventBridgeArchive:
+    Type: AWS::Events::Archive
+    Properties:
+      ArchiveName: !Join ['', [!Ref Env, -geo-jobs, -archive]]
+      SourceArn: !GetAtt EventBridgeBus.Arn
+
+  EventBridgeRule1:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Join ['', [!Ref Env, -1-geo-jobs, -from-api-to-api]]
+      EventBusName: !GetAtt EventBridgeBus.Name
+      EventPattern:
+        source:
+          - app.bpartners.geojobs.event1
+      Targets:
+        - Arn: !GetAtt MailboxQueue1.Arn
+          Id: !Join ['', [!Ref Env, -1-geo-jobs, -api-mailbox]]
+
+  EventBridgeRule2:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Join [ '', [ !Ref Env, -2-geo-jobs, -from-api-to-api ] ]
+      EventBusName: !GetAtt EventBridgeBus.Name
+      EventPattern:
+        source:
+          - app.bpartners.geojobs.event2
+      Targets:
+        - Arn: !GetAtt MailboxQueue2.Arn
+          Id: !Join [ '', [ !Ref Env, -2-geo-jobs, -api-mailbox ] ]
+
+  EventBridgeRule3:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Join [ '', [ !Ref Env, -3-geo-jobs, -from-api-to-api ] ]
+      EventBusName: !GetAtt EventBridgeBus.Name
+      EventPattern:
+        source:
+          - app.bpartners.geojobs.event3
+      Targets:
+        - Arn: !GetAtt MailboxQueue3.Arn
+          Id: !Join [ '', [ !Ref Env, -3-geo-jobs, -api-mailbox ] ]
+
+  EventBridgeRule4:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Join [ '', [ !Ref Env, -4-geo-jobs, -from-api-to-api ] ]
+      EventBusName: !GetAtt EventBridgeBus.Name
+      EventPattern:
+        source:
+          - app.bpartners.geojobs.event4
+      Targets:
+        - Arn: !GetAtt MailboxQueue4.Arn
+          Id: !Join [ '', [ !Ref Env, -4-geo-jobs, -api-mailbox ] ]
+
+  EventBridgeBusNameSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join ['',[/geo-jobs/ , !Ref Env , /eventbridge/bus-name]]
+      Type: String
+      Value: !GetAtt EventBridgeBus.Name
+
+  EventBridgeBusArnSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Join [ '',[ /geo-jobs/ , !Ref Env , /eventbridge/bus-arn ] ]
+      Type: String
+      Value: !GetAtt EventBridgeBus.Arn
+
+Outputs:
+  MailboxQueue1URL:
+    Value: !Ref MailboxQueue1SSM
+  MailboxQueue1Arn:
+    Value: !Ref MailboxQueue1SSMArn
+  DeadLetterQueue1URL:
+    Value: !Ref DeadLetterQueue1SSM
+  DeadLetterQueue1Arn:
+    Value: !Ref DeadLetterQueue1ArnSSM
+  MailboxQueue2URL:
+    Value: !Ref MailboxQueue2SSM
+  MailboxQueue2Arn:
+    Value: !Ref MailboxQueue2SSMArn
+  DeadLetterQueue2URL:
+    Value: !Ref DeadLetterQueue2SSM
+  DeadLetterQueue2Arn:
+    Value: !Ref DeadLetterQueue2ArnSSM
+  MailboxQueue3URL:
+    Value: !Ref MailboxQueue3SSM
+  MailboxQueue3Arn:
+    Value: !Ref MailboxQueue3SSMArn
+  DeadLetterQueue3URL:
+    Value: !Ref DeadLetterQueue3SSM
+  DeadLetterQueue3Arn:
+    Value: !Ref DeadLetterQueue3ArnSSM
+  MailboxQueue4URL:
+    Value: !Ref MailboxQueue4SSM
+  MailboxQueue4Arn:
+    Value: !Ref MailboxQueue4SSMArn
+  DeadLetterQueue4URL:
+    Value: !Ref DeadLetterQueue4SSM
+  DeadLetterQueue4Arn:
+    Value: !Ref DeadLetterQueue4ArnSSM
+  EventBridgeBusName:
+    Value: !Ref EventBridgeBusNameSSM
+  EventBridgeArnName:
+    Value: !Ref EventBridgeBusArnSSM

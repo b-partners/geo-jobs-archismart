@@ -1,0 +1,22 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Helvetica, serif;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <p>Bonjour,</p>
+    <p>La séparation des tâches en succès et en non-succès du <strong>job=<span
+            th:text="${initialJobId}"></span></strong> a été effectué
+        avec succès.</p>
+    <ol>
+        <li>Le nouveau job en succès est <span th:text="${succeededJob.describe()}"></span></li>
+        <li>Le nouveau job en non-succès est <span th:text="${notSucceededJob.describe()}"></span></li>
+    </ol>
+    <p>Cordialement</p>
+</section>
+</body>
+</html>

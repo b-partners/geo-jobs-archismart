@@ -1,0 +1,4 @@
+mavenLocal()
+maven {
+  url 'https://repo.osgeo.org/repository/geotools-releases'
+}

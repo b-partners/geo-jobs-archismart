@@ -1,0 +1,17 @@
+{
+  "url": "https://geoserver.bpartners.app/geoserver/ows",
+  "parameter": {
+    "service": "WMS",
+    "request": "GetMap",
+    "layers": "cite:Labege_PCRS",
+    "styles": "",
+    "format": "image/jpeg",
+    "transparent": true,
+    "version": "1.3.0",
+    "width": 1024,
+    "height": 1024,
+    "srs": "EPSG:3857"
+  },
+  "concurrency": 8
+}
+
