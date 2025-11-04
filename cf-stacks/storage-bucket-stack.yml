@@ -21,7 +21,7 @@ Resources:
   BucketSSM:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Join ['', [/geo-jobs/, !Ref Env, /s3/bucket-name]]
+      Name: !Join ['', [/geo-jobs-howdenre/, !Ref Env, /s3/bucket-name]]
       Type: String
       Value: !Ref Bucket
 

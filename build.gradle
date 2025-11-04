@@ -65,7 +65,7 @@ task generateJavaClient(type: GenerateTask) {
     library = "native"
 
     groupId = 'app.bpartners'
-    id = 'geo-jobs-gen'
+    id = 'geo-jobs-howdenre-gen'
     skipValidateSpec = false
     logToStderr = true
     generateAliasAsModel = false
@@ -81,7 +81,7 @@ task generateTsClient(type: org.openapitools.generator.gradle.plugin.tasks.Gener
     ]
     additionalProperties = [
             enumPropertyNaming: "original",
-            npmName           : "@geo-jobs/typescript-client",
+            npmName           : "@geo-jobs-howdenre/typescript-client",
             npmVersion        : project.properties["args"] ?: "latest"
     ]
 }
@@ -218,7 +218,7 @@ dependencies {
     implementation 'io.sentry:sentry-logback:7.6.0'
     implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.4.0'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-implementation 'app.bpartners:geo-jobs-gen:latest'
+implementation 'app.bpartners:geo-jobs-howdenre-gen:latest'
 implementation 'org.thymeleaf:thymeleaf:3.1.1.RELEASE'
 implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1'
 implementation 'org.geotools:gt-api:31.2'

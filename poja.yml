@@ -33,7 +33,7 @@ gen_api_client:
   with_gen_clients: 'true'
   with_publish_to_npm_registry: 'false'
 general:
-  app_name: geo-jobs
+  app_name: geo-jobs-howdenre
   cli_version: 20.0.6
   custom_java_deps: poja-custom-java-deps.txt
   custom_java_env_vars: poja-custom-java-env-vars.txt
