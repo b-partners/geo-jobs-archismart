@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class DetectionAddressConversionJobStatusChangedService
     implements Consumer<DetectionAddressConversionJobStatusChanged> {
-  private static final String LAYER_CITE_PCRS = "cite:PCRS";
   private final StatusChangedHandler statusChangedHandler;
   private final DetectionRepository detectionRepository;
   private final DetectionAddressConversionTaskRepository detectionAddressConversionTaskRepository;
@@ -129,6 +128,7 @@ public class DetectionAddressConversionJobStatusChangedService
     var savedDetection =
         detectionRepository.save(
             detection.toBuilder()
+                .needsImageOutput(true) // By default, addresses needs image output
                 .providedGeoJsonZone(convertedFeatures)
                 .multiPolygonGeoJsonZone(convertedFeatures)
                 .geoServerProperties(geoServerConfiguration.defaultGeoServerProperties(null))
