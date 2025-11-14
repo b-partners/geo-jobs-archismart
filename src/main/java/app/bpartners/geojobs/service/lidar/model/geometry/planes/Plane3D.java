@@ -1,12 +1,10 @@
 package app.bpartners.geojobs.service.lidar.model.geometry.planes;
 
 import app.bpartners.geojobs.service.lidar.model.geometry.LasPointGeometry;
-import app.bpartners.geojobs.service.lidar.model.geometry.LasPointsDelimiter;
 import java.util.Set;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Polygon;
 
 @Getter
 @RequiredArgsConstructor
@@ -18,7 +16,6 @@ public class Plane3D {
   private final Set<LasPointGeometry> points;
 
   private Plane3DSlopeInDegrees slopeInDegrees;
-  private Polygon delimitation;
 
   public static Plane3D fit(LasPointGeometry p1, LasPointGeometry p2, LasPointGeometry p3) {
     var v1 = p2.subtract(p1);
@@ -54,18 +51,5 @@ public class Plane3D {
     }
 
     return slopeInDegrees;
-  }
-
-  public Polygon getDelimitation() {
-    if (delimitation == null) {
-      var delimiter = new LasPointsDelimiter(points);
-      delimitation = delimiter.getPolygon();
-    }
-
-    return delimitation;
-  }
-
-  public double getArea() {
-    return getDelimitation().getArea();
   }
 }

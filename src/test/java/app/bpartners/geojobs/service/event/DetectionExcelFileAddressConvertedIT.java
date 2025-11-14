@@ -148,12 +148,10 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
   }
 
   private CommunityAuthorization someCommunityAuthorization(String communityAuthorizationId) {
-    var apiKey = randomUUID().toString();
     return communityAuthorizationRepository.save(
         CommunityAuthorization.builder()
             .id(communityAuthorizationId)
-            .apiKey(apiKey)
-            .dashboardApiKey(apiKey)
+            .apiKey(randomUUID().toString())
             .name("dummyCommunity")
             .email("dummyCommunityEmail")
             .detectableObjectTypes(List.of())

@@ -67,10 +67,10 @@ class LidarRoofsAnalysisProcessorIT extends FacadeIT {
 
     var expectedSet =
         Set.of(
-            new Expected(roofGeometry1, 2d, 9.85, 3487, 2187),
-            new Expected(roofGeometry2, 2d, 21.81, 4949, 1265),
-            new Expected(roofGeometry3, 18d, 17.08, 3073, 1377),
-            new Expected(roofGeometry4, 19d, 17.33, 5769, 2239));
+            new Expected(roofGeometry1, 2d, 9.85, 3225, 2187),
+            new Expected(roofGeometry2, 2d, 21.81, 3846, 1265),
+            new Expected(roofGeometry3, 18d, 17.08, 2923, 1377),
+            new Expected(roofGeometry4, 19d, 17.33, 5074, 2239));
 
     for (var geometry : roofGeometries) {
       var actual = roofsAnalysisResult.getProperties(geometry);

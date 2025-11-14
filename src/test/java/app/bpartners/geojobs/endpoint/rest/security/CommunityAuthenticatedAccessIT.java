@@ -32,7 +32,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 class CommunityAuthenticatedAccessIT extends FacadeIT {
-  private final String APIKEY = randomUUID().toString();
+  private static final String APIKEY = "APIKEY";
 
   MachineDetectionApi machineDetectionApi;
   DetectionApi detectionApi;
@@ -117,7 +117,6 @@ class CommunityAuthenticatedAccessIT extends FacadeIT {
         .usedSurfaces(List.of())
         .detectableObjectTypes(List.of(communityDetectableType))
         .role(ROLE_COMMUNITY)
-        .dashboardApiKey(APIKEY)
         .build();
   }
 }

@@ -54,7 +54,6 @@ import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
-import app.bpartners.geojobs.service.dashboard.component.Zoom;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.detection.DetectionCreationMapper;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
@@ -181,6 +180,7 @@ class ZoneServiceTest {
   GeoServerConfiguration geoServerConfiguration = new GeoServerConfiguration(geoServerDummyUrl);
   DetectionSupportedAreaValidator detectionAreaValidatorMock = mock();
   DetectionStepMapper detectionStepMapper = new DetectionStepMapper();
+  DetectionStepRepository detectionStepRepositoryMock = mock();
   DetectionFromStepMapper detectionFromStepMapperMock = mock();
   RoofAnalysisMailer roofAnalysisMailerMock = mock(RoofAnalysisMailer.class);
   FileWriter fileWriterMock = mock();
@@ -270,13 +270,6 @@ class ZoneServiceTest {
         .thenReturn(List.of(longitude, latitude));
     when(tileMultiPolygonFrameMock.apply(longitude, latitude))
         .thenReturn(Optional.of(jtsMultiPolygonFrameMock));
-    when(communityAuthRepositoryMock.findById(any(String.class)))
-        .thenReturn(
-            Optional.<CommunityAuthorization>of(
-                new CommunityAuthorization().builder().dashboardApiKey("apiKey").build()));
-    when(areaPictureApiMock.getAreaPictureMapLayers(anyDouble(), anyDouble(), anyString()))
-        .thenReturn(
-            List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24))));
 
     var actual = subject.processDetection(detectionIdentifier, createDetection, communityOwnerId);
 
@@ -939,7 +932,7 @@ class ZoneServiceTest {
     var detectionSaved = (DetectionSaved) listCaptor.getValue().getFirst();
     var expectedSavedDetection = detection.toBuilder().shapeFileKey(shapeFileBucketKey).build();
     var expectedDetectionSavedEvent =
-        DetectionSaved.builder().detection(expectedSavedDetection).build();
+        DetectionSaved.builder().detectionIdentifier(expectedSavedDetection.getId()).build();
     var expectedRestDetection =
         new Detection()
             .id(detectionE2eId)
@@ -993,7 +986,7 @@ class ZoneServiceTest {
         (DetectionExcelFileSaved) listCaptor.getAllValues().getFirst().getFirst();
     var expectedSavedDetection = detection.toBuilder().excelFileKey(excelFileBucketKey).build();
     var expectedDetectionSavedEvent =
-        DetectionSaved.builder().detection(expectedSavedDetection).build();
+        DetectionSaved.builder().detectionIdentifier(expectedSavedDetection.getId()).build();
     var expectedDetectionExcelFileSaved =
         DetectionExcelFileSaved.builder().detection(expectedSavedDetection).build();
     var expectedRestDetection =
@@ -1085,7 +1078,7 @@ class ZoneServiceTest {
                     .updatedAt(actual.getStep().getUpdatedAt()))
             .geoJsonOutput(GEO_JSON);
     assertEquals(
-        DetectionSaved.builder().detection(expectedDetectionSaved).build(), detectionProvided);
+        DetectionSaved.builder().detectionIdentifier(detectionId).build(), detectionProvided);
     assertEquals(expectedDetectionSaved, savedDetection);
     assertEquals(expectedRestDetection, actual);
   }

@@ -4,8 +4,6 @@ import static jakarta.persistence.CascadeType.ALL;
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.FetchType.EAGER;
 import static jakarta.persistence.FetchType.LAZY;
-import static java.util.Comparator.comparing;
-import static java.util.Comparator.naturalOrder;
 import static org.hibernate.type.SqlTypes.ARRAY;
 import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
@@ -32,12 +30,7 @@ public class CommunityAuthorization implements Serializable {
 
   @Column private String name;
 
-  @Getter(AccessLevel.NONE)
-  @Deprecated
-  @Column
-  private String apiKey;
-
-  @Column private String dashboardApiKey;
+  @Column private String apiKey;
 
   @Column private boolean isApiKeyRevoked;
 
@@ -67,9 +60,6 @@ public class CommunityAuthorization implements Serializable {
   @OneToMany(mappedBy = "communityOwnerId", fetch = LAZY)
   private List<RevokedApiKey> revokedApiKeys;
 
-  @OneToMany(mappedBy = "communityOwnerId", fetch = EAGER, cascade = ALL)
-  private List<CommunityAuthorizationApiKey> apiKeys;
-
   @Enumerated(STRING)
   @JdbcTypeCode(ARRAY)
   private List<ModelName> detectableModels;
@@ -77,25 +67,6 @@ public class CommunityAuthorization implements Serializable {
   @Enumerated(STRING)
   @JdbcTypeCode(NAMED_ENUM)
   private Authority.Role role;
-
-  @PrePersist
-  public void onCreation() {
-    if (dashboardApiKey == null) {
-      this.dashboardApiKey = apiKey;
-    }
-  }
-
-  public CommunityAuthorizationApiKey getMostRecentApiKey() {
-    return apiKeys != null && !apiKeys.isEmpty()
-        ? apiKeys.stream()
-            .max(comparing(CommunityAuthorizationApiKey::getCreationDatetime, naturalOrder()))
-            .orElse(null)
-        : null;
-  }
-
-  public String getApiKey() {
-    return getMostRecentApiKey() == null ? apiKey : getMostRecentApiKey().getKeyValue();
-  }
 
   public List<CommunityDetectableObjectType> getDetectableObjectTypes() {
     if (this.detectableModels != null && !detectableModels.isEmpty()) {

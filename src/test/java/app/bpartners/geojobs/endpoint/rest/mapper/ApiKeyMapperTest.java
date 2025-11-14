@@ -14,7 +14,6 @@ import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTyp
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.validator.CreateApiKeyValidator;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
-import app.bpartners.geojobs.repository.model.community.CommunityAuthorizationApiKey;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorizedZone;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -50,8 +49,6 @@ class ApiKeyMapperTest {
         CommunityAuthorization.builder()
             .id(communityAuthorizationId)
             .apiKey(actual.getFirst().getApiKey())
-            .apiKeys(actual.getFirst().getApiKeys())
-            .dashboardApiKey(actual.getFirst().getApiKey())
             .name("consumerName")
             .email("consumer@email.com")
             .maxSurfaceUnit(SQUARE_METER)
@@ -95,7 +92,6 @@ class ApiKeyMapperTest {
         CommunityAuthorization.builder()
             .id(communityAuthorizationId)
             .apiKey(actual.getFirst().getApiKey())
-            .dashboardApiKey(actual.getFirst().getApiKey())
             .name("consumerName")
             .email("consumer@email.com")
             .maxSurfaceUnit(SQUARE_METER)
@@ -110,17 +106,7 @@ class ApiKeyMapperTest {
             .detectableObjectTypes(null)
             .detectableModels(List.of(TOITURE))
             .role(ROLE_INSURANCE)
-            .apiKeys(actual.getFirst().getApiKeys())
             .build(),
         actual.getFirst());
-    assertEquals(1, actual.getFirst().getApiKeys().size());
-    assertEquals(
-        CommunityAuthorizationApiKey.builder()
-            .id(actual.getFirst().getApiKeys().getFirst().getId())
-            .creationDatetime(actual.getFirst().getApiKeys().getFirst().getCreationDatetime())
-            .communityOwnerId(communityAuthorizationId)
-            .keyValue(actual.getFirst().getApiKey())
-            .build(),
-        actual.getFirst().getApiKeys().getFirst());
   }
 }

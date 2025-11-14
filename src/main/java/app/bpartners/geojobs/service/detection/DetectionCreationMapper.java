@@ -190,7 +190,7 @@ public class DetectionCreationMapper {
     var e2ApiKey =
         communityAuthRepository
             .findById(communityOwnerId)
-            .map(CommunityAuthorization::getDashboardApiKey)
+            .map(CommunityAuthorization::getApiKey)
             .orElseThrow();
     var areaMapLayers = areaPictureApi.getAreaPictureMapLayers(longitude, latitude, e2ApiKey);
     return areaMapLayers.stream().map(AreaPictureMapLayer::name).toList();

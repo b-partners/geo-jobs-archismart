@@ -6,8 +6,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.*;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.*;
 import static java.util.UUID.randomUUID;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -27,9 +26,10 @@ import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.TilingTaskRepository;
 import app.bpartners.geojobs.repository.model.Feature;
-import app.bpartners.geojobs.repository.model.Parcel;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
+import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
+import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
@@ -65,19 +65,37 @@ class ZoneTilingJobStatusChangedServiceTest {
           detectionRepositoryMock,
           eventProducerMock,
           objectConfigurationRepositoryMock,
-          detectionDelimitationRetrieverMock);
+          detectionDelimitationRetrieverMock,
+          tilingTaskRepositoryMock);
 
   @BeforeEach
   void setUp() {
-    when(tilingTaskRepositoryMock.findAllByJobId(any()))
-        .thenReturn(
-            List.of(
-                tilingTaskCreator.create(
-                    randomUUID().toString(),
-                    randomUUID().toString(),
-                    new Parcel(),
-                    FINISHED,
-                    SUCCEEDED)));
+    when(tilingTaskRepositoryMock.findAllByJobId(any())).thenReturn(List.of());
+  }
+
+  @Test
+  void produces_failed_job_when_tile_bucket_path_contains_xml() {
+    ParcelTilingTask parcelTilingTask = mock();
+    when(parcelTilingTask.getTiles())
+        .thenReturn(List.of(Tile.builder().bucketPath("dummy file.xml").build()));
+    when(tilingTaskRepositoryMock.findAllByJobId(any())).thenReturn(List.of(parcelTilingTask));
+
+    var ztjStatusChanged = new ZoneTilingJobStatusChanged();
+    var oldJob = aZTJ(PROCESSING, UNKNOWN);
+    var newJob = aZTJ(FINISHED, SUCCEEDED);
+    ztjStatusChanged.setOldJob(oldJob);
+    ztjStatusChanged.setNewJob(newJob);
+
+    assertDoesNotThrow(() -> subject.accept(ztjStatusChanged));
+
+    var listCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock, times(1)).accept(listCaptor.capture());
+    verify(zoneDetectionJobServiceMock, never()).saveZDJFromZTJ(any());
+    verify(detectionRepositoryMock, never()).findByZtjId(any());
+    verify(detectionRepositoryMock, never()).save(any());
+    verify(mailerMock, never()).accept(any());
+    var zoneTilingJobFailedEvent = (ZoneTilingJobFailed) listCaptor.getValue().getFirst();
+    assertEquals(new ZoneTilingJobFailed(newJob), zoneTilingJobFailedEvent);
   }
 
   @Test

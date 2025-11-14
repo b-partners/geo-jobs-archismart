@@ -33,7 +33,6 @@ public class LidarRoofsAnalysisProcessor
   private static final int ROOF_GROUND_BUFFER_METERS = 3;
   private static final short ROOF_LIDAR_CLASS_VALUE = 6;
   private static final short GROUND_LIDAR_CLASS_VALUE = 2;
-  private static final short NOT_CLASSIFIED_LIDAR_CLASS_VALUE = 1;
 
   @Override
   public RoofsAnalysisResult apply(Set<Geometry> roofsEPSG4326) {
@@ -109,7 +108,7 @@ public class LidarRoofsAnalysisProcessor
           var groundPoint = new LasPointGeometry(point, lasHeader);
           handleGroundPoint(groundPoint, roofsDataFromFile);
           break;
-        case ROOF_LIDAR_CLASS_VALUE, NOT_CLASSIFIED_LIDAR_CLASS_VALUE:
+        case ROOF_LIDAR_CLASS_VALUE:
           var roofPoint = new LasPointGeometry(point, lasHeader);
           handleRoofPoint(roofPoint, roofsDataFromFile);
           break;
