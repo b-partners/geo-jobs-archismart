@@ -47,7 +47,7 @@ public class DetectionSavedService implements Consumer<DetectionSaved> {
     var env = System.getenv("ENV");
     String subject =
         String.format(
-            "[%s] Detection(e2Id=%s, communityOwnerId=%s) modifiée le %s",
+            "[howdenre/%s] Detection(e2Id=%s, communityOwnerId=%s) modifiée le %s",
             env == null ? "" : env.toLowerCase(),
             detection.getEndToEndId(),
             detection.getCommunityOwnerId(),
