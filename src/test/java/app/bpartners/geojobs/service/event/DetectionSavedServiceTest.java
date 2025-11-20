@@ -223,6 +223,8 @@ class DetectionSavedServiceTest {
         <li>Email associé : <span></span></li>
         <li>Nom de zone fournie par le consommateur : <span></span></li>
         <li>Model utilisé pour la détection : <span>BP_TOITURE</span></li>
+        <li>A besoin d'images : <span>false</span></li>
+        <li>Format ZIP demandé : <span>false</span></li>
         <li>Configuration du geoServer :
             <ul>
                 <li>geoServerUrl: <span>geo_server_value_test</span></li>

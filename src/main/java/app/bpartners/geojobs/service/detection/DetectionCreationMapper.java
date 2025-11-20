@@ -67,8 +67,9 @@ public class DetectionCreationMapper {
         .detectableObjectModel(detectableObjectModel)
         .toNotify(Boolean.TRUE.equals(createDetection.getToNotify()))
         .isOutputZipped(
-            createDetection.getGeoJsonOutput() != null
-                && ZIP.equals(createDetection.getGeoJsonOutput()))
+            createDetection.getGeoJsonOutput() == null
+                || (createDetection.getGeoJsonOutput() != null
+                    && ZIP.equals(createDetection.getGeoJsonOutput())))
         .needsImageOutput(
             createDetection.getNeedsImageOutput() != null && createDetection.getNeedsImageOutput())
         .geoJsonDelimitationType(

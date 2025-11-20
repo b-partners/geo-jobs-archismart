@@ -615,11 +615,59 @@ class ZoneServiceTest {
   }
 
   @Test
-  void admin_role_read_finished_geo_json_conversion_statistics() {
+  void admin_role_read_finished_geo_json_conversion_but_not_computed_geo_json_file_key() {
     var detectionId = randomUUID().toString();
     var tilingId = randomUUID().toString();
     var detectionJobId = randomUUID().toString();
     var detection = detectionCreator.create(detectionId, tilingId, detectionJobId);
+    detection.setGeojsonS3FileKey(null); // Just to explicit it here
+    detection.setMultiPolygonGeoJsonZone(List.of(new Feature()));
+    detection.setGeoServerProperties(new GeoServerProperties());
+    setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
+    reset(geoJsonConversionJobRepositoryMock);
+    when(geoJsonConversionJobRepositoryMock.findByZoneDetectionJobId(detectionJobId))
+        .thenReturn(
+            List.of(
+                someGeoJsonConversionJob(
+                    FINISHED,
+                    app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED,
+                    now())));
+    when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(detectionJobId))
+        .thenReturn(0L);
+    when(zoneDetectionJobServiceMock.computeTaskStatistics(detectionJobId))
+        .thenReturn(
+            TaskStatistic.builder()
+                .actualJobStatus(
+                    JobStatus.builder()
+                        .progression(FINISHED)
+                        .health(app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED)
+                        .build())
+                .taskStatusStatistics(new ArrayList<>())
+                .build());
+    when(zoneDetectionJobServiceMock.findById(detectionJobId))
+        .thenReturn(
+            zoneDetectionJobCreator.create(
+                detectionJobId,
+                null,
+                null,
+                FINISHED,
+                app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED,
+                new ZoneTilingJob()));
+
+    var actual = subject.getProcessedDetection(detectionId);
+
+    assertEquals(POST_PROCESSING, actual.getStep().getName());
+    assertEquals(Status.ProgressionEnum.PROCESSING, actual.getStep().getStatus().getProgression());
+    assertEquals(UNKNOWN, actual.getStep().getStatus().getHealth());
+  }
+
+  @Test
+  void admin_role_read_finished_geo_json_conversion_with_computed_geo_json_file_key() {
+    var detectionId = randomUUID().toString();
+    var tilingId = randomUUID().toString();
+    var detectionJobId = randomUUID().toString();
+    var detection = detectionCreator.create(detectionId, tilingId, detectionJobId);
+    detection.setGeojsonS3FileKey(randomUUID().toString()); // Just to explicit it here
     detection.setMultiPolygonGeoJsonZone(List.of(new Feature()));
     detection.setGeoServerProperties(new GeoServerProperties());
     setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);

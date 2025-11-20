@@ -285,11 +285,8 @@ public class ZoneService {
       }
       var geoJsonConversionJob = findActualGeoJsonConversionJob(zoneDetectionJob.getId());
       if (geoJsonConversionJob != null) {
-        if (geoJsonConversionJob.isSucceeded()) {
-          return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
-              detection, FINISHED, SUCCEEDED, POST_PROCESSING);
-        }
-        if (geoJsonConversionJob.isProcessing()) {
+        if (geoJsonConversionJob.isProcessing()
+            || (geoJsonConversionJob.isSucceeded() && detection.getGeojsonS3FileKey() == null)) {
           return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
               detection, PROCESSING, UNKNOWN, POST_PROCESSING);
         }
