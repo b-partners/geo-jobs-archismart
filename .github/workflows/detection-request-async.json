@@ -1,9 +1,9 @@
 {
   "emailReceiver": "tech@birdia.fr",
-  "zoneName": "[archismart] monitoring detections sync",
+  "zoneName": "[archismart] monitoring detections async",
   "geoServerProperties": null,
   "needsImageOutput": true,
-  "geoJsonDelimitationType": "ROOF",
+  "geoJsonDelimitationType": "ZONE",
   "detectableObjectModel": {
     "modelName": "BP_TOITURE"
   },

@@ -2,7 +2,7 @@ name: Detection creation IT
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: "10,25,40,55 * * * *"
   workflow_dispatch:
 
 env:
@@ -39,7 +39,7 @@ jobs:
           http_code=$(curl -s -w "%{http_code}" -X POST "$API_URL/detections/$detection_e2_id" \
           -H "Content-Type: application/json" \
           -H "x-api-key: $API_KEY" \
-          --data "@.github/workflows/detection-request.json" \
+          --data "@.github/workflows/detection-request-async.json" \
           -o >(tee detection-response.json))
           
           echo "HTTP Response Code: $http_code"
@@ -51,7 +51,6 @@ jobs:
           fi
 
       - name: Send POST /detections/*/sync request
-        if: false
         run: |
           detection_sync_e2_id=$(uuidgen)
           echo "Generated detection_sync_e2_id: '$detection_sync_e2_id'"
