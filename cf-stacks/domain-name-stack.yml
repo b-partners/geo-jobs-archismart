@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: geo-jobs-howdenre - Domain name
+Description: geo-jobs-archismart - Domain name
 
 Parameters:
   DomainName:

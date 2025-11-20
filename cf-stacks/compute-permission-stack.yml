@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: geo-jobs-howdenre - Compute permission
+Description: geo-jobs-archismart - Compute permission
 
 Parameters:
   Env:
@@ -9,7 +9,7 @@ Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [ geo-jobs-howdenre-, !Ref Env, -ExecutionRole ] ]
+      RoleName: !Join [ '', [ geo-jobs-archismart-, !Ref Env, -ExecutionRole ] ]
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -22,6 +22,6 @@ Resources:
   ExecutionRoleArnSSM:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Join [ '',[ /geo-jobs-howdenre/ , !Ref Env , /execution/role-arn ] ]
+      Name: !Join [ '',[ /geo-jobs-archismart/ , !Ref Env , /execution/role-arn ] ]
       Type: String
       Value: !GetAtt ExecutionRole.Arn

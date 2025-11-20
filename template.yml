@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: geo-jobs-howdenre - Computation and API
+Description: geo-jobs-archismart - Computation and API
 
 Globals:
   Function:
@@ -23,15 +23,15 @@ Globals:
     Environment:
       Variables:
         ENV: !Ref Env
-        AWS_S3_BUCKET: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/s3/bucket-name}}'
+        AWS_S3_BUCKET: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/s3/bucket-name}}'
         AWS_SES_SOURCE: lou@bpartners.app
-        AWS_EVENTBRIDGE_BUS: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/eventbridge/bus-name}}'
-        AWS_EVENT_STACK_1_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/1/sqs/mailbox-queue-url}}'
-        AWS_EVENT_STACK_2_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/2/sqs/mailbox-queue-url}}'
-        AWS_EVENT_STACK_3_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/3/sqs/mailbox-queue-url}}'
-        AWS_EVENT_STACK_4_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/4/sqs/mailbox-queue-url}}'
+        AWS_EVENTBRIDGE_BUS: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/eventbridge/bus-name}}'
+        AWS_EVENT_STACK_1_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/1/sqs/mailbox-queue-url}}'
+        AWS_EVENT_STACK_2_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/2/sqs/mailbox-queue-url}}'
+        AWS_EVENT_STACK_3_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/3/sqs/mailbox-queue-url}}'
+        AWS_EVENT_STACK_4_SQS_QUEUE_URL: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/4/sqs/mailbox-queue-url}}'
         
-        SENTRY_DSN: !Sub '{{resolve:ssm:/geo-jobs-howdenre/sentry/dsn}}'
+        SENTRY_DSN: !Sub '{{resolve:ssm:/geo-jobs-archismart/sentry/dsn}}'
         SENTRY_ENVIRONMENT: !Ref Env
         TILES_DOWNLOADER_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/tiles/downloader/url}}'
         TILE_DETECTION_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/tiles/detection/url}}'
@@ -41,9 +41,9 @@ Globals:
         ANNOTATOR_GEOJOBS_USER_INFO: !Sub '{{resolve:ssm:/geo-jobs/${Env}/annotator/user/info}}'
         TILES_DOWNLOADER_MOCK_ACTIVATED: !Sub '{{resolve:ssm:/geo-jobs/${Env}/tiles-downloader-activated}}'
         OBJECTS_DETECTOR_MOCK_ACTIVATED: !Sub '{{resolve:ssm:/geo-jobs/${Env}/objects-detector-activated}}'
-        SPRING_DATASOURCE_URL: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/db/url}}'
-        SPRING_DATASOURCE_USERNAME: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/db/username}}'
-        SPRING_DATASOURCE_PASSWORD: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/db/password}}'
+        SPRING_DATASOURCE_URL: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/db/url}}'
+        SPRING_DATASOURCE_USERNAME: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/db/username}}'
+        SPRING_DATASOURCE_PASSWORD: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/db/password}}'
         README_MONITOR_IS_DEVELOPMENT: !Sub '{{resolve:ssm:/geo-jobs/${Env}/readme/monitor/is-development}}'
         README_MONITOR_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/readme/monitor/url}}'
         README_MONITOR_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/readme/monitor/apikey}}'
@@ -69,7 +69,7 @@ Resources:
       Handler: app.bpartners.geojobs.handler.LambdaHandler::handleRequest
       MemorySize: 2048
       Timeout: 300
-      Role: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/execution/role-arn}}'
+      Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       
       FunctionUrlConfig:
         AuthType: NONE
@@ -82,12 +82,12 @@ Resources:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
       MemorySize: 1024
       Timeout: 900 #note(sqs-visibility)
-      Role: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/execution/role-arn}}'
+      Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       Events:
         AllEvents:
           Type: SQS
           Properties:
-            Queue: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/1/sqs/mailbox-queue-arn}}'
+            Queue: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/1/sqs/mailbox-queue-arn}}'
             BatchSize: 1
       ReservedConcurrentExecutions: 100
 
@@ -97,12 +97,12 @@ Resources:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
       MemorySize: 1024
       Timeout: 900 #note(sqs-visibility)
-      Role: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/execution/role-arn}}'
+      Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       Events:
         AllEvents:
           Type: SQS
           Properties:
-            Queue: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/2/sqs/mailbox-queue-arn}}'
+            Queue: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/2/sqs/mailbox-queue-arn}}'
             BatchSize: 1
       ReservedConcurrentExecutions: 100
 
@@ -112,12 +112,12 @@ Resources:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
       MemorySize: 1024
       Timeout: 900 #note(sqs-visibility)
-      Role: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/execution/role-arn}}'
+      Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       Events:
         AllEvents:
           Type: SQS
           Properties:
-            Queue: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/3/sqs/mailbox-queue-arn}}'
+            Queue: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/3/sqs/mailbox-queue-arn}}'
             BatchSize: 1
       ReservedConcurrentExecutions: 10
 
@@ -127,19 +127,19 @@ Resources:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
       MemorySize: 10240
       Timeout: 900 #note(sqs-visibility)
-      Role: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/execution/role-arn}}'
+      Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       Events:
         AllEvents:
           Type: SQS
           Properties:
-            Queue: !Sub '{{resolve:ssm:/geo-jobs-howdenre/${Env}/4/sqs/mailbox-queue-arn}}'
+            Queue: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/4/sqs/mailbox-queue-arn}}'
             BatchSize: 1
       ReservedConcurrentExecutions: 10
 
   ApiUrlSSM:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Join [ '', [ /geo-jobs-howdenre/, !Ref Env, /api/url ] ]
+      Name: !Join [ '', [ /geo-jobs-archismart/, !Ref Env, /api/url ] ]
       Type: String
       Value: !GetAtt FrontalFunctionUrl.FunctionUrl
   
