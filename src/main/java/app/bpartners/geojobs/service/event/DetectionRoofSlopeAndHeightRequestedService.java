@@ -58,7 +58,7 @@ public class DetectionRoofSlopeAndHeightRequestedService
     }
 
     var roofGeometries = toGeometries(featureWithDelimitations);
-    var roofsAnalysesResult = lidarRoofsAnalysisProcessor.apply(roofGeometries);
+    var roofsAnalysesResult = lidarRoofsAnalysisProcessor.from(roofGeometries);
     var featuresWithDelimitationsWithRoofProperties =
         addRoofProperties(featureWithDelimitations, roofsAnalysesResult);
 

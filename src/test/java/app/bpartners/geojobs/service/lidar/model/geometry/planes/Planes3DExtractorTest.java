@@ -1,17 +1,11 @@
 package app.bpartners.geojobs.service.lidar.model.geometry.planes;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator.LARGE_LIDAR_FILE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.RoofProperties;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
-import java.io.File;
-import java.nio.file.Files;
 import java.util.Set;
-import lombok.SneakyThrows;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -21,25 +15,12 @@ class Planes3DExtractorTest {
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();
 
-  File lidarFile;
-
-  @BeforeEach
-  void setUp() {
-    lidarFile = processorCreator.createTempFileFromResources(LARGE_LIDAR_FILE_PATH);
-  }
-
-  @AfterEach
-  @SneakyThrows
-  void cleanUp() {
-    Files.deleteIfExists(lidarFile.toPath());
-  }
-
   @Test
   void extract_one_plane_ok() {
     var roofGeometry1 = roofGeometry1();
     var roofGeometries = Set.of(roofGeometry1);
-    var processor = processorCreator.create(roofGeometries, lidarFile);
-    var processResult = processor.apply(roofGeometries);
+    var processor = processorCreator.create(roofGeometries);
+    var processResult = processor.from(roofGeometries);
 
     var property = new RoofProperties(processResult.getData(roofGeometry1));
     var planes = subject.apply(property.getCleanedRoofPoints());
@@ -51,8 +32,8 @@ class Planes3DExtractorTest {
   void extract_multiples_plane_ok() {
     var roofGeometry3 = roofGeometry3();
     var roofGeometries = Set.of(roofGeometry3);
-    var processor = processorCreator.create(roofGeometries, lidarFile);
-    var processResult = processor.apply(roofGeometries);
+    var processor = processorCreator.create(roofGeometries);
+    var processResult = processor.from(roofGeometries);
 
     var properties = new RoofProperties(processResult.getData(roofGeometry3));
     var planes = subject.apply(properties.getCleanedRoofPoints());

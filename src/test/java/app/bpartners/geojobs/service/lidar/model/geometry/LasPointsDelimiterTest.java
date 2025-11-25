@@ -1,16 +1,10 @@
 package app.bpartners.geojobs.service.lidar.model.geometry;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator.LARGE_LIDAR_FILE_PATH;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
-import java.io.File;
-import java.nio.file.Files;
 import java.util.Set;
-import lombok.SneakyThrows;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -19,25 +13,12 @@ class LasPointsDelimiterTest {
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();
 
-  File lidarFile;
-
-  @BeforeEach
-  void setUp() {
-    lidarFile = processorCreator.createTempFileFromResources(LARGE_LIDAR_FILE_PATH);
-  }
-
-  @AfterEach
-  @SneakyThrows
-  void cleanUp() {
-    Files.deleteIfExists(lidarFile.toPath());
-  }
-
   @Test
   void guess_delimitation_ok() {
     var roofGeometry1 = roofGeometry1();
     var roofGeometries = Set.of(roofGeometry1);
-    var processor = processorCreator.create(roofGeometries, lidarFile);
-    var processResult = processor.apply(roofGeometries);
+    var processor = processorCreator.create(roofGeometries);
+    var processResult = processor.from(roofGeometries);
 
     var points = processResult.getData(roofGeometry1).roof().points();
     var actual = new LasPointsDelimiter(points);

@@ -28,9 +28,9 @@ public class RoofProperties {
   private Set<LasPointGeometry> cleanedGroundPoints;
 
   private static final double POINTS_THRESHOLD = 0.2;
-  private static final double POINTS_CONTINUATION_THRESHOLD = 0.5;
+  private static final double POINTS_CONTINUATION_THRESHOLD = 1;
 
-  private static final int MINIMUM_PLANE_POINTS_COUNT = 50;
+  private static final int MINIMUM_PLANE_POINTS_COUNT = 10;
 
   private static final short MINIMUM_ROOF_POINTS_COUNT = 5;
   private static final short MINIMUM_GROUND_POINTS_COUNT = 5;
@@ -56,7 +56,7 @@ public class RoofProperties {
       var extractor =
           new Planes3DExtractor(
               POINTS_THRESHOLD, POINTS_CONTINUATION_THRESHOLD, MINIMUM_PLANE_POINTS_COUNT);
-      var rawPlanes = extractor.apply(getCleanedRoofPoints());
+      var rawPlanes = extractor.apply(data.roof().points());
       planes =
           rawPlanes.stream()
               .map(plane -> new RoofPlane3D(toPolygon(data.roof().boundaryLambert93()), plane))

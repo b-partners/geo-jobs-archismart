@@ -54,6 +54,7 @@ import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
+import app.bpartners.geojobs.service.dashboard.component.Zoom;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.detection.DetectionCreationMapper;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
@@ -180,7 +181,6 @@ class ZoneServiceTest {
   GeoServerConfiguration geoServerConfiguration = new GeoServerConfiguration(geoServerDummyUrl);
   DetectionSupportedAreaValidator detectionAreaValidatorMock = mock();
   DetectionStepMapper detectionStepMapper = new DetectionStepMapper();
-  DetectionStepRepository detectionStepRepositoryMock = mock();
   DetectionFromStepMapper detectionFromStepMapperMock = mock();
   RoofAnalysisMailer roofAnalysisMailerMock = mock(RoofAnalysisMailer.class);
   FileWriter fileWriterMock = mock();
@@ -270,6 +270,13 @@ class ZoneServiceTest {
         .thenReturn(List.of(longitude, latitude));
     when(tileMultiPolygonFrameMock.apply(longitude, latitude))
         .thenReturn(Optional.of(jtsMultiPolygonFrameMock));
+    when(communityAuthRepositoryMock.findById(any(String.class)))
+        .thenReturn(
+            Optional.<CommunityAuthorization>of(
+                new CommunityAuthorization().builder().dashboardApiKey("apiKey").build()));
+    when(areaPictureApiMock.getAreaPictureMapLayers(anyDouble(), anyDouble(), anyString()))
+        .thenReturn(
+            List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24))));
 
     var actual = subject.processDetection(detectionIdentifier, createDetection, communityOwnerId);
 

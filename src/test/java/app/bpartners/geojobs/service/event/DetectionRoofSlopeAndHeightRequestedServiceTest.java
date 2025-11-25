@@ -74,7 +74,7 @@ class DetectionRoofSlopeAndHeightRequestedServiceTest {
     var height = mock(RoofHeightInMeters.class);
     when(height.getValue()).thenReturn(expectedRoofHeight);
     when(properties.getHeightInMeters()).thenReturn(height);
-    when(lidarRoofsAnalysisProcessorMock.apply(anySet())).thenReturn(result);
+    when(lidarRoofsAnalysisProcessorMock.from(anySet())).thenReturn(result);
 
     subject.accept(requested);
 

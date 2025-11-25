@@ -29,12 +29,16 @@ public class LidarRoofsAnalysisProcessorCreator {
   public static final String LARGE_LIDAR_FILE_PATH =
       "las/LHD_FXX_0644_6859_PTS_O_LAMB93_IGN69.copc.laz";
 
-  public LidarRoofsAnalysisProcessor create(Set<Geometry> geometries, File lidarFile) {
+  public LidarRoofsAnalysisProcessor create(Set<Geometry> geometries) {
     var projected =
         geometries.stream().map(g -> projector.project(g, WGS84, LAMBERT_93)).collect(toSet());
-    var lidarApiMock = lidarApiMock(projected, lidarFile);
+    var lidarApiMock = lidarApiMock(projected, createTempFileFromResources(LARGE_LIDAR_FILE_PATH));
 
     return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
+  }
+
+  public LidarRoofsAnalysisProcessor create(LidarApi lidarApi) {
+    return new LidarRoofsAnalysisProcessor(lidarApi, projector);
   }
 
   @SneakyThrows

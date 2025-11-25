@@ -10,14 +10,20 @@ public class Planes3DExtractor implements Function<Collection<LasPointGeometry>,
   private final int minimumPointCount;
   private final OnePlane3DExtractor onePlane3DExtractor;
   private final Plane3DContinuationCluster plane3DContinuationCluster;
+  private final Plane3DMerger plane3DMerger;
 
   private static final int PLANE_EXTRACTION_ITERATION = 200;
+  private static final double MERGER_EPSILON_SLOPE = 10;
+  private static final double MERGER_EPSILON_DISTANCE = 0.5;
+  private static final double MERGER_SMALL_AREA = 0.2;
 
   public Planes3DExtractor(double threshold, double continuationThreshold, int minimumPointCount) {
     this.minimumPointCount = minimumPointCount;
     this.onePlane3DExtractor = new OnePlane3DExtractor(PLANE_EXTRACTION_ITERATION, threshold);
     this.plane3DContinuationCluster =
         new Plane3DContinuationCluster(continuationThreshold, minimumPointCount);
+    this.plane3DMerger =
+        new Plane3DMerger(MERGER_EPSILON_SLOPE, MERGER_EPSILON_DISTANCE, MERGER_SMALL_AREA);
   }
 
   @Override
@@ -44,6 +50,6 @@ public class Planes3DExtractor implements Function<Collection<LasPointGeometry>,
       pointsToProcess.addAll(clusterResult.outliers());
     }
 
-    return planes;
+    return plane3DMerger.apply(planes);
   }
 }
