@@ -63,7 +63,7 @@ class FeatureImageRequestedServiceTest {
 
   @BeforeEach
   void setUp() {
-    when(tileImageBlurMock.apply(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
+    when(tileImageBlurMock.apply(any(Detection.class), anyList())).thenAnswer(invocation -> invocation.getArgument(1));
     when(whiteImageDetectorMock.apply(any())).thenReturn(false);
     List<TileCoordinates> tileCoordinatesMock = mock();
     when(tileCoordinatesMock.contains(any(TileCoordinates.class))).thenReturn(true);

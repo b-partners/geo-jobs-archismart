@@ -8,6 +8,7 @@ import static org.locationtech.jts.geom.util.GeometryCombiner.combine;
 
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
+import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
@@ -31,6 +32,61 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
   private final FilePolygonDrawer filePolygonDrawer;
   private final DetectionBackgroundRetriever detectionBackgroundRetriever;
   private final DetectionZoneToProcessProvider detectionProvidedZoneUnifier;
+
+  public List<Tile> apply(Geometry polygonGeometry, List<Tile> tiles) {
+    return tiles.stream()
+        .map(
+            tile -> {
+              var tileCoordinates = tile.getCoordinates();
+              var multiPolygonFromTile =
+                  geometryConverter.getMultiPolygonFromTile(
+                      tileCoordinates.getX(), tileCoordinates.getY(), tileCoordinates.getZ());
+              List<List<List<IntXY>>> multiPolygonPixelCoordinates;
+              if (!multiPolygonFromTile.intersects(polygonGeometry)) {
+                multiPolygonPixelCoordinates = getBlurAllAreaCoordinates();
+              } else {
+                var roofInsideTile =
+                    handleGeometryCollectionType(
+                        multiPolygonFromTile.intersection(polygonGeometry));
+                var tileWithoutRoof = multiPolygonFromTile.difference(roofInsideTile);
+                multiPolygonPixelCoordinates =
+                    retrievePixelBackgroundCoordinates(tileCoordinates, tileWithoutRoof);
+              }
+              var imageWithBlur =
+                  filePolygonDrawer.apply(multiPolygonPixelCoordinates, WHITE, tile.getImage());
+              return tile.toBuilder().image(imageWithBlur).build();
+            })
+        .toList();
+  }
+
+  private List<List<List<IntXY>>> retrievePixelBackgroundCoordinates(
+      TileCoordinates tileCoordinates, Geometry tileWithoutRoof) {
+    List<List<List<IntXY>>> multiPolygonPixelCoordinates;
+    var backgroundMultiPolygonPixels =
+        geometryPixelProjector.toMultiPolygonPixels(
+            tileWithoutRoof,
+            tileCoordinates.getX(),
+            tileCoordinates.getY(),
+            tileCoordinates.getZ(),
+            DEFAULT_TILE_SIZE);
+    multiPolygonPixelCoordinates =
+        backgroundMultiPolygonPixels.stream()
+            .map(
+                polygon ->
+                    polygon.stream()
+                        .map(
+                            ring ->
+                                ring.stream()
+                                    .map(
+                                        coordinates ->
+                                            new IntXY(
+                                                coordinates.getFirst().intValue(),
+                                                coordinates.getLast().intValue()))
+                                    .toList())
+                        .toList())
+            .toList();
+    return multiPolygonPixelCoordinates;
+  }
 
   @Override
   public List<Tile> apply(Detection detection, List<Tile> tiles) {
@@ -75,29 +131,9 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
                     multiPolygonPixelCoordinates = getBlurAllAreaCoordinates();
                     isBlured = true;
                   } else {
-                    var backgroundMultiPolygonPixels =
-                        geometryPixelProjector.toMultiPolygonPixels(
-                            tileWithoutRoofInsideTileAndZone,
-                            tileCoordinates.getX(),
-                            tileCoordinates.getY(),
-                            tileCoordinates.getZ(),
-                            DEFAULT_TILE_SIZE);
                     multiPolygonPixelCoordinates =
-                        backgroundMultiPolygonPixels.stream()
-                            .map(
-                                polygon ->
-                                    polygon.stream()
-                                        .map(
-                                            ring ->
-                                                ring.stream()
-                                                    .map(
-                                                        coordinates ->
-                                                            new IntXY(
-                                                                coordinates.getFirst().intValue(),
-                                                                coordinates.getLast().intValue()))
-                                                    .toList())
-                                        .toList())
-                            .toList();
+                        retrievePixelBackgroundCoordinates(
+                            tileCoordinates, tileWithoutRoofInsideTileAndZone);
                   }
                   var imageWithBlur =
                       filePolygonDrawer.apply(multiPolygonPixelCoordinates, WHITE, tile.getImage());
