@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.detection;
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.ZIP;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
@@ -16,6 +17,7 @@ import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
+import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,6 +34,7 @@ public class DetectionCreationMapper {
   private final AreaPictureApi areaPictureApi;
   private final GeoServerConfiguration geoServerConfiguration;
   private final GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper;
+  private final GeometryConverter geometryConverter;
 
   public Detection apply(
       CreateDetection createDetection,
@@ -45,7 +48,8 @@ public class DetectionCreationMapper {
         detectableObjectTypeMapper.mapDefaultConfigurationsFromModel(detectionId, modelName);
     var providedGeoJson = createDetection.getGeoJsonZone();
     var domainProvidedGeoJsonZone = getActualProvidedGeoJson(providedGeoJson);
-    var polygonGeoJsonZoneToBeProcessed = extractDetectionPolygonGeoJson(providedGeoJson);
+    var polygonGeoJsonZoneToBeProcessed =
+        extractDetectionPolygonGeoJson(providedGeoJson, modelName);
     var finalGeoServerProperties =
         extractGeoServerProperties(
             createDetection.getGeoServerProperties(),
@@ -106,15 +110,28 @@ public class DetectionCreationMapper {
   }
 
   private app.bpartners.geojobs.repository.model.Feature extractDetectionPolygonGeoJson(
-      List<app.bpartners.geojobs.endpoint.rest.model.Feature> providedGeoJsonZone) {
-    var providedGeoJsonHasPolygonOnly =
-        featureTypeChecker.apply(providedGeoJsonZone, Polygon.class);
+      List<app.bpartners.geojobs.endpoint.rest.model.Feature> providedGeoJsonZone,
+      ModelName modelName) {
+    if (TOITURE.equals(modelName)
+        && providedGeoJsonZone.size() == 1
+        && providedGeoJsonZone.getFirst().getGeometry() != null
+        && providedGeoJsonZone.getFirst().getGeometry().getActualInstance()
+            instanceof Point point) {
+      var nearestRoofMultiPolygonGeometry =
+          geometryConverter.retrieveNearestRoofMultiPolygon(point);
+      var nearestRoofMultiPolygonCoordinates =
+          geometryConverter.multiPolygonToNestedList(nearestRoofMultiPolygonGeometry);
+      return toDomainFeature(
+          new app.bpartners.geojobs.endpoint.rest.model.Feature()
+              .type(FEATURE)
+              .properties(providedGeoJsonZone.getFirst().getProperties())
+              .geometry(
+                  new FeatureGeometry(
+                      new Polygon().coordinates(nearestRoofMultiPolygonCoordinates.getFirst()))));
+    }
     var featurePolygonFromMultiPolygon =
         retrieveFeaturePolygonFromMultiPolygon(providedGeoJsonZone);
     if (featurePolygonFromMultiPolygon != null) return featurePolygonFromMultiPolygon;
-    if (!providedGeoJsonHasPolygonOnly) {
-      return null;
-    }
     if (providedGeoJsonZone.size() != 1) {
       return null;
     }

@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.endpoint.rest.mapper;
 
+import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.GEO_JSON;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.ZIP;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_HEIGHT_PROPERTY_NAME;
@@ -109,6 +110,10 @@ public class DetectionFromStepMapper
 
   private RoofDelimiter retrieveRoofDelimiter(
       app.bpartners.geojobs.repository.model.detection.Detection detection) {
+    if (detection.getGeoJsonDelimitationType() == null
+        || !ROOF.equals(detection.getGeoJsonDelimitationType())) {
+      return null;
+    }
     var polygonRoofDelimitation = detection.getPolygonRoofDelimitation();
     var featureWithDelimitations = detection.getFeatureWithDelimitations();
 

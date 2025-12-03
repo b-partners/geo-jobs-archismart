@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.*;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
@@ -31,8 +32,9 @@ public class DetectionBackgroundRetriever implements Function<Detection, MultiPo
               + detection.getDetectableObjectModel().getModelName());
     }
     var unifiedProvidedZone = detectionProvidedZoneUnifier.apply(detection);
+    var featureWithDelimitationList = computeFeatureDelimitations(detection);
     var roofMultipolygon =
-        detection.getFeatureWithDelimitations().stream()
+        featureWithDelimitationList.stream()
             .map(FeatureWithDelimitation::delimitations)
             .flatMap(List::stream)
             .map(
@@ -79,5 +81,19 @@ public class DetectionBackgroundRetriever implements Function<Detection, MultiPo
               "Unexpected geometry type to retrieve detection background: "
                   + providedZoneWithoutRoofs);
     }
+  }
+
+  private List<FeatureWithDelimitation> computeFeatureDelimitations(Detection detection) {
+    List<FeatureWithDelimitation> featureWithDelimitationList;
+    if (ROOF.equals(detection.getGeoJsonDelimitationType())
+        || ZONE.equals(detection.getGeoJsonDelimitationType())) {
+      featureWithDelimitationList = detection.getFeatureWithDelimitations();
+    } else if (PARCEL.equals(detection.getGeoJsonDelimitationType())) {
+      featureWithDelimitationList = detection.getParcelDelimitations();
+    } else {
+      throw new IllegalStateException(
+          "Unexpected geojson delimitation type for detection: " + detection.getId());
+    }
+    return featureWithDelimitationList;
   }
 }

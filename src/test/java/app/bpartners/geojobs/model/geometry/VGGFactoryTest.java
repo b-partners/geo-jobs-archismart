@@ -51,7 +51,7 @@ class VGGFactoryTest {
   private final GeoJsonLoader geoJsonLoader = new GeoJsonLoader();
   private final PolygonProvider polygonProvider =
       new PolygonProvider("/geometry/vgg/pathway.json", null, new IntXY(1024, 1024));
-  GeometryConverter geometryConverter = new GeometryConverter(null);
+  GeometryConverter geometryConverter = new GeometryConverter(null, null);
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection =
       new TileCoordinatesPolygonIntersection(new GeometryPixelProjector(), geometryConverter);
   FeatureMapper featureMapper = new FeatureMapper(geometryConverter);

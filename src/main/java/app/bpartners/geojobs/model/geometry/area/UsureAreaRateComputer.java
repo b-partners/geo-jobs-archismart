@@ -15,7 +15,7 @@ import org.locationtech.jts.geom.Polygon;
 
 public class UsureAreaRateComputer extends AreaRateComputer {
   private static final double weight = 0.5;
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null));
+  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
   private final double roofArea;
   private final DetectedTile tile;
   private final Collection<PolygonObjectType> polygonObjectTypes;

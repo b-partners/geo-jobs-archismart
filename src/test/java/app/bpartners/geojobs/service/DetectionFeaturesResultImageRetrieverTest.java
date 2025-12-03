@@ -15,6 +15,7 @@ import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.gouv.fr.rnb.BuildingApi;
+import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
@@ -36,7 +37,9 @@ class DetectionFeaturesResultImageRetrieverTest {
   BucketComponent bucketComponentMock = mock();
   CustomBucketComponent customBucketComponentMock = mock();
   BuildingApi buildingApiMock = mock(BuildingApi.class);
-  GeometryConverter geometryConverter = new GeometryConverter(buildingApiMock);
+  IgnCadastreFeatureFetcher ignCadastreFeatureFetcherMock = mock(IgnCadastreFeatureFetcher.class);
+  GeometryConverter geometryConverter =
+      new GeometryConverter(buildingApiMock, ignCadastreFeatureFetcherMock);
   DetectionImageAttributeRetriever imageAttributeRetrieverMock = mock();
   DetectionVggAttributeRetriever vggAttributeRetrieverMock = mock();
   DetectionFeaturesResultImageRetriever subject =

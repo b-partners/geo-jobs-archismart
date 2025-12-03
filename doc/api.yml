@@ -1113,7 +1113,7 @@ paths:
       operationId: requestCityJSON
       summary: Request CityJSON files for provided roof delimitation
       security:
-        - ApiKeyAuth: []
+        - ApiKeyAuth: [ ]
       requestBody:
         content:
           application/json:
@@ -1882,9 +1882,15 @@ components:
             Optional. If so, must shape file or excel file or image file through its specific endpoint.
         geoJsonDelimitationType:
           type: string
+          description: |
+            By default delimitation type is ZONE.
+            ZONE type can be used with any BP models, and API retrieves objects (such as roof for BP_TOITURE model) inside provided zone;
+            ROOF type can be used with BP_TOITURE model only, and allows consumer to specify directly provided zone as roof, so API does not have to search for roofs inside provided zone;
+            PARCEL type can be used with BP_TOITURE model only, and allows consumer to exclude parcels for each zone provided, not only its roofs as do ZONE and ROOF behaviors.
           enum:
             - ROOF
             - ZONE
+            - PARCEL
         geoJsonOutput:
           $ref: '#/components/schemas/GeoJsonOutput'
         needsImageOutput:

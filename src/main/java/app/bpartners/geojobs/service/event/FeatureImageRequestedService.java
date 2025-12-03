@@ -43,10 +43,13 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
   @Override
   public void accept(FeatureImageRequested event) {
     var feature = event.getFeature();
-    var polygonGeometry = geometryConverter.retrievePolygonGeometry(feature);
-    if (polygonGeometry == null) return;
     var detectionIdentifier = event.getDetectionIdentifier();
-    var actualArea = geometrySquareMeterArea.apply(polygonGeometry);
+    var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
+    var zonePolygonGeometryProcessed =
+        geometryConverter.retrieveZonePolygonGeometryProcessed(
+            feature, detection.getGeoJsonDelimitationType());
+    if (zonePolygonGeometryProcessed == null) return;
+    var actualArea = geometrySquareMeterArea.apply(zonePolygonGeometryProcessed);
     if (actualArea > ONE_KILOMETRE_SQUARE_AREA) {
       log.warn(
           "Feature image requested not implemented for zone over 1km^2, otherwise actual provided"
@@ -56,12 +59,11 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
           feature);
       return;
     }
-    var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
     // TODO : paginate finding tilingTasks to optimize performance
     var tilingJobIdentifier = detection.getZtjId();
     var tilingTasks = tilingTaskRepository.findAllByJobId(tilingJobIdentifier);
     var tileCoordinatesEnvelopingPolygon =
-        tileFinder.getFromGeoJsonPolygon(polygonGeometry, HOUSES_0.getZoomLevel());
+        tileFinder.getFromGeoJsonPolygon(zonePolygonGeometryProcessed, HOUSES_0.getZoomLevel());
     var tiles =
         tilingTasks.stream()
             .map(ParcelTilingTask::getTiles)
@@ -77,7 +79,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
     List<Tile> tilesWithBlur;
     if (feature.getGeometry() != null
         && feature.getGeometry().getActualInstance() instanceof Point) {
-      tilesWithBlur = tileImageBlur.apply(polygonGeometry, tilesWithImages);
+      tilesWithBlur = tileImageBlur.apply(zonePolygonGeometryProcessed, tilesWithImages);
     } else {
       tilesWithBlur = tileImageBlur.apply(detection, tilesWithImages);
     }

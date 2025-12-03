@@ -92,13 +92,23 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
   public List<Tile> apply(Detection detection, List<Tile> tiles) {
     var latLonBackgroundInsideProvidedZone = detectionBackgroundRetriever.apply(detection);
     var providedZone = detectionProvidedZoneUnifier.apply(detection);
-    Geometry roofInsideProvidedZone;
-    if (detection.getGeoJsonDelimitationType().equals(ROOF)) {
-      roofInsideProvidedZone = providedZone;
-    } else {
-      var unifiedRoofMultiPolygon = getUnifiedRoofMultiPolygon(detection);
-      roofInsideProvidedZone =
-          handleGeometryCollectionType(providedZone.intersection(unifiedRoofMultiPolygon));
+    var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
+    Geometry zoneToExcludeInsideProvidedZone;
+    switch (geoJsonDelimitationType) {
+      case ROOF -> zoneToExcludeInsideProvidedZone = providedZone;
+      case ZONE -> {
+        var unifiedRoofMultiPolygon = getUnifiedRoofMultiPolygon(detection);
+        zoneToExcludeInsideProvidedZone =
+            handleGeometryCollectionType(providedZone.intersection(unifiedRoofMultiPolygon));
+      }
+      case PARCEL -> {
+        var unifiedParcelsMultiPolygon = getUnifiedParcelsMultiPolygon(detection);
+        zoneToExcludeInsideProvidedZone =
+            handleGeometryCollectionType(providedZone.intersection(unifiedParcelsMultiPolygon));
+      }
+      default ->
+          throw new IllegalArgumentException(
+              "Unsupported geoJsonDelimitationType: " + geoJsonDelimitationType);
     }
     var bluredTiles =
         tiles.stream()
@@ -109,14 +119,14 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
                   var multiPolygonFromTile =
                       geometryConverter.getMultiPolygonFromTile(
                           tileCoordinates.getX(), tileCoordinates.getY(), tileCoordinates.getZ());
-                  var roofInsideTileAndProvidedZone =
+                  var excludedZoneInsideTileAndProvidedZone =
                       handleGeometryCollectionType(
-                          multiPolygonFromTile.intersection(roofInsideProvidedZone));
+                          multiPolygonFromTile.intersection(zoneToExcludeInsideProvidedZone));
 
                   Geometry intersectionBetweenTileMultiPolygonAndBackground;
-                  if (ROOF.equals(detection.getGeoJsonDelimitationType())) {
+                  if (ROOF.equals(geoJsonDelimitationType)) {
                     intersectionBetweenTileMultiPolygonAndBackground =
-                        multiPolygonFromTile.difference(roofInsideTileAndProvidedZone);
+                        multiPolygonFromTile.difference(excludedZoneInsideTileAndProvidedZone);
                   } else {
                     intersectionBetweenTileMultiPolygonAndBackground =
                         handleGeometryCollectionType(
@@ -124,7 +134,7 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
                   }
 
                   var tileWithoutRoofInsideTileAndZone =
-                      multiPolygonFromTile.difference(roofInsideTileAndProvidedZone);
+                      multiPolygonFromTile.difference(excludedZoneInsideTileAndProvidedZone);
                   List<List<List<IntXY>>> multiPolygonPixelCoordinates;
                   if (intersectionBetweenTileMultiPolygonAndBackground == null
                       || intersectionBetweenTileMultiPolygonAndBackground.isEmpty()) {
@@ -159,6 +169,39 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
 
   private org.locationtech.jts.geom.MultiPolygon getUnifiedRoofMultiPolygon(Detection detection) {
     return detection.getFeatureWithDelimitations().stream()
+        .map(
+            featureWithDelimitation ->
+                featureWithDelimitation.delimitations().stream()
+                    .map(
+                        f -> {
+                          var geometryType = toRestFeature(f).getGeometry().getActualInstance();
+                          switch (geometryType) {
+                            case Polygon polygon -> {
+                              return geometryConverter.apply(List.of(polygon.getCoordinates()));
+                            }
+                            case MultiPolygon multiPolygon -> {
+                              return geometryConverter.apply(multiPolygon.getCoordinates());
+                            }
+                            default ->
+                                throw new IllegalArgumentException(
+                                    "Unsupported geometry type to extended image: " + geometryType);
+                          }
+                        })
+                    .toList())
+        .toList()
+        .stream()
+        .flatMap(List::stream)
+        .reduce(unifyMultiPolygon())
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Unable to unify delimitation multiPolygon for detection.id: "
+                        + detection.getId()));
+  }
+
+  private org.locationtech.jts.geom.MultiPolygon getUnifiedParcelsMultiPolygon(
+      Detection detection) {
+    return detection.getParcelDelimitations().stream()
         .map(
             featureWithDelimitation ->
                 featureWithDelimitation.delimitations().stream()

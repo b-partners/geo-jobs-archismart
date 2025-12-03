@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 class TileMultiPolygonFrameTest {
 
-  GeometryConverter geometryConverter = new GeometryConverter(null);
+  GeometryConverter geometryConverter = new GeometryConverter(null, null);
   TileMultiPolygonFrame subject = new TileMultiPolygonFrame(new TileFinder(), geometryConverter);
 
   @Test

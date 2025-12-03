@@ -1,5 +1,7 @@
 package app.bpartners.geojobs.unit;
 
+import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ZONE;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_HEIGHT_PROPERTY_NAME;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_SLOPE_PROPERTY_NAME;
 import static org.junit.jupiter.api.Assertions.*;
@@ -74,6 +76,7 @@ class DetectionFromStatisticRestMapperTest {
     var featureDelimitation = new FeatureWithDelimitation(feature, List.of(feature));
 
     return Detection.builder()
+        .geoJsonDelimitationType(ROOF)
         .providedGeoJsonZone(List.of(feature))
         .polygonRoofDelimitation(mock())
         .vggFileKey("vgg-key")
@@ -129,6 +132,7 @@ class DetectionFromStatisticRestMapperTest {
   void slope_and_height_should_be_null_when_no_only_polygon_roof_delimitation_is_present() {
     var detection =
         Detection.builder()
+            .geoJsonDelimitationType(ROOF)
             .polygonRoofDelimitation(mock())
             .providedGeoJsonZone(List.of(mock(Feature.class)))
             .vggFileKey("vgg-key")
@@ -167,5 +171,23 @@ class DetectionFromStatisticRestMapperTest {
 
     assertNotNull(actualDetection.getRoofDelimiter());
     assertNotNull(actualDetection.getRoofDelimiter().getPolygon());
+  }
+
+  @Test
+  void polygon_should_be_null_if_geo_json_delimitation_type_not_ROOF() {
+    var detection = detectionWithFeatureDelimitation(null, null);
+    var detectionNotWithRoofDelimitation =
+        detection.toBuilder().geoJsonDelimitationType(ZONE).build();
+
+    when(imageTileInfoOriginRetrieverMock.apply(any())).thenReturn(mock());
+    when(roofDelimiterMapperMock.toRestPolygon(any())).thenReturn(List.of());
+    when(detectionFeaturesResultImageRetrieverMock.apply(any())).thenReturn(List.of());
+    when(bucketComponentMock.presign(any())).thenReturn("https://dummy.com");
+    when(detectionStepStatisticMapperMock.toRestDetectionStepStatus(any(), any()))
+        .thenReturn(mock());
+
+    var actualDetection = subject.apply(detectionNotWithRoofDelimitation, mock(), mock());
+
+    assertNull(actualDetection.getRoofDelimiter());
   }
 }

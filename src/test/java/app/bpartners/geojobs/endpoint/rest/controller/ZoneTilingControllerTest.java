@@ -32,7 +32,7 @@ class ZoneTilingControllerTest {
   ZoneTilingJobService tilingJobServiceMock = mock();
   ParcelService parcelServiceMock = mock();
   ZoomMapper zoomMapper = new ZoomMapper();
-  FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null));
+  FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
   TilingTaskMapper tilingTaskMapper = new TilingTaskMapper(featureMapper);
   TaskStatisticMapper taskStatisticMapper = new TaskStatisticMapper(statusMapper);
   ZoneTilingJobValidator zoneTilingJobValidator = new ZoneTilingJobValidator();

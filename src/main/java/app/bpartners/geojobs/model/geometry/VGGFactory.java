@@ -4,7 +4,7 @@ import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFacto
 import static app.bpartners.geojobs.model.geometry.area.AreaRateComputerFacade.*;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.*;
-import static app.bpartners.geojobs.service.geojson.GeometryConverter.getRoofMultiPolygon;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.getMultiPolygonZoneProcessed;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.flatMapping;
@@ -239,7 +239,7 @@ public class VGGFactory implements Converter<Set<Polygon>, VGG> {
         .forEach(
             (feature, tiledPixelPolygonGroupByFeature) -> {
               var vgg = new VGG();
-              var roofMultiPolygon = getRoofMultiPolygon(feature);
+              var roofMultiPolygon = getMultiPolygonZoneProcessed(feature);
               Map<String, VGG.Annotation.Region> regions = new HashMap<>();
               List<PolygonGroup> projectedPolygonGroups =
                   tiledPixelPolygonGroupByFeature.stream()

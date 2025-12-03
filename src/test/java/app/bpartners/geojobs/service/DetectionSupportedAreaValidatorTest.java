@@ -25,7 +25,7 @@ class DetectionSupportedAreaValidatorTest {
 
   DetectionSupportedAreaValidator subject =
       new DetectionSupportedAreaValidator(
-          new GeometrySquareMeterArea(), new GeometryConverter(null));
+          new GeometrySquareMeterArea(), new GeometryConverter(null, null));
 
   @SneakyThrows
   @Test

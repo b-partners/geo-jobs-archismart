@@ -21,7 +21,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 class GeometryConverterTest {
-  GeometryConverter subject = new GeometryConverter(new BuildingApi());
+  GeometryConverter subject = new GeometryConverter(new BuildingApi(), null);
 
   @Test
   void retrieve_geometry_from_tile_coordinates() {

@@ -18,7 +18,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 class TilePolygonRetrieverTest {
-  GeometryConverter geometryConverter = new GeometryConverter(null);
+  GeometryConverter geometryConverter = new GeometryConverter(null, null);
 
   TilePolygonRetriever subject = new TilePolygonRetriever(new TileFinder(), geometryConverter);
 

@@ -19,7 +19,7 @@ import org.locationtech.jts.geom.Polygon;
 
 class FeatureMapperTest {
   private final String id = randomUUID().toString();
-  private final FeatureMapper subject = new FeatureMapper(new GeometryConverter(null));
+  private final FeatureMapper subject = new FeatureMapper(new GeometryConverter(null, null));
 
   private Feature expectedFeature() {
     Feature feature = new Feature();

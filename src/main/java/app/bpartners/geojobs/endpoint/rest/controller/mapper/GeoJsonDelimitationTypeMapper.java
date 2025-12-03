@@ -17,6 +17,7 @@ public class GeoJsonDelimitationTypeMapper {
     return switch (rest) {
       case ROOF -> GeoJsonDelimitationTypeEnum.ROOF;
       case ZONE -> GeoJsonDelimitationTypeEnum.ZONE;
+      case PARCEL -> GeoJsonDelimitationTypeEnum.PARCEL;
     };
   }
 }

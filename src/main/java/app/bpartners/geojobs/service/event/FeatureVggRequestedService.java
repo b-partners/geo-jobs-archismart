@@ -4,11 +4,12 @@ import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMappe
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.Polygon.TypeEnum.POLYGON;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
-import static app.bpartners.geojobs.service.geojson.GeometryConverter.getRoofMultiPolygon;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.getMultiPolygonZoneProcessed;
 
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.endpoint.rest.model.Detection;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
 import app.bpartners.geojobs.model.geometry.TiledPixelPolygon;
 import app.bpartners.geojobs.model.geometry.VGGFactory;
@@ -77,7 +78,8 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     var tiledPixelPolygons =
         getTiledPixelPolygon(
             polygonGeoJson, latLonRoofFeatures, detectableTypes, machineDetectedTiles);
-    var featureTileCoordinates = retrieveFeatureTileCoordinates(feature);
+    var featureTileCoordinates =
+        retrieveFeatureTileCoordinates(feature, detection.getGeoJsonDelimitationType());
 
     var vggMap = vggFactory.from(tiledPixelPolygons, featureTileCoordinates);
 
@@ -139,8 +141,10 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     return polygonGeoJsonZone;
   }
 
-  private List<TileCoordinates> retrieveFeatureTileCoordinates(Feature feature) {
-    var polygonGeometry = geometryConverter.retrievePolygonGeometry(feature);
+  private List<TileCoordinates> retrieveFeatureTileCoordinates(
+      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+    var polygonGeometry =
+        geometryConverter.retrieveZonePolygonGeometryProcessed(feature, delimitationTypeEnum);
     return tileFinder.getFromGeoJsonPolygon(polygonGeometry, HOUSES_0.getZoomLevel()).stream()
         .sorted(
             Comparator.comparing(TileCoordinates::getZ)
@@ -173,7 +177,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     return latLonRoofFeatures.stream()
         .map(
             roofFeature -> {
-              var roofGeometry = getRoofMultiPolygon(roofFeature);
+              var roofGeometry = getMultiPolygonZoneProcessed(roofFeature);
               return detectedTileList.stream()
                   .map(
                       detectedTile -> {

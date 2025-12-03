@@ -17,6 +17,7 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
+import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
@@ -29,9 +30,13 @@ class DetectionDelimitationRetrieverTest {
   GeometryConverter geometryConverterMock = mock();
   DetectionRepository detectionRepositoryMock = mock();
   ObjectMapper objectMapperMock = mock();
+  IgnCadastreFeatureFetcher ignCadastreFeatureFetcher = mock();
   DetectionDelimitationRetriever subject =
       new DetectionDelimitationRetriever(
-          geometryConverterMock, detectionRepositoryMock, objectMapperMock);
+          geometryConverterMock,
+          detectionRepositoryMock,
+          objectMapperMock,
+          ignCadastreFeatureFetcher);
 
   @SneakyThrows
   @Test

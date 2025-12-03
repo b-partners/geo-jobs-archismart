@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 class ProvidedGeoJsonContainedInsideFrameTest {
 
-  GeometryConverter geometryConverter = new GeometryConverter(new BuildingApi());
+  GeometryConverter geometryConverter = new GeometryConverter(new BuildingApi(), null);
   TileMultiPolygonFrame tileMultiPolygonFrame =
       new TileMultiPolygonFrame(new TileFinder(), geometryConverter);
 

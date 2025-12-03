@@ -1,0 +1,1 @@
+alter type geo_json_delimitation_type add value 'PARCEL';

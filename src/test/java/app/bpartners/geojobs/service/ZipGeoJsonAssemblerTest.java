@@ -24,6 +24,7 @@ import app.bpartners.geojobs.service.event.ZipGeoJsonAssembler;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.gouv.fr.rnb.BuildingApi;
+import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.util.HashMap;
@@ -46,7 +47,8 @@ class ZipGeoJsonAssemblerTest {
   EventProducer eventProducerMock = mock();
   GeoFeatureConverter geoFeatureConverter = new GeoFeatureConverter(new ObjectMapper());
   DetectionZoneToProcessProvider detectionProvidedZoneUnifierMock = mock();
-  GeometryConverter geometryConverter = new GeometryConverter(mock(BuildingApi.class));
+  GeometryConverter geometryConverter =
+      new GeometryConverter(mock(BuildingApi.class), mock(IgnCadastreFeatureFetcher.class));
   DetectionBackgroundRetriever detectionBackgroundRetrieverMock = mock();
   ZipGeoJsonAssembler subject =
       new ZipGeoJsonAssembler(

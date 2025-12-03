@@ -28,7 +28,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 class TileImageBlurTest {
-  GeometryConverter geometryConverter = new GeometryConverter(null);
+  GeometryConverter geometryConverter = new GeometryConverter(null, null);
   DetectionZoneToProcessProvider providedZoneUnifierMock = mock();
   DetectionBackgroundRetriever detectionBackgroundRetrieverMock =
       new DetectionBackgroundRetriever(providedZoneUnifierMock, geometryConverter);

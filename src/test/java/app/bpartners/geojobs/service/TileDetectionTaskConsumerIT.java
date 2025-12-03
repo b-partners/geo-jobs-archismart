@@ -49,7 +49,7 @@ class TileDetectionTaskConsumerIT {
   CustomBucketComponent customBucketComponentMock = mock();
   RestTemplate restTemplateMock = mock();
 
-  GeometryConverter geometryConverter = new GeometryConverter(null);
+  GeometryConverter geometryConverter = new GeometryConverter(null, null);
   ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
   DetectionResponseAggregator detectionResponseAggregator = new DetectionResponseAggregator();
   TileValidator tileValidator = new TileValidator();

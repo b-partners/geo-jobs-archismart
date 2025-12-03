@@ -117,6 +117,9 @@ public class Detection implements Serializable {
   private List<FeatureWithDelimitation> featureWithDelimitations;
 
   @JdbcTypeCode(JSON)
+  private List<FeatureWithDelimitation> parcelDelimitations;
+
+  @JdbcTypeCode(JSON)
   private List<String> convertedAddresses;
 
   @JdbcTypeCode(JSON)

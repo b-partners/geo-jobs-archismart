@@ -57,7 +57,7 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   private final Workers workers;
 
   static {
-    FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null));
+    FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
     zoomMapper = new ZoomMapper();
     tilingTaskMapper = new TilingTaskMapper(featureMapper);
   }

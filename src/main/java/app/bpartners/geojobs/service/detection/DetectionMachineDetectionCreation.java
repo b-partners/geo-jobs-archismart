@@ -8,6 +8,7 @@ import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMulti
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
+import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.endpoint.rest.validator.ZoneDetectionJobValidator;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
@@ -18,10 +19,13 @@ import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DetectionMachineDetectionCreation
@@ -56,6 +60,13 @@ public class DetectionMachineDetectionCreation
             .map(
                 feature -> {
                   switch (feature.getGeometry().getActualInstance()) {
+                    case Point point -> {
+                      if (detection.hasToitureModelName()) {
+                        return geometryConverter.retrieveNearestRoofMultiPolygon(point);
+                      }
+                      log.warn("Skip processing detection on Point : {}", point);
+                      return null;
+                    }
                     case app.bpartners.geojobs.endpoint.rest.model.MultiPolygon multiPolygon -> {
                       return geometryConverter.apply(multiPolygon.getCoordinates());
                     }
@@ -68,6 +79,7 @@ public class DetectionMachineDetectionCreation
                                 + feature.getGeometry().getActualInstance());
                   }
                 })
+            .filter(Objects::nonNull)
             .reduce(unifyMultiPolygon())
             .orElseThrow(() -> new IllegalStateException("No provided geojson zone found"));
 

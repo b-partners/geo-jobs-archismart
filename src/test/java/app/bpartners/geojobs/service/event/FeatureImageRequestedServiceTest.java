@@ -63,7 +63,8 @@ class FeatureImageRequestedServiceTest {
 
   @BeforeEach
   void setUp() {
-    when(tileImageBlurMock.apply(any(Detection.class), anyList())).thenAnswer(invocation -> invocation.getArgument(1));
+    when(tileImageBlurMock.apply(any(Detection.class), anyList()))
+        .thenAnswer(invocation -> invocation.getArgument(1));
     when(whiteImageDetectorMock.apply(any())).thenReturn(false);
     List<TileCoordinates> tileCoordinatesMock = mock();
     when(tileCoordinatesMock.contains(any(TileCoordinates.class))).thenReturn(true);
@@ -121,7 +122,8 @@ class FeatureImageRequestedServiceTest {
     when(detectionRepositoryMock.findById(detectionIdentifier))
         .thenReturn(Optional.of(detectionMock));
     var polygonGeometryMock = mock(org.locationtech.jts.geom.Polygon.class);
-    when(geometryConverterMock.retrievePolygonGeometry(any())).thenReturn(polygonGeometryMock);
+    when(geometryConverterMock.retrieveZonePolygonGeometryProcessed(any(), any()))
+        .thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA);
     var tilesWithImagesMock =
         List.of(

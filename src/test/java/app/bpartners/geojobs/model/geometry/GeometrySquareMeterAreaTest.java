@@ -1,17 +1,24 @@
 package app.bpartners.geojobs.model.geometry;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Objects;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Polygon;
 
+@Slf4j
 class GeometrySquareMeterAreaTest {
   GeometrySquareMeterArea subject = new GeometrySquareMeterArea();
 
@@ -20,7 +27,8 @@ class GeometrySquareMeterAreaTest {
   void geometry_area_pcrs() {
     var feature = new ObjectMapper().readValue(featureFromZonePCRS(), Feature.class);
     var geometry =
-        new GeometryConverter(null).apply(feature.getGeometry().getMultiPolygon().getCoordinates());
+        new GeometryConverter(null, null)
+            .apply(feature.getGeometry().getMultiPolygon().getCoordinates());
 
     var actual = subject.apply(geometry);
 
@@ -62,7 +70,8 @@ class GeometrySquareMeterAreaTest {
   void geometry_area_tours() {
     var feature = new ObjectMapper().readValue(featureFromZoneTours(), Feature.class);
     var geometry =
-        new GeometryConverter(null).apply(feature.getGeometry().getMultiPolygon().getCoordinates());
+        new GeometryConverter(null, null)
+            .apply(feature.getGeometry().getMultiPolygon().getCoordinates());
 
     var actual = subject.apply(geometry);
 
@@ -141,5 +150,123 @@ class GeometrySquareMeterAreaTest {
                        },
                        "properties": {}
                    }""";
+  }
+
+  @SneakyThrows
+  @Test
+  void compute_3x3_tiles_area() {
+    var geometryConverter = new GeometryConverter(null, null);
+    var featureDomainList =
+        new ObjectMapper()
+            .readValue(
+                domainFeatureListFor3x3Tiles(),
+                new TypeReference<List<app.bpartners.geojobs.repository.model.Feature>>() {});
+    var tile3x3MultiPolygon =
+        featureDomainList.stream()
+            .map(
+                feature ->
+                    geometryConverter.readGeometryFromString(
+                        feature.getGeometry().getActualInstanceStringValue()))
+            .map(
+                geometry -> {
+                  if (geometry instanceof Polygon polygon) {
+                    return geometryFactory.createMultiPolygon(new Polygon[] {polygon});
+                  }
+                  return null;
+                })
+            .filter(Objects::nonNull)
+            .reduce(unifyMultiPolygon())
+            .orElseThrow();
+
+    var actual = subject.apply(tile3x3MultiPolygon);
+
+    assertEquals(6209.0, Math.round(actual));
+  }
+
+  private String domainFeatureListFor3x3Tiles() {
+    return """
+[
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6736984252929688,46.546819304239754],[-1.6736984252929688,46.54705542793464],[-1.6733551025390625,46.54705542793464],[-1.6733551025390625,46.546819304239754],[-1.6736984252929688,46.546819304239754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6736984252929688,46.546583179517754],[-1.6736984252929688,46.546819304239754],[-1.6733551025390625,46.546819304239754],[-1.6733551025390625,46.546583179517754],[-1.6736984252929688,46.546583179517754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6736984252929688,46.54634705376863],[-1.6736984252929688,46.546583179517754],[-1.6733551025390625,46.546583179517754],[-1.6733551025390625,46.54634705376863],[-1.6736984252929688,46.54634705376863]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6733551025390625,46.546819304239754],[-1.6733551025390625,46.54705542793464],[-1.6730117797851562,46.54705542793464],[-1.6730117797851562,46.546819304239754],[-1.6733551025390625,46.546819304239754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6733551025390625,46.546583179517754],[-1.6733551025390625,46.546819304239754],[-1.6730117797851562,46.546819304239754],[-1.6730117797851562,46.546583179517754],[-1.6733551025390625,46.546583179517754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6733551025390625,46.54634705376863],[-1.6733551025390625,46.546583179517754],[-1.6730117797851562,46.546583179517754],[-1.6730117797851562,46.54634705376863],[-1.6733551025390625,46.54634705376863]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6730117797851562,46.546819304239754],[-1.6730117797851562,46.54705542793464],[-1.67266845703125,46.54705542793464],[-1.67266845703125,46.546819304239754],[-1.6730117797851562,46.546819304239754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6730117797851562,46.546583179517754],[-1.6730117797851562,46.546819304239754],[-1.67266845703125,46.546819304239754],[-1.67266845703125,46.546583179517754],[-1.6730117797851562,46.546583179517754]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  },
+  {
+    "id": null,
+    "zoom": null,
+    "geometry": {
+      "geometryType": "Polygon",
+      "actualInstanceStringValue": "{\\"coordinates\\":[[[-1.6730117797851562,46.54634705376863],[-1.6730117797851562,46.546583179517754],[-1.67266845703125,46.546583179517754],[-1.67266845703125,46.54634705376863],[-1.6730117797851562,46.54634705376863]]],\\"type\\":\\"Polygon\\"}"
+    },
+    "properties": {}
+  }
+]""";
   }
 }

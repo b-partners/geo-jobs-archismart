@@ -80,6 +80,7 @@ class SynchronousDetectionServiceTest {
     var detectionId = randomUUID().toString();
 
     when(detectionMock.getId()).thenReturn(detectionId);
+    when(detectionMock.needsImageOutput()).thenReturn(true);
     when(detectionMock.getDetectableObjectConfigurations())
         .thenReturn(List.of(new DetectableObjectConfiguration()));
     when(detectionWithVGGAndImagesFinished.getVggFileKey())

@@ -1,13 +1,19 @@
 package app.bpartners.geojobs.service;
 
+import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geometry.JtsGeoFeature;
+import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -22,6 +28,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DetectionZoneToProcessProvider implements Function<Detection, MultiPolygon> {
   private final GeometryConverter geometryConverter;
+  private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
 
   @Override
   public MultiPolygon apply(Detection detection) {
@@ -36,8 +43,10 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
     if (detection == null) {
       return List.of();
     }
+    var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
+    var actualModel = detection.getDetectableObjectModel().getModelName();
     var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-    return apply(providedGeoJsonZone);
+    return apply(providedGeoJsonZone, actualModel, geoJsonDelimitationType);
   }
 
   private MultiPolygon apply(String detectionId, List<Feature> featureList) {
@@ -74,7 +83,11 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
                     "Unable to unify provided zone for detection.id : " + detectionId));
   }
 
-  public List<JtsGeoFeature> apply(List<Feature> featureList) {
+  public List<JtsGeoFeature> apply(
+      List<Feature> featureList,
+      ModelName modelName,
+      app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum
+          geoJsonDelimitationType) {
     if (featureList == null) {
       return List.of();
     }
@@ -91,9 +104,39 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
               }
               var geometryType = geometry.getActualInstance();
               return switch (geometryType) {
-                case Point point ->
-                    new JtsGeoFeature(
+                case Point point -> {
+                  if (TOITURE.equals(modelName)) {
+                    if (PARCEL.equals(geoJsonDelimitationType)) {
+                      try {
+                        var parcelsNearestPoint =
+                            ignCadastreFeatureFetcher.apply(
+                                geometryConverter.readGeometryFromString(
+                                    new ObjectMapper().writeValueAsString(point)));
+                        if (parcelsNearestPoint.isEmpty()) {
+                          yield null;
+                        }
+                        if (parcelsNearestPoint.size() > 1) {
+                          log.warn(
+                              "More than one parcel found for point {}, used first {}",
+                              point,
+                              parcelsNearestPoint.getFirst());
+                        }
+                        yield new JtsGeoFeature(
+                            properties,
+                            geometryConverter.readGeometryFromString(
+                                parcelsNearestPoint
+                                    .getFirst()
+                                    .getGeometry()
+                                    .getActualInstanceStringValue()));
+                      } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                      }
+                    }
+                    yield new JtsGeoFeature(
                         properties, geometryConverter.retrieveNearestRoofMultiPolygon(point));
+                  }
+                  yield null;
+                }
                 case app.bpartners.geojobs.endpoint.rest.model.Polygon polygon ->
                     new JtsGeoFeature(
                         properties, geometryConverter.apply(List.of(polygon.getCoordinates())));

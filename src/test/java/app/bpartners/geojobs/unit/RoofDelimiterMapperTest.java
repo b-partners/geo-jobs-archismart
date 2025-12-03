@@ -16,7 +16,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 
 class RoofDelimiterMapperTest {
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null));
+  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
   private final RoofDelimiterMapper subject = new RoofDelimiterMapper(featureMapper);
 
   private RoofDelimiter sampleRoofDelimiter() {

@@ -218,7 +218,8 @@ class ZoneServiceTest {
               communityAuthRepositoryMock,
               areaPictureApiMock,
               geoServerConfiguration,
-              geoJsonDelimitationTypeMapper),
+              geoJsonDelimitationTypeMapper,
+              geometryConverterMock),
           fileWriterMock,
           mailerMock,
           htmlTemplateParserMock);

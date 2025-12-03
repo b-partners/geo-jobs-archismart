@@ -106,19 +106,19 @@ public class ZoneTilingJobMapper {
   }
 
   public CreateZoneTilingJob from(Detection detection) {
-    var overallConfiguration = detection.getGeoServerProperties();
-    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
     var finalGeoJsonZone = getFinalGeoJsonZone(detection);
     var finalGeoJsonZoom =
         finalGeoJsonZone.getFirst().getProperties().get("zoom") == null
             ? HOUSES_0.getZoomLevel()
             : (Integer) finalGeoJsonZone.getFirst().getProperties().get("zoom");
+    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
     var zoom =
         (providedGeoJsonZone == null || providedGeoJsonZone.isEmpty())
             ? finalGeoJsonZoom
             : providedGeoJsonZone.getFirst().getProperties().get("zoom") == null
                 ? HOUSES_0.getZoomLevel()
                 : (Integer) providedGeoJsonZone.getFirst().getProperties().get("zoom");
+    var overallConfiguration = detection.getGeoServerProperties();
     return new CreateZoneTilingJob()
         .emailReceiver(detection.getEmailReceiver())
         .zoneName(detection.getZoneName())
