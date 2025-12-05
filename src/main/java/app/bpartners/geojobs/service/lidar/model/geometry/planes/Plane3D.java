@@ -1,11 +1,15 @@
 package app.bpartners.geojobs.service.lidar.model.geometry.planes;
 
+import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+
 import app.bpartners.geojobs.service.lidar.model.geometry.LasPointGeometry;
 import app.bpartners.geojobs.service.lidar.model.geometry.LasPointsDelimiter;
+import app.bpartners.geojobs.service.lidar.model.geometry.Polygon3DArea;
 import java.util.Set;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 
 @Getter
@@ -17,8 +21,9 @@ public class Plane3D {
   private final double d;
   private final Set<LasPointGeometry> points;
 
-  private Plane3DSlopeInDegrees slopeInDegrees;
+  private Polygon3DArea area;
   private Polygon delimitation;
+  private Plane3DSlopeInDegrees slopeInDegrees;
 
   public static Plane3D fit(LasPointGeometry p1, LasPointGeometry p2, LasPointGeometry p3) {
     var v1 = p2.subtract(p1);
@@ -60,12 +65,43 @@ public class Plane3D {
     if (delimitation == null) {
       var delimiter = new LasPointsDelimiter(points);
       delimitation = delimiter.getPolygon();
+      delimitation = makePlane(delimitation);
     }
 
     return delimitation;
   }
 
-  public double getArea() {
+  public double get2DArea() {
     return getDelimitation().getArea();
+  }
+
+  public double getArea() {
+    if (area == null) {
+      area = new Polygon3DArea(getDelimitation());
+    }
+
+    return area.getValue();
+  }
+
+  /* Or simply with average */
+  private Polygon makePlane(Polygon polygon) {
+    var coordinates = polygon.getCoordinates();
+    var projected = new Coordinate[coordinates.length];
+
+    for (int i = 0; i < coordinates.length; i++) {
+      double x = coordinates[i].getX();
+      double y = coordinates[i].getY();
+      double z = coordinates[i].getZ();
+
+      double t = (a * x + b * y + c * z + d) / (a * a + b * b + c * c);
+
+      double xProj = x - a * t;
+      double yProj = y - b * t;
+      double zProj = z - c * t;
+
+      projected[i] = new Coordinate(xProj, yProj, zProj);
+    }
+
+    return geometryFactory.createPolygon(projected);
   }
 }

@@ -146,6 +146,8 @@ public class DetectionTaskMapper {
       case CIMETIERE -> CIMETIERE;
       case TOMBE_SIMPLE -> TOMBE_SIMPLE;
       case TOMBE_DOUBLE -> TOMBE_DOUBLE;
+      case POINTILLE -> null;
+      case FLECHE_DIRECTIONNELLE -> null;
       case TOMBE_NON_GEOMETRIQUE -> TOMBE_NON_GEOMETRIQUE;
     };
   }

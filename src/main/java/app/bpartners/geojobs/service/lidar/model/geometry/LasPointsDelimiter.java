@@ -16,7 +16,7 @@ public class LasPointsDelimiter {
   private final Collection<LasPointGeometry> points;
   private final PolylineSimplifier polylineSimplifier;
 
-  public static final double DEFAULT_CONCAVE_RATIO = 0.1;
+  public static final double DEFAULT_CONCAVE_RATIO = 0.2;
   public static final double DEFAULT_POLYLINE_SIMPLIFIER_EPSILON = 0.6;
 
   public LasPointsDelimiter(Collection<LasPointGeometry> points) {

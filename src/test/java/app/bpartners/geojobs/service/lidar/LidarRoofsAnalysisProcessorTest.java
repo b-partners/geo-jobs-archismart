@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import app.bpartners.geojobs.service.lidar.api.LidarApi;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -79,8 +78,7 @@ class LidarRoofsAnalysisProcessorTest {
     var geometry1 = roofGeometry1();
     var lidarApiMock = mock(LidarApi.class);
 
-    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(Map.of("url", Set.of(geometry1)));
-    when(lidarApiMock.download(any())).thenReturn(Optional.empty());
+    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(Map.of());
 
     var subject = processorCreator.create(lidarApiMock);
 

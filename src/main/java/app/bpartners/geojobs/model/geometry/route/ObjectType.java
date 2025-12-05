@@ -53,8 +53,9 @@ public enum ObjectType {
   humidite_intense(lengthOrWidth),
   velux(lengthOrWidth),
   concession(lengthOrWidth),
-  background(lengthOrWidth);
-
+  background(lengthOrWidth),
+  pointilles(lengthOrWidth),
+  fleche_directionnelle(lengthOrWidth);
   private final ContinuationOrientation continuationOrientation;
 
   public static ObjectType routeTypeFrom(DetectableObjectType detectableType) {
@@ -146,6 +147,8 @@ public enum ObjectType {
       case "velux" -> velux;
       case "background" -> background;
       case "concession" -> concession;
+      case "fleche_directionnelle" -> fleche_directionnelle;
+      case "pointilles" -> pointilles;
       default -> throw new IllegalArgumentException("Unsupported continuation on " + label);
     };
   }

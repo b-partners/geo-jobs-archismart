@@ -46,8 +46,8 @@ public class Plane3DMerger implements UnaryOperator<List<Plane3D>> {
   }
 
   private boolean shouldMerge(Plane3D p1, Plane3D p2) {
-    double area1 = p1.getArea();
-    double area2 = p2.getArea();
+    double area1 = p1.get2DArea();
+    double area2 = p2.get2DArea();
     boolean small = area1 < smallArea || area2 < smallArea;
 
     double dist = Math.abs(p1.getD() - p2.getD());

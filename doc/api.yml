@@ -1106,15 +1106,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RevokeApiKeyResponse'
-  '/city-jsons':
+  '/city-jsons/{id}':
+    get:
+      tags:
+        - CityJSON
+      operationId: getRequestedCityJSONById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: CityJSONRequest unique id
+          schema:
+            type: string
+      summary: Get CityJSON Request files URL by id
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: CityJSON files urls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityJSONRequest'
+  '/city-jsons/{id}/process':
     put:
       tags:
         - CityJSON
       operationId: requestCityJSON
-      summary: Request CityJSON files for provided roof delimitation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: CityJSONRequest unique id
+          schema:
+            type: string
+      summary: Request CityJSON files for provided roof delimitations
       security:
         - ApiKeyAuth: [ ]
       requestBody:
+        required: true
         content:
           application/json:
             schema:

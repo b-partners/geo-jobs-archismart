@@ -49,6 +49,12 @@ public class LidarRoofsAnalysisProcessor {
       Map<String, Set<Geometry>> lidarFilesUrl =
           lidarApi.getUniqueLidarFilesUrls(
               allRoofsData.stream().map(data -> data.roof().boundaryLambert93()).collect(toSet()));
+
+      if (lidarFilesUrl.isEmpty()) {
+        return new RoofsAnalysisResult(
+            mergeSameRoofBoundary(List.of(emptyFrom(allRoofsData, UNAVAILABLE))));
+      }
+
       List<Set<LidarRoofData>> roofsDataPerFiles =
           lidarFilesUrl.entrySet().parallelStream()
               .map(

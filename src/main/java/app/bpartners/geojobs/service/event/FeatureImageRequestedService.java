@@ -17,6 +17,7 @@ import app.bpartners.geojobs.service.TileImageBlur;
 import app.bpartners.geojobs.service.TileImagesAssembler;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.TileFinder;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +39,12 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
   private final TileImageBlur tileImageBlur;
   private final WhiteImageDetector whiteImageDetector;
   private final TileFinder tileFinder;
+  private final EntityManager entityManager;
 
   @SneakyThrows
   @Override
   public void accept(FeatureImageRequested event) {
+    entityManager.clear();
     var feature = event.getFeature();
     var detectionIdentifier = event.getDetectionIdentifier();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();

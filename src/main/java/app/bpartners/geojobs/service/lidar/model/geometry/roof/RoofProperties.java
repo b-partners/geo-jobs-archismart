@@ -29,6 +29,7 @@ public class RoofProperties {
 
   private static final double POINTS_THRESHOLD = 0.2;
   private static final double POINTS_CONTINUATION_THRESHOLD = 1;
+  private static final double MINIMUM_PLANE_2D_AREA = 0.25;
 
   private static final int MINIMUM_PLANE_POINTS_COUNT = 10;
 
@@ -60,6 +61,10 @@ public class RoofProperties {
       planes =
           rawPlanes.stream()
               .map(plane -> new RoofPlane3D(toPolygon(data.roof().boundaryLambert93()), plane))
+              .filter(
+                  plane ->
+                      plane.getDelimitation().getCoordinates().length > 2
+                          && plane.get2DArea() > MINIMUM_PLANE_2D_AREA)
               .toList();
     }
 

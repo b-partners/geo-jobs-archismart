@@ -59,7 +59,8 @@ class FeatureImageRequestedServiceTest {
           geometrySquareMeterAreaMock,
           tileImageBlurMock,
           whiteImageDetectorMock,
-          tileFinderMock);
+          tileFinderMock,
+          mock());
 
   @BeforeEach
   void setUp() {

@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service.cityjson;
 
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
+import static app.bpartners.geojobs.service.lidar.utils.MathUtilities.round2;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.service.cityjson.exception.CityJsonException;
@@ -30,8 +31,10 @@ public class LidarDataToCityJsonProcessor
     implements BiFunction<String, LidarRoofsAnalysisProcessor.RoofsAnalysisResult, File> {
 
   private final CityJsonFactory cityJsonFactory;
-  private static final String PLANE_SLOPE_KEY = "slope_in_degrees";
   private static final String ID_KEY = "id";
+  private static final String AREA_KEY = "area_in_square_meters";
+  private static final String PLANE_SLOPE_KEY = "slope_in_degrees";
+  private static final String DISTANCE_2D_SCALE = "distance_2d_scale";
 
   @Override
   public File apply(
@@ -54,13 +57,19 @@ public class LidarDataToCityJsonProcessor
   private static BuildingData toBuildingData(LidarRoofData lidarRoofData) {
     var roofProperty = new RoofProperties(lidarRoofData);
     var planes = roofProperty.getPlanes();
+    var area2DScale = getArea2DScale(lidarRoofData, planes);
+    var distance2DScale = Math.sqrt(area2DScale);
+
     var groundZ =
         roofProperty.getCleanedGroundPoints().stream()
             .mapToDouble(LasPointGeometry::getZ)
             .average()
             .orElse(0);
 
-    var roofs = planes.stream().map(LidarDataToCityJsonProcessor::toPolygonWithProperties).toList();
+    var roofs =
+        planes.stream()
+            .map(plane -> toPolygonWithProperties(plane, area2DScale, distance2DScale))
+            .toList();
 
     var walls =
         planes.stream().map(plane -> createWalls(plane, groundZ)).toList().stream()
@@ -85,11 +94,19 @@ public class LidarDataToCityJsonProcessor
     return data.properties() == null ? new HashMap<>() : data.properties();
   }
 
-  private static GeometryWithProperties toPolygonWithProperties(RoofPlane3D plane) {
+  private static GeometryWithProperties toPolygonWithProperties(
+      RoofPlane3D plane, double area2DScale, double distance2DScale) {
     var slope = plane.getSlopeInDegrees().getValue();
+    var area2D = plane.get2DArea() * area2DScale;
+    var area3D = Math.abs(round2(area2D / Math.cos(Math.toRadians(slope))));
+
     return GeometryWithProperties.builder()
         .geometry(plane.getDelimitation())
-        .properties(Map.of(PLANE_SLOPE_KEY, slope))
+        .properties(
+            Map.of(
+                PLANE_SLOPE_KEY, slope,
+                AREA_KEY, area3D,
+                DISTANCE_2D_SCALE, distance2DScale))
         .build();
   }
 
@@ -102,5 +119,11 @@ public class LidarDataToCityJsonProcessor
     var roofPolygon = plane.getDelimitation();
     var groundPolygon = BuildingGroundPolygonFactory.make(roofPolygon, groundZ);
     return new GeometryWithProperties(groundPolygon, Map.of());
+  }
+
+  private static double getArea2DScale(LidarRoofData lidarRoofData, List<RoofPlane3D> planes) {
+    var delimitation2DArea = lidarRoofData.roof().boundaryLambert93().getArea();
+    var planes2DArea = planes.stream().mapToDouble(RoofPlane3D::get2DArea).sum();
+    return delimitation2DArea / planes2DArea;
   }
 }

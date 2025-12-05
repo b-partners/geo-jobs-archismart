@@ -100,6 +100,21 @@ class CityJSONControllerIT extends FacadeIT {
   }
 
   @Test
+  void should_throw_if_delimitations_if_is_more_than_5() {
+    var payloadId = randomUUID().toString();
+    var payloadWithNullDelimitations =
+        new CreateCityJSONRequest()
+            .delimitations(List.of(mock(), mock(), mock(), mock(), mock(), mock()))
+            .id(payloadId);
+
+    var exception =
+        assertThrows(
+            BadRequestException.class,
+            () -> subject.processCityJSONRequest(payloadWithNullDelimitations, payloadId));
+    assertTrue(exception.getMessage().contains("more than 5"));
+  }
+
+  @Test
   void should_get_correctly_processed_city_json_request() {
     var payloadId = randomUUID().toString();
     var payload = new CreateCityJSONRequest().id(payloadId).delimitations(List.of(feature()));
