@@ -36,6 +36,7 @@ import java.util.Optional;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Geometry;
 import org.mockito.MockedStatic;
 
 class FeatureImageRequestedServiceTest {
@@ -64,7 +65,7 @@ class FeatureImageRequestedServiceTest {
 
   @BeforeEach
   void setUp() {
-    when(tileImageBlurMock.apply(any(Detection.class), anyList()))
+    when(tileImageBlurMock.apply(any(Geometry.class), anyList()))
         .thenAnswer(invocation -> invocation.getArgument(1));
     when(whiteImageDetectorMock.apply(any())).thenReturn(false);
     List<TileCoordinates> tileCoordinatesMock = mock();
