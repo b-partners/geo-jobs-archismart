@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.model.exception.NotImplementedException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +47,19 @@ class SynchronousDetectionValidatorTest {
                                 .type(Polygon.TypeEnum.POLYGON)
                                 .coordinates(expectedPolygonCoordinates()))))),
         actual);
+  }
+
+  @Test
+  void not_implemented_on_multiple_geo_json_provided() {
+    var creationDetectionMock = mock(CreateDetection.class);
+    when(creationDetectionMock.getGeoJsonZone()).thenReturn(List.of(new Feature(), new Feature()));
+
+    var actual =
+        assertThrows(NotImplementedException.class, () -> subject.apply(creationDetectionMock));
+
+    assertEquals(
+        "Only unique feature can be processed synchronously for now, meanwhile given are 2",
+        actual.getMessage());
   }
 
   @Test

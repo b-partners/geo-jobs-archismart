@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.model.exception.NotImplementedException;
 import java.util.ArrayList;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,13 @@ public class SynchronousDetectionValidator implements Function<CreateDetection, 
 
   @Override
   public CreateDetection apply(CreateDetection createDetection) {
+    if (createDetection != null
+        && createDetection.getGeoJsonZone() != null
+        && createDetection.getGeoJsonZone().size() != 1) {
+      throw new NotImplementedException(
+          "Only unique feature can be processed synchronously for now, meanwhile given are "
+              + createDetection.getGeoJsonZone().size());
+    }
     var fixFeatures = new ArrayList<Feature>();
     if (createDetection.getGeoJsonZone() != null && createDetection.getGeoJsonZone().size() == 1) {
       var uniqueFeature = createDetection.getGeoJsonZone().getFirst();

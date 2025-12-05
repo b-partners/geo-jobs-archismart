@@ -77,7 +77,8 @@ public class SynchronousDetectionService
     Callable<Void> imageRequestCallableVoidList =
         () -> {
           featureImageRequestedService.accept(
-              new FeatureImageRequested(detection.getId(), detection.getPolygonGeoJsonZone(), 0));
+              new FeatureImageRequested(
+                  detection.getId(), detection.getProvidedGeoJsonZone().getFirst(), 0));
           return null;
         };
     Callable<Void> machineDetectionProcessCallableVoidList =
@@ -98,7 +99,8 @@ public class SynchronousDetectionService
         () -> {
           // VGG result computing step
           zoneVggRequestedService.accept(
-              new FeatureVggRequested(detection.getId(), detection.getPolygonGeoJsonZone(), 0));
+              new FeatureVggRequested(
+                  detection.getId(), detection.getProvidedGeoJsonZone().getFirst(), 0));
           return null;
         };
     Callable<Void> geoJsonRequestedCallableVoid =
