@@ -95,7 +95,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
-      MemorySize: 1024
+      MemorySize: 2048
       Timeout: 900 #note(sqs-visibility)
       Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       Events:
@@ -110,7 +110,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
-      MemorySize: 7077
+      MemorySize: 1024
       Timeout: 900 #note(sqs-visibility)
       Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       SnapStart:
