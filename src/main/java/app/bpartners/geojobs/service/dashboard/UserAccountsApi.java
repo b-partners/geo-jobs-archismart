@@ -1,13 +1,17 @@
 package app.bpartners.geojobs.service.dashboard;
 
+import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
 import static app.bpartners.geojobs.service.dashboard.ApiConfiguration.API_KEY_HEADER;
+import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.DASHBOARD;
 import static org.springframework.http.HttpMethod.*;
 
+import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.service.dashboard.component.Account;
 import app.bpartners.geojobs.service.dashboard.component.User;
 import app.bpartners.geojobs.service.dashboard.component.UserApiKey;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -62,7 +66,7 @@ public class UserAccountsApi {
         .getBody();
   }
 
-  public UserApiKey getUserApiKey(String userId, String adminApiKey) {
+  public List<UserApiKey> getUserApiKey(String userId, String adminApiKey) {
     var endpoint = String.format("%s/users/%s/keys", apiConfiguration.getDashboardApiUrl(), userId);
 
     var headers = new HttpHeaders();
@@ -70,7 +74,8 @@ public class UserAccountsApi {
     var requestEntity = new HttpEntity<>(headers);
 
     return restTemplate
-        .exchange(endpoint, GET, requestEntity, new ParameterizedTypeReference<UserApiKey>() {})
+        .exchange(
+            endpoint, GET, requestEntity, new ParameterizedTypeReference<List<UserApiKey>>() {})
         .getBody();
   }
 
@@ -88,22 +93,37 @@ public class UserAccountsApi {
               + "Please choose which of following users do you want to generate new api key : "
               + usersByEmail.stream().map(User::email).toList());
     }
-    var actualApiKey = getUserApiKey(usersByEmail.getFirst().id(), adminApiKey);
+    var dashboardUserIdentifier = usersByEmail.getFirst().id();
+
+    var actualApiKeyList = getUserApiKey(dashboardUserIdentifier, adminApiKey);
+    UserApiKey actualApiKey =
+        actualApiKeyList.stream()
+            .filter(apiKey -> DASHBOARD.equals(apiKey.type()))
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new ApiException(
+                        SERVER_EXCEPTION,
+                        "Unable to retrieve dashboard api key for email " + userEmail));
     if (actualApiKey.key() != null) {
       return actualApiKey;
     }
 
+    return updateUserDashboardApiKey(newUserApiKey, adminApiKey, dashboardUserIdentifier);
+  }
+
+  private UserApiKey updateUserDashboardApiKey(
+      String newUserApiKey, String adminApiKey, String dashboardUserIdentifier) {
     var endpoint =
         String.format(
-            "%s/users/%s/keys",
-            apiConfiguration.getDashboardApiUrl(), usersByEmail.getFirst().id());
-
+            "%s/users/%s/keys", apiConfiguration.getDashboardApiUrl(), dashboardUserIdentifier);
     var headers = new HttpHeaders();
     headers.add(API_KEY_HEADER, adminApiKey);
-    var requestEntity = new HttpEntity<>(new UserApiKey(newUserApiKey), headers);
-
-    return restTemplate
-        .exchange(endpoint, POST, requestEntity, new ParameterizedTypeReference<UserApiKey>() {})
-        .getBody();
+    var requestEntity = new HttpEntity<>(new UserApiKey(newUserApiKey, DASHBOARD), headers);
+    return Objects.requireNonNull(
+        restTemplate
+            .exchange(
+                endpoint, POST, requestEntity, new ParameterizedTypeReference<UserApiKey>() {})
+            .getBody());
   }
 }

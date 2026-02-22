@@ -16,6 +16,7 @@ import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
+import app.bpartners.geojobs.service.DetectionZoneToProcessProvider;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ public class DetectionMachineDetectionCreation
   private final DetectionMachineDetectionStatisticsComputer
       detectionMachineDetectionStatisticsComputer;
   private final GeometryConverter geometryConverter;
+  private final DetectionZoneToProcessProvider detectionZoneToProcessProvider;
 
   @Override
   public app.bpartners.geojobs.endpoint.rest.model.Detection apply(
@@ -55,33 +57,33 @@ public class DetectionMachineDetectionCreation
   public void processMachineDetection(
       Detection detection, ZoneDetectionJob zoneDetectionJob, List<ParcelTilingTask> tilingTasks) {
     var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-    var providedLonLatJtsMultiPolygon =
-        providedGeoJsonZone.stream()
-            .map(
-                feature -> {
-                  switch (feature.getGeometry().getActualInstance()) {
-                    case Point point -> {
-                      if (detection.hasToitureModelName()) {
-                        return geometryConverter.retrieveNearestRoofMultiPolygon(point);
-                      }
-                      log.warn("Skip processing detection on Point : {}", point);
-                      return null;
-                    }
-                    case app.bpartners.geojobs.endpoint.rest.model.MultiPolygon multiPolygon -> {
-                      return geometryConverter.apply(multiPolygon.getCoordinates());
-                    }
-                    case app.bpartners.geojobs.endpoint.rest.model.Polygon polygon -> {
-                      return geometryConverter.apply(List.of(polygon.getCoordinates()));
-                    }
-                    default ->
-                        throw new UnsupportedOperationException(
-                            "Unsupported geometry instance during sync processing detection : "
-                                + feature.getGeometry().getActualInstance());
+    var providedLonLatJtsMultiPolygon = detectionZoneToProcessProvider.apply(detection);
+    providedGeoJsonZone.stream()
+        .map(
+            feature -> {
+              switch (feature.getGeometry().getActualInstance()) {
+                case Point point -> {
+                  if (detection.hasToitureModelName()) {
+                    return geometryConverter.retrieveNearestRoofMultiPolygon(point);
                   }
-                })
-            .filter(Objects::nonNull)
-            .reduce(unifyMultiPolygon())
-            .orElseThrow(() -> new IllegalStateException("No provided geojson zone found"));
+                  log.warn("Skip processing detection on Point : {}", point);
+                  return null;
+                }
+                case app.bpartners.geojobs.endpoint.rest.model.MultiPolygon multiPolygon -> {
+                  return geometryConverter.apply(multiPolygon.getCoordinates());
+                }
+                case app.bpartners.geojobs.endpoint.rest.model.Polygon polygon -> {
+                  return geometryConverter.apply(List.of(polygon.getCoordinates()));
+                }
+                default ->
+                    throw new UnsupportedOperationException(
+                        "Unsupported geometry instance during sync processing detection : "
+                            + feature.getGeometry().getActualInstance());
+              }
+            })
+        .filter(Objects::nonNull)
+        .reduce(unifyMultiPolygon())
+        .orElseThrow(() -> new IllegalStateException("No provided geojson zone found"));
 
     var tileDetectionTasks =
         tilingTasks.stream()

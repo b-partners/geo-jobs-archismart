@@ -34,12 +34,25 @@ public class DetectionModelUnsupportedService implements Consumer<DetectionModel
     var detection = detectionRepository.findById(event.getDetectionIdentifier()).orElseThrow();
     var communityOwner =
         communityAuthorizationRepository.findById(detection.getCommunityOwnerId()).orElseThrow();
-    var emailSubject =
-        String.format(
-            "Détection (e2Id=%s) lancée par %s sur le modèle %s",
-            detection.getEndToEndId(),
-            communityOwner.getName(),
-            detection.getDetectableObjectModel().getModelName());
+    String emailSubject;
+    if (detection.getDetectableObjectModelList() != null
+        && !detection.getDetectableObjectModelList().isEmpty()) {
+      emailSubject =
+          String.format(
+              "Détection (e2Id=%s) lancée par %s sur les modèles %s",
+              detection.getEndToEndId(),
+              communityOwner.getName(),
+              detection.getDetectableObjectModelList().stream()
+                  .map(objectModel -> objectModel.getModelName().toString())
+                  .toList());
+    } else {
+      emailSubject =
+          String.format(
+              "Détection (e2Id=%s) lancée par %s sur le modèle %s",
+              detection.getEndToEndId(),
+              communityOwner.getName(),
+              detection.getDetectableObjectModel().getModelName());
+    }
     var attachments =
         List.of(
             providedFeaturesAsFile(

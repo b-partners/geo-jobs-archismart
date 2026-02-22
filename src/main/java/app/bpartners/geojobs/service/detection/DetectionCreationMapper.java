@@ -14,13 +14,19 @@ import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
+import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -42,14 +48,22 @@ public class DetectionCreationMapper {
       @Nullable String communityOwnerId,
       boolean isSynchronous) {
     var detectableObjectModel = createDetection.getDetectableObjectModel();
-    var modelName = detectableObjectModel.getModelName();
+    var detectableObjectModelList = createDetection.getDetectableObjectModelList();
     var detectionId = randomUUID().toString();
     var detectableObjectConfigurations =
-        detectableObjectTypeMapper.mapDefaultConfigurationsFromModel(detectionId, modelName);
+        getDetectableObjectConfigurations(detectionId, createDetection);
     var providedGeoJson = createDetection.getGeoJsonZone();
     var domainProvidedGeoJsonZone = getActualProvidedGeoJson(providedGeoJson);
+    List<ModelName> modelNames =
+        detectableObjectModel != null
+            ? List.of(detectableObjectModel.getModelName())
+            : (detectableObjectModelList != null
+                ? detectableObjectModelList.stream()
+                    .map(DetectableObjectModel::getModelName)
+                    .toList()
+                : List.of());
     var polygonGeoJsonZoneToBeProcessed =
-        extractDetectionPolygonGeoJson(providedGeoJson, modelName);
+        extractDetectionPolygonGeoJson(providedGeoJson, modelNames);
     var finalGeoServerProperties =
         extractGeoServerProperties(
             createDetection.getGeoServerProperties(),
@@ -69,6 +83,7 @@ public class DetectionCreationMapper {
         .multiPolygonGeoJsonZone(domainProvidedGeoJsonZone)
         .polygonGeoJsonZone(polygonGeoJsonZoneToBeProcessed)
         .detectableObjectModel(detectableObjectModel)
+        .detectableObjectModelList(detectableObjectModelList)
         .toNotify(Boolean.TRUE.equals(createDetection.getToNotify()))
         .isOutputZipped(
             createDetection.getGeoJsonOutput() == null
@@ -81,12 +96,55 @@ public class DetectionCreationMapper {
         .build();
   }
 
+  private List<DetectableObjectConfiguration> getDetectableObjectConfigurations(
+      String detectionId, CreateDetection createDetection) {
+    if (createDetection.getDetectableObjectModelList() == null
+        || createDetection.getDetectableObjectModelList().isEmpty()) {
+
+      if (createDetection.getDetectableObjectModel() == null) {
+        throw new IllegalArgumentException(
+            "No detectable object model provided for detectionId: " + detectionId);
+      }
+
+      return detectableObjectTypeMapper.mapDefaultConfigurationsFromModel(
+          detectionId, createDetection.getDetectableObjectModel().getModelName());
+    }
+
+    return createDetection.getDetectableObjectModelList().stream()
+        .flatMap(
+            model ->
+                detectableObjectTypeMapper
+                    .mapDefaultConfigurationsFromModel(detectionId, model.getModelName())
+                    .stream())
+        .toList();
+  }
+
   private List<Feature> getActualProvidedGeoJson(
       List<app.bpartners.geojobs.endpoint.rest.model.Feature> restProvidedGeoJson) {
     if (restProvidedGeoJson == null) {
       return List.of();
     }
-    return restProvidedGeoJson.stream().map(FeatureMapper::toDomainFeature).toList();
+    return restProvidedGeoJson.stream()
+        .peek(
+            getOrSetFeatureIdentifier(
+                app.bpartners.geojobs.endpoint.rest.model.Feature::getProperties,
+                app.bpartners.geojobs.endpoint.rest.model.Feature::setProperties))
+        .map(FeatureMapper::toDomainFeature)
+        .toList();
+  }
+
+  public static <T> Consumer<T> getOrSetFeatureIdentifier(
+      Function<T, Map<String, Object>> getter, BiConsumer<T, Map<String, Object>> setter) {
+    return feature -> {
+      Map<String, Object> props = getter.apply(feature);
+
+      if (props == null) {
+        props = new HashMap<>();
+        setter.accept(feature, props);
+      }
+
+      props.computeIfAbsent("feature_id", k -> randomUUID().toString());
+    };
   }
 
   private GeoServerProperties extractGeoServerProperties(
@@ -111,8 +169,8 @@ public class DetectionCreationMapper {
 
   private app.bpartners.geojobs.repository.model.Feature extractDetectionPolygonGeoJson(
       List<app.bpartners.geojobs.endpoint.rest.model.Feature> providedGeoJsonZone,
-      ModelName modelName) {
-    if (TOITURE.equals(modelName)
+      List<ModelName> modelNames) {
+    if (modelNames.contains(TOITURE)
         && providedGeoJsonZone.size() == 1
         && providedGeoJsonZone.getFirst().getGeometry() != null
         && providedGeoJsonZone.getFirst().getGeometry().getActualInstance()

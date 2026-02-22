@@ -31,6 +31,7 @@ import app.bpartners.geojobs.service.DetectionVGGUpdate;
 import app.bpartners.geojobs.service.PolygonCoordinatesCloser;
 import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
+import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import app.bpartners.geojobs.service.tiling.TileFinder;
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,6 +53,7 @@ class FeatureVggRequestedServiceTest {
   FeatureMapper featureMapperMock = mock();
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
   TileFinder tileFinderMock = mock();
+  IgnCadastreFeatureFetcher ignCadastreFeatureFetcherMock = mock();
 
   FeatureVggRequestedService subject =
       new FeatureVggRequestedService(
@@ -65,7 +67,8 @@ class FeatureVggRequestedServiceTest {
           featureMapperMock,
           detectionRoofPropertiesRequestedServiceMock,
           tileFinderMock,
-          mock());
+          mock(),
+          ignCadastreFeatureFetcherMock);
 
   @Test
   void compute_vgg_for_zone_and_update_detection_vgg() {

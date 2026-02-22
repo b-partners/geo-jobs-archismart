@@ -17,9 +17,13 @@ public class CreateDetectionValidator implements Consumer<CreateDetection> {
     if (createDetection.getZoneName() == null || createDetection.getZoneName().isEmpty()) {
       exceptionMessageBuilder.append("CreateDetection.zoneName is mandatory. ");
     }
-    if (createDetection.getDetectableObjectModel() == null
-        || createDetection.getDetectableObjectModel().getModelName() == null) {
-      exceptionMessageBuilder.append("CreateDetection.detectableObjectModel is mandatory.");
+    if ((createDetection.getDetectableObjectModel() == null
+            || createDetection.getDetectableObjectModel().getModelName() == null)
+        && (createDetection.getDetectableObjectModelList() == null
+            || createDetection.getDetectableObjectModelList().isEmpty())) {
+      exceptionMessageBuilder.append(
+          "Either CreateDetection.detectableObjectModel or"
+              + " CreateDetection.detectableObjectModelList is mandatory.");
     }
     var exceptionMessage = exceptionMessageBuilder.toString();
     if (!exceptionMessage.isEmpty()) {

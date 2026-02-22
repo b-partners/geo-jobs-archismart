@@ -57,7 +57,7 @@ public class TileImagesAssembler implements Function<List<Tile>, File> {
         int drawY = (y - minY) * DEFAULT_TILE_SIZE;
 
         Tile tile = tileMap.get(x + "_" + y);
-        if (tile != null) {
+        if (tile != null && tile.getImage() != null) {
           g2d.drawImage(read(tile.getImage()), drawX, drawY, null);
         } else {
           g2d.drawImage(whiteTile, drawX, drawY, null);

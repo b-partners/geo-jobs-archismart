@@ -26,11 +26,13 @@ import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+@Disabled("flaky test on CI : flyway launches before postgres")
 class ZoneTilingJobCreatedServiceIT extends FacadeIT {
   @Autowired ZoneTilingJobCreatedService subject;
   @Autowired ZoneTilingJobService zoneTilingJobService;

@@ -1,18 +1,18 @@
 package app.bpartners.geojobs.service.event;
 
+import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import app.bpartners.geojobs.endpoint.rest.model.Feature;
-import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
-import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
-import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
+import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.*;
+import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
+import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
 import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
@@ -42,6 +42,47 @@ class TileDetectionTaskConsumerTest {
           geometryConverterMock,
           maskRetrieverMock,
           roofCoveringDetectorMock);
+
+  @Test
+  void do_nothing_when_detection_has_toiture_model_but_without_mask() {
+    var zoneDetectionJobId = randomUUID().toString();
+    var tileMock = mock(Tile.class);
+    var tileDetectionTask =
+        TileDetectionTask.builder().zoneDetectionJobId(zoneDetectionJobId).tile(tileMock).build();
+    var detectionMock = mock(Detection.class);
+    var geometryActualInstanceStringValue = "geometryActualInstanceStringValue";
+    var geometryMock =
+        geometryFactory.createMultiPolygon(new org.locationtech.jts.geom.Polygon[] {});
+    var multiPolygonFromTileMock = mock(org.locationtech.jts.geom.MultiPolygon.class);
+    when(tileMock.getCoordinates()).thenReturn(new TileCoordinates().x(0).y(0).z(20));
+    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(multiPolygonFromTileMock.intersection(geometryMock)).thenReturn(geometryMock);
+    when(geometryConverterMock.readGeometryFromString(geometryActualInstanceStringValue))
+        .thenReturn(geometryMock);
+    when(detectionMock.getFeatureWithDelimitations())
+        .thenReturn(
+            List.of(
+                new FeatureWithDelimitation(
+                    mock(),
+                    List.of(
+                        app.bpartners.geojobs.repository.model.Feature.builder()
+                            .geometry(
+                                new app.bpartners.geojobs.repository.model.Feature.FeatureGeometry(
+                                    Geometry.TypeEnum.POLYGON, geometryActualInstanceStringValue))
+                            .build()))));
+    when(geometryConverterMock.getMultiPolygonFromTile(anyInt(), anyInt(), anyInt()))
+        .thenReturn(multiPolygonFromTileMock);
+    when(detectionRepositoryMock.findByZdjId(zoneDetectionJobId))
+        .thenReturn(Optional.of(detectionMock));
+    when(maskRetrieverMock.apply(any(), any())).thenReturn(null);
+
+    assertDoesNotThrow(() -> subject.accept(tileDetectionTask));
+
+    verify(objectDetectorMock, never()).apply(any(), any(), any());
+    verify(roofCoveringDetectorMock, never()).apply(any(), any());
+    verify(detectionMapperMock, never()).toDetectedTile(any(), any(), any(), any(), any());
+    verify(machineDetectedTileRepositoryMock, never()).save(any());
+  }
 
   @Test
   void do_nothing_as_roof_polygon_not_intersecting_with_tile_polygon() {

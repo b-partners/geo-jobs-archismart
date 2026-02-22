@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.endpoint.event.model;
 
-import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_4;
+import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.conf.FacadeIT;
@@ -27,6 +27,6 @@ class DetectionRoofSlopeAndHeightRequestedIT extends FacadeIT {
     assertEquals(original, deserialized);
     assertEquals(Duration.ofMinutes(8), deserialized.maxConsumerDuration());
     assertEquals(Duration.ofMinutes(2), deserialized.maxConsumerBackoffBetweenRetries());
-    assertEquals(EVENT_STACK_4, deserialized.getEventStack());
+    assertEquals(EVENT_STACK_2, deserialized.getEventStack());
   }
 }

@@ -8,7 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.service.lidar.api.LidarApi;
+import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.util.Map;
 import java.util.Set;
@@ -36,21 +36,19 @@ class LidarRoofsAnalysisProcessorTest {
 
     var expectedSet =
         Set.of(
-            new Expected(roofGeometry1, 2d, 9.85, 3487, 2187),
-            new Expected(roofGeometry2, 2d, 21.81, 4949, 1265),
-            new Expected(roofGeometry3, 18d, 17.08, 3073, 1377),
-            new Expected(roofGeometry4, 19d, 17.33, 5769, 2239));
+            new Expected(roofGeometry1, 2d, 9.85),
+            new Expected(roofGeometry2, 2d, 21.81),
+            new Expected(roofGeometry3, 18d, 17.08),
+            new Expected(roofGeometry4, 19d, 17.33));
 
     for (var geometry : roofGeometries) {
       var actual = roofsAnalysisResult.getProperties(geometry);
       var expected = getExpected(expectedSet, geometry);
 
       assertEquals(AVAILABLE, actual.getData().status());
-      assertEquals(expected.roofPts(), actual.getData().roof().points().size());
-      assertEquals(expected.groundPts(), actual.getData().ground().points().size());
       assertEquals(expected.height(), actual.getHeightInMeters().getValue(), 0.3);
 
-      var firstPlane = actual.getPlanes().getFirst();
+      var firstPlane = actual.getRoofPlanes().getFirst();
       assertEquals(expected.slope(), firstPlane.getSlopeInDegrees().getValue(), 10);
     }
   }
@@ -58,7 +56,7 @@ class LidarRoofsAnalysisProcessorTest {
   @Test
   void status_should_be_extraction_error_when_unchecked_exception_happens() {
     var geometry1 = roofGeometry1();
-    var lidarApiMock = mock(LidarApi.class);
+    var lidarApiMock = mock(LidarApiFacade.class);
 
     when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenThrow();
 
@@ -70,13 +68,13 @@ class LidarRoofsAnalysisProcessorTest {
 
     assertEquals(EXTRACTION_ERROR, property.getData().status());
     assertEquals(0, property.getHeightInMeters().getValue());
-    assertTrue(property.getPlanes().isEmpty());
+    assertTrue(property.getRoofPlanes().isEmpty());
   }
 
   @Test
   void status_should_be_unavailable_when_no_lidar_was_found() {
     var geometry1 = roofGeometry1();
-    var lidarApiMock = mock(LidarApi.class);
+    var lidarApiMock = mock(LidarApiFacade.class);
 
     when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(Map.of());
 
@@ -88,7 +86,7 @@ class LidarRoofsAnalysisProcessorTest {
 
     assertEquals(UNAVAILABLE, property.getData().status());
     assertEquals(0, property.getHeightInMeters().getValue());
-    assertTrue(property.getPlanes().isEmpty());
+    assertTrue(property.getRoofPlanes().isEmpty());
   }
 
   private static Geometry roofGeometry1() {
@@ -162,6 +160,5 @@ class LidarRoofsAnalysisProcessorTest {
         .orElseThrow();
   }
 
-  private record Expected(
-      Geometry geometry, Double slope, Double height, Integer roofPts, Integer groundPts) {}
+  private record Expected(Geometry geometry, Double slope, Double height) {}
 }

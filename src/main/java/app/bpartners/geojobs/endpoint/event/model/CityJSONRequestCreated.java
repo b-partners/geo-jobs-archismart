@@ -13,6 +13,7 @@ import lombok.*;
 @NoArgsConstructor
 public class CityJSONRequestCreated extends PojaEvent {
   private String requestId;
+  private String communityOwnerId;
 
   @Override
   public Duration maxConsumerDuration() {

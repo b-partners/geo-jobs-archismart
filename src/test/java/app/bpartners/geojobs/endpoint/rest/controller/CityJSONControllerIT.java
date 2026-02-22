@@ -77,17 +77,6 @@ class CityJSONControllerIT extends FacadeIT {
   }
 
   @Test
-  void should_throw_if_null_id__given() {
-    var payloadWithNullDelimitations = new CreateCityJSONRequest();
-
-    var exception =
-        assertThrows(
-            BadRequestException.class,
-            () -> subject.processCityJSONRequest(payloadWithNullDelimitations, null));
-    assertTrue(exception.getMessage().contains("CityJSONRequest.id is mandatory"));
-  }
-
-  @Test
   void should_throw_if_null_delimitations_if_given() {
     var payloadId = randomUUID().toString();
     var payloadWithNullDelimitations = new CreateCityJSONRequest().id(payloadId);

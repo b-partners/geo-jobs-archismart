@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.validator;
 
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PROCESSING;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

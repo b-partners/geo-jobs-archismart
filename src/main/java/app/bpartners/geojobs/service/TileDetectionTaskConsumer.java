@@ -96,6 +96,13 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
           return;
         }
       }
+      if (mask == null && detection.hasToitureModelName()) {
+        log.info(
+            "Actual tile detection could not compute mask, skipping detection for TileDetectionTask"
+                + " : {}",
+            tileDetectionTask);
+        return;
+      }
     }
     log.info("TileDetectionTask ID=[{}] — detection started", tileDetectionTask.getId());
     var detectionResponse =

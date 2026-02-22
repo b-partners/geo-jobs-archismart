@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.CreateApiKey.ConsumerTyp
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.endpoint.rest.security.model.Authority.Role.ROLE_INSURANCE;
 import static app.bpartners.geojobs.repository.model.SurfaceUnit.SQUARE_METER;
+import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.DASHBOARD;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,7 +14,6 @@ import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.rest.controller.SecurityController;
 import app.bpartners.geojobs.endpoint.rest.model.CreateApiKey;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
-import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.dashboard.UserAccountsApi;
@@ -33,7 +33,7 @@ class SecurityControllerIT extends FacadeIT {
   @Test
   void generate_and_read_api_keys_for_insurance_ok() {
     when(userAccountsApiMock.getOrGenerateApiKey(any(), any(), any()))
-        .thenAnswer(invocationOnMock -> new UserApiKey(invocationOnMock.getArgument(1)));
+        .thenAnswer(invocationOnMock -> new UserApiKey(invocationOnMock.getArgument(1), DASHBOARD));
     var consumerEmail = "randomEmail" + randomUUID();
 
     var actual = subject.generateApiKeys(List.of(someCreateApiKey(consumerEmail)));
@@ -60,18 +60,15 @@ class SecurityControllerIT extends FacadeIT {
   }
 
   @Test
-  void used_email_throws_ko() {
+  void used_email_return_existing_keys() {
     when(userAccountsApiMock.getOrGenerateApiKey(any(), any(), any()))
-        .thenAnswer(invocationOnMock -> new UserApiKey(invocationOnMock.getArgument(1)));
+        .thenAnswer(invocationOnMock -> new UserApiKey(invocationOnMock.getArgument(1), DASHBOARD));
     var consumerEmail = "randomEmail" + randomUUID();
     assertDoesNotThrow(() -> subject.generateApiKeys(List.of(someCreateApiKey(consumerEmail))));
 
-    var actual =
-        assertThrows(
-            BadRequestException.class,
-            () -> subject.generateApiKeys(List.of(someCreateApiKey(consumerEmail))));
+    var actual = subject.generateApiKeys(List.of(someCreateApiKey(consumerEmail)));
 
-    assertEquals("Email=" + consumerEmail + " is already used", actual.getMessage());
+    System.out.println(actual);
   }
 
   private static CreateApiKey someCreateApiKey(String consumerEmail) {

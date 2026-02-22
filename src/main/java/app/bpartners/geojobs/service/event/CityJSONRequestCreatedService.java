@@ -11,6 +11,7 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus;
+import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor.RoofsAnalysisResult;
@@ -40,11 +41,15 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
 
   @Override
   public void accept(CityJSONRequestCreated created) {
-    var request = cityJSONRequestRepository.findById(created.getRequestId()).orElseThrow();
+    var request =
+        cityJSONRequestRepository
+            .findByIdAndCommunityOwnerId(created.getRequestId(), created.getCommunityOwnerId())
+            .orElseThrow();
 
     try {
+      var requestDelimitations = getRequestDelimitations(request);
       var lidarAnalysisResult =
-          lidarProcessor.apply(toGeometryWithProperties(request.getDelimitations()));
+          lidarProcessor.apply(toGeometryWithProperties(requestDelimitations));
       if (isError(lidarAnalysisResult)) {
         log.error("All data from lidar analysis was failed");
         updateStatus(request, FAILED);
@@ -64,6 +69,17 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
       log.error(e.getMessage());
       updateStatus(request, FAILED);
     }
+  }
+
+  private List<Feature> getRequestDelimitations(CityJSONRequest request) {
+    if (request.getFeaturesWithDelimitation() != null
+        && !request.getFeaturesWithDelimitation().isEmpty()) {
+      return request.getFeaturesWithDelimitation().stream()
+          .map(FeatureWithDelimitation::delimitations)
+          .flatMap(List::stream)
+          .toList();
+    }
+    return request.getDelimitations();
   }
 
   private static boolean isUnavailable(RoofsAnalysisResult roofsAnalysisResult) {

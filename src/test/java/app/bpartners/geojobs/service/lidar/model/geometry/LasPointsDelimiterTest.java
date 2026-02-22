@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.lidar.model.geometry;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import app.bpartners.geojobs.model.lidar.LasPointsDelimiter;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,8 @@ import org.locationtech.jts.geom.Geometry;
 class LasPointsDelimiterTest {
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();
+  private static final double CONCAVE_RATIO = 0.2;
+  private static final double POLYLINE_SIMPLIFICATION_EPSILON = 0.6;
 
   @Test
   void guess_delimitation_ok() {
@@ -21,7 +24,7 @@ class LasPointsDelimiterTest {
     var processResult = processor.from(roofGeometries);
 
     var points = processResult.getData(roofGeometry1).roof().points();
-    var actual = new LasPointsDelimiter(points);
+    var actual = new LasPointsDelimiter(points, CONCAVE_RATIO, POLYLINE_SIMPLIFICATION_EPSILON);
 
     assertTrue(actual.getPolygon().isValid());
   }

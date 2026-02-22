@@ -46,6 +46,12 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
     var feature = event.getFeature();
     var detectionIdentifier = event.getDetectionIdentifier();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
+    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
+    var zoom =
+        providedGeoJsonZone.getFirst().getProperties().get("zoom") == null
+            ? HOUSES_0.getZoomLevel()
+            : (Integer) providedGeoJsonZone.getFirst().getProperties().get("zoom");
+
     var zonePolygonGeometryProcessed =
         geometryConverter.retrieveZonePolygonGeometryProcessed(
             feature, detection.getGeoJsonDelimitationType());
@@ -64,7 +70,8 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
     var tilingJobIdentifier = detection.getZtjId();
     var tilingTasks = tilingTaskRepository.findAllByJobId(tilingJobIdentifier);
     var tileCoordinatesEnvelopingPolygon =
-        tileFinder.getFromGeoJsonPolygon(zonePolygonGeometryProcessed, HOUSES_0.getZoomLevel());
+        tileFinder.getFromGeoJsonPolygon(zonePolygonGeometryProcessed, zoom);
+
     var tiles =
         tilingTasks.stream()
             .map(ParcelTilingTask::getTiles)

@@ -42,9 +42,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 class CommunityUsedSurfaceServiceIT extends FacadeIT {
   private static final double LAST_SURFACE_VALUE = 10;
-  private static final String COMMUNITY_ID = "DUMMY_ID";
-  private static final String COMMUNITY_APIKEY = "DUMMY_APIKEY";
+  private static final String COMMUNITY_ID = randomUUID().toString();
+  private static final String COMMUNITY_APIKEY = randomUUID().toString();
   private static final Instant DUMMY_DATE = Instant.parse("2024-07-18T00:00:00Z");
+  public static final String DASHBOARD_API_KEY = randomUUID().toString();
 
   @Autowired DetectionSurfaceValueMapper surfaceValueMapper;
   @Autowired CommunityAuthorizationRepository communityAuthorizationRepository;
@@ -74,6 +75,7 @@ class CommunityUsedSurfaceServiceIT extends FacadeIT {
         .maxSurface(5_000)
         .maxSurfaceUnit(SQUARE_METER)
         .apiKey(COMMUNITY_APIKEY)
+        .dashboardApiKey(DASHBOARD_API_KEY)
         .name("communityName")
         .authorizedZones(List.of(communityAuthorizedZone()))
         .usedSurfaces(List.of())
@@ -160,8 +162,8 @@ class CommunityUsedSurfaceServiceIT extends FacadeIT {
 
   @Test
   void persist_detectionWithSurfaceUsage_ok() {
-    var detectionId = randomUUID().toString();
-    var endToEndId = randomUUID().toString();
+    var detectionId = DASHBOARD_API_KEY;
+    var endToEndId = DASHBOARD_API_KEY;
     var detection =
         Detection.builder()
             .id(detectionId)

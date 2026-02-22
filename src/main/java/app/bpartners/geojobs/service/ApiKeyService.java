@@ -3,13 +3,13 @@ package app.bpartners.geojobs.service;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
-import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.security.ApiKey;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorizationApiKey;
 import app.bpartners.geojobs.service.dashboard.UserAccountsApi;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +30,14 @@ public class ApiKeyService {
 
   public List<ApiKey> generateApiKeys(List<CommunityAuthorization> authorizations) {
     for (CommunityAuthorization auth : authorizations) {
-      if (communityAuthorizationRepository.findByEmail(auth.getEmail()).isPresent()) {
-        throw new BadRequestException("Email=" + auth.getEmail() + " is already used");
+      Optional<CommunityAuthorization> optionalCommunityAuthorization =
+          communityAuthorizationRepository.findByEmail(auth.getEmail());
+      if (optionalCommunityAuthorization.isPresent()) {
+        var communityAuthorization = optionalCommunityAuthorization.get();
+        return List.of(
+            new ApiKey(
+                communityAuthorization.getMostRecentApiKey().getKeyValue(),
+                communityAuthorization.getMostRecentApiKey().getCreationDatetime()));
       }
     }
 
@@ -39,10 +45,10 @@ public class ApiKeyService {
 
     communityAuthorizations.forEach(
         authorization -> {
-          var dashboardUserApiKey =
+          var dashboardUserApiKeyList =
               userAccountsApi.getOrGenerateApiKey(
                   authorization.getEmail(), authorization.getApiKey(), adminApiKey);
-          authorization.setDashboardApiKey(dashboardUserApiKey.key());
+          authorization.setDashboardApiKey(dashboardUserApiKeyList.key());
         });
 
     return communityAuthorizationRepository.saveAll(authorizations).stream()

@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
+import static app.bpartners.geojobs.service.detection.DetectionCreationMapper.getOrSetFeatureIdentifier;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionAddressConversionJobFailed;
@@ -11,6 +12,7 @@ import app.bpartners.geojobs.repository.DetectionAddressConversionTaskRepository
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.DetectionAddressConversionJob;
 import app.bpartners.geojobs.repository.model.DetectionAddressConversionTask;
+import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.service.StatusChangedHandler;
 import app.bpartners.geojobs.service.ZoneService;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
@@ -129,7 +131,12 @@ public class DetectionAddressConversionJobStatusChangedService
         detectionRepository.save(
             detection.toBuilder()
                 .needsImageOutput(true) // By default, addresses needs image output
-                .providedGeoJsonZone(convertedFeatures)
+                .providedGeoJsonZone(
+                    convertedFeatures.stream()
+                        .peek(
+                            getOrSetFeatureIdentifier(
+                                Feature::getProperties, Feature::setProperties))
+                        .toList())
                 .multiPolygonGeoJsonZone(convertedFeatures)
                 .geoServerProperties(geoServerConfiguration.defaultGeoServerProperties(null))
                 .build());

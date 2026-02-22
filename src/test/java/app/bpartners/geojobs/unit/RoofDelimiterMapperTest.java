@@ -1,8 +1,8 @@
 package app.bpartners.geojobs.unit;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;

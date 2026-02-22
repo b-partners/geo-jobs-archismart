@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
@@ -35,8 +36,25 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
     if (detection == null) {
       return geometryFactory.createMultiPolygon(new Polygon[0]);
     }
-    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-    return apply(detection.getId(), providedGeoJsonZone);
+    var jtsGeoFeatures = applyInternalGeoFeatures(detection);
+    return jtsGeoFeatures.stream()
+        .map(JtsGeoFeature::geometry)
+        .map(
+            geometry -> {
+              if (geometry instanceof org.locationtech.jts.geom.Polygon polygon) {
+                return geometryFactory.createMultiPolygon(new Polygon[] {polygon});
+              }
+              if (geometry instanceof MultiPolygon multiPolygon) {
+                return multiPolygon;
+              }
+              return null;
+            })
+        .filter(Objects::nonNull)
+        .reduce(unifyMultiPolygon())
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "Unable to unify provided zone for detection.id : " + detection.getId()));
   }
 
   public List<JtsGeoFeature> applyInternalGeoFeatures(Detection detection) {
@@ -44,48 +62,18 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
       return List.of();
     }
     var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
-    var actualModel = detection.getDetectableObjectModel().getModelName();
+    var detectableObjectModelList = detection.getDetectableObjectModelList();
+    var actualModelNames =
+        detectableObjectModelList != null && !detectableObjectModelList.isEmpty()
+            ? detectableObjectModelList.stream().map(DetectableObjectModel::getModelName).toList()
+            : List.of(Objects.requireNonNull(detection.getDetectableObjectModel().getModelName()));
     var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-    return apply(providedGeoJsonZone, actualModel, geoJsonDelimitationType);
-  }
-
-  private MultiPolygon apply(String detectionId, List<Feature> featureList) {
-    if (featureList == null) {
-      return geometryFactory.createMultiPolygon(new Polygon[0]);
-    }
-    if (featureList.isEmpty()) {
-      return geometryFactory.createMultiPolygon(new Polygon[0]);
-    }
-    return featureList.stream()
-        .map(
-            feature -> {
-              var geometry = feature.getGeometry();
-              if (geometry == null) {
-                return null;
-              }
-              var geometryType = geometry.getActualInstance();
-              return switch (geometryType) {
-                case Point point -> geometryConverter.retrieveNearestRoofMultiPolygon(point);
-                case app.bpartners.geojobs.endpoint.rest.model.Polygon polygon ->
-                    geometryConverter.apply(List.of(polygon.getCoordinates()));
-                case app.bpartners.geojobs.endpoint.rest.model.MultiPolygon multiPolygon ->
-                    geometryConverter.apply(multiPolygon.getCoordinates());
-                default ->
-                    throw new UnsupportedOperationException(
-                        "Unsupported geometry type to retrieve zone to process : " + geometryType);
-              };
-            })
-        .filter(Objects::nonNull)
-        .reduce(unifyMultiPolygon())
-        .orElseThrow(
-            () ->
-                new IllegalArgumentException(
-                    "Unable to unify provided zone for detection.id : " + detectionId));
+    return apply(providedGeoJsonZone, actualModelNames, geoJsonDelimitationType);
   }
 
   public List<JtsGeoFeature> apply(
       List<Feature> featureList,
-      ModelName modelName,
+      List<ModelName> modelNames,
       app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum
           geoJsonDelimitationType) {
     if (featureList == null) {
@@ -105,7 +93,7 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
               var geometryType = geometry.getActualInstance();
               return switch (geometryType) {
                 case Point point -> {
-                  if (TOITURE.equals(modelName)) {
+                  if (modelNames.contains(TOITURE)) {
                     if (PARCEL.equals(geoJsonDelimitationType)) {
                       try {
                         var parcelsNearestPoint =

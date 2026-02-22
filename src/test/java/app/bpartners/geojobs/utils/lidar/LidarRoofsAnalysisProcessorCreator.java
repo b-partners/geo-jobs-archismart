@@ -1,7 +1,9 @@
 package app.bpartners.geojobs.utils.lidar;
 
+import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
+import static java.nio.file.Files.readAllBytes;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,13 +14,10 @@ import app.bpartners.geojobs.file.ExtensionGuesser;
 import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
-import app.bpartners.geojobs.service.lidar.api.LidarApi;
+import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
-import java.nio.file.Files;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import lombok.SneakyThrows;
 import org.locationtech.jts.geom.Geometry;
 
@@ -37,8 +36,27 @@ public class LidarRoofsAnalysisProcessorCreator {
     return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
   }
 
-  public LidarRoofsAnalysisProcessor create(LidarApi lidarApi) {
+  public LidarRoofsAnalysisProcessor create(LidarApiFacade lidarApi) {
     return new LidarRoofsAnalysisProcessor(lidarApi, projector);
+  }
+
+  public LidarRoofsAnalysisProcessor create(Geometry delimitation, List<String> files) {
+    var projected = projector.project(delimitation, WGS84, LAMBERT_93);
+    var filesData = files.stream().map(this::createTempFileFromResources).toList();
+    var lidarApiMock = mock(LidarApiFacade.class);
+
+    Map<String, Set<Geometry>> data = new HashMap<>();
+    files.forEach(file -> data.put(file, Set.of(projected)));
+
+    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(data);
+    when(lidarApiMock.download(any()))
+        .thenAnswer(
+            invocation -> {
+              var filename = invocation.getArguments()[0].toString();
+              return Optional.of(filesData.get(files.indexOf(filename)));
+            });
+
+    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
   }
 
   @SneakyThrows
@@ -46,13 +64,13 @@ public class LidarRoofsAnalysisProcessorCreator {
     var lasFileFromResource =
         new File(requireNonNull(getClass().getClassLoader().getResource(path)).getFile());
     return fileWriter.write(
-        Files.readAllBytes(lasFileFromResource.toPath()),
-        FileWriter.createTempDirectory(),
+        readAllBytes(lasFileFromResource.toPath()),
+        createTempDirectory(),
         lasFileFromResource.getName());
   }
 
-  private static LidarApi lidarApiMock(Set<Geometry> lambert93Geometries, File file) {
-    LidarApi lidarApiMock = mock();
+  private static LidarApiFacade lidarApiMock(Set<Geometry> lambert93Geometries, File file) {
+    LidarApiFacade lidarApiMock = mock();
 
     when(lidarApiMock.getUniqueLidarFilesUrls(any()))
         .thenReturn(Map.of("url", lambert93Geometries));

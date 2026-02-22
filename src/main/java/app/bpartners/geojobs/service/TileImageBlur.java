@@ -54,6 +54,12 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
               }
               var imageWithBlur =
                   filePolygonDrawer.apply(multiPolygonPixelCoordinates, WHITE, tile.getImage());
+              if (imageWithBlur == null) {
+                log.info(
+                    "Unable to blur image for tile x: {} / y: {}",
+                    tileCoordinates.getX(),
+                    tileCoordinates.getY());
+              }
               return tile.toBuilder().image(imageWithBlur).build();
             })
         .toList();
@@ -147,6 +153,13 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
                   }
                   var imageWithBlur =
                       filePolygonDrawer.apply(multiPolygonPixelCoordinates, WHITE, tile.getImage());
+                  if (imageWithBlur == null) {
+                    log.info(
+                        "Unable to blur image for detection (e2Id= {}) - tile x: {} / y: {}",
+                        detection.getEndToEndId(),
+                        tileCoordinates.getX(),
+                        tileCoordinates.getY());
+                  }
                   return tile.toBuilder().image(imageWithBlur).isBlured(isBlured).build();
                 })
             .toList();

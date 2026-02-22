@@ -1,0 +1,14 @@
+{
+  "emailReceiver": "<your-email-to-be-notified>",
+  "zoneName": "<your-zone-name>",
+  "geoJsonDelimitationType": "PARCEL",
+  "needsImageOutput": true,
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_TOITURE"
+    },
+    {
+      "modelName": "BP_VEGETATION"
+    }
+  ]
+}

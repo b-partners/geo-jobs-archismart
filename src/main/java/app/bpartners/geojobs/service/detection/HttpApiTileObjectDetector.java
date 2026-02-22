@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.detection;
 
+import static app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper.detectableObjectTypeForVegetationModel;
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
@@ -70,13 +71,24 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     String base64MaskData =
         mask == null ? null : Base64.getEncoder().encodeToString(readFileToByteArray(mask));
 
-    var payload =
+    var detectionPayloadBuilder =
         DetectionPayload.builder()
             .projectName(tileDetectionTask.getJobId())
             .fileName(file.getName())
             .base64ImgData(base64ImgData)
-            .base64MaskData(base64MaskData)
-            .build();
+            .base64MaskData(base64MaskData);
+
+    if (detectableObjectConfigurations.stream()
+        .anyMatch(
+            detectableObjectConfiguration ->
+                detectableObjectTypeForVegetationModel().stream()
+                    .map(detectableObjectType -> detectableObjectConfiguration.getObjectType())
+                    .toList()
+                    .contains(detectableObjectConfiguration.getObjectType()))) {
+      detectionPayloadBuilder.vegetation(true);
+    }
+
+    var payload = detectionPayloadBuilder.build();
     String requestBody = om.writeValueAsString(payload);
 
     HttpEntity<String> request = new HttpEntity<>(requestBody, headers);

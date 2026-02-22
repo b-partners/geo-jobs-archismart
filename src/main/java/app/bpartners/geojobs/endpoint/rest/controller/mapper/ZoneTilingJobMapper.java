@@ -129,25 +129,6 @@ public class ZoneTilingJobMapper {
   }
 
   private List<Feature> getFinalGeoJsonZone(Detection detection) {
-    var polygonGeoJsonZone = detection.getPolygonGeoJsonZone();
-    if (polygonGeoJsonZone != null) {
-      var geometryInstance = polygonGeoJsonZone.getGeometry().getActualInstance();
-      if (Objects.requireNonNull(geometryInstance) instanceof Polygon p) {
-        var geometryPolygon = geometryConverter.convertToPolygon(p.getCoordinates().getFirst());
-        var splitFeatures =
-            computeTileFeatureFromPolygon(
-                geometryPolygon, new HashMap<>(polygonGeoJsonZone.getProperties()));
-
-        // /!\ Be careful here, there may be a side effect
-        detection.setSplitPolygonGeoJsonZone(
-            splitFeatures.stream().map(FeatureMapper::toDomainFeature).toList());
-
-        return splitFeatures;
-      }
-      throw new IllegalStateException(
-          "Unsupported geometry type to retrieve final geo json zone " + geometryInstance);
-    }
-
     var internalGeoFeatures = detectionZoneToProcessProvider.applyInternalGeoFeatures(detection);
     var finalGeoJsonZone = new ArrayList<Feature>();
     internalGeoFeatures.forEach(

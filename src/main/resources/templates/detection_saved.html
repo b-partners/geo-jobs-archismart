@@ -68,7 +68,8 @@
     <ul>
         <li>Email associé : <span th:text="${detection.getEmailReceiver()}"></span></li>
         <li>Nom de zone fournie par le consommateur : <span th:text="${detection.getZoneName()}"></span></li>
-        <li>Model utilisé pour la détection : <span th:text="${detectableObjectModel.getModelName()}"></span></li>
+        <li>Model fourni pour la détection : <span th:text="${detectableObjectModel.getModelName()}"></span></li>
+        <li>Liste des modèles utilisés pour la détection : <span th:text="${detectableObjectModelListStringValue}"></span></li>
         <li>A besoin d'images : <span th:text="${detection.needsImageOutput()}"></span></li>
         <li>Format ZIP demandé : <span th:text="${detection.isOutputZipped()}"></span></li>
         <li>Configuration du geoServer :

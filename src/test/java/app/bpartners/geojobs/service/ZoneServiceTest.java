@@ -170,12 +170,14 @@ class ZoneServiceTest {
   SynchronousDetectionService synchronousDetectionServiceMock = mock();
   SynchronousDetectionValidator synchronousDetectionValidatorMock = mock();
   TileMultiPolygonFrame tileMultiPolygonFrameMock = mock();
+  DetectionZoneToProcessProvider detectionZoneToProcessProviderMock = mock();
   DetectionMachineDetectionCreation detectionMachineDetectionCreationMock =
       new DetectionMachineDetectionCreation(
           zoneDetectionJobServiceMock,
           detectionJobValidatorMock,
           detectionMachineDetectionStatisticsComputerMock,
-          geometryConverterMock);
+          geometryConverterMock,
+          detectionZoneToProcessProviderMock);
   private final String geoServerDummyUrl = "http://dummy";
   private final String e2ApiKey = randomUUID().toString();
   GeoServerConfiguration geoServerConfiguration = new GeoServerConfiguration(geoServerDummyUrl);
@@ -926,7 +928,11 @@ class ZoneServiceTest {
         detectionCreator.create(
             detectionId, randomUUID().toString(), randomUUID().toString(), null);
     var addresses = List.of("11-7 Rue Mot, 94120 Fontenay-sous-Bois, France");
-    var expected = detection.toBuilder().convertedAddresses(addresses).build();
+    var expected =
+        detection.toBuilder()
+            .detectableObjectModelList(List.of())
+            .convertedAddresses(addresses)
+            .build();
     when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(any(), any()))
         .thenReturn(Optional.of(detection));
     when(detectionRepositoryMock.save(any()))
@@ -945,6 +951,7 @@ class ZoneServiceTest {
             .geoJsonZone(null)
             .geoServerProperties(detection.getGeoServerProperties())
             .detectableObjectModel(detection.getDetectableObjectModel())
+            .detectableObjectModelList(detection.getDetectableObjectModelList())
             .step(
                 new DetectionStep()
                     .name(REQUEST_ACCEPTED)
@@ -997,6 +1004,7 @@ class ZoneServiceTest {
             .geoJsonZone(null)
             .geoServerProperties(detection.getGeoServerProperties())
             .detectableObjectModel(detection.getDetectableObjectModel())
+            .detectableObjectModelList(detection.getDetectableObjectModelList())
             .step(
                 new DetectionStep()
                     .name(REQUEST_ACCEPTED)
@@ -1053,6 +1061,7 @@ class ZoneServiceTest {
             .geoJsonZone(detection.getProvidedGeoJsonZone())
             .geoServerProperties(detection.getGeoServerProperties())
             .detectableObjectModel(detection.getDetectableObjectModel())
+            .detectableObjectModelList(detection.getDetectableObjectModelList())
             .step(
                 new DetectionStep()
                     .name(REQUEST_ACCEPTED)
@@ -1122,6 +1131,7 @@ class ZoneServiceTest {
             .geoJsonZone(featureCreator.defaultFeatures())
             .geoServerProperties(detection.getGeoServerProperties())
             .detectableObjectModel(detection.getDetectableObjectModel())
+            .detectableObjectModelList(detection.getDetectableObjectModelList())
             .step(
                 new DetectionStep()
                     .name(REQUEST_ACCEPTED)

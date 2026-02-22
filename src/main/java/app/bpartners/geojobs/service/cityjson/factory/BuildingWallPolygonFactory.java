@@ -3,8 +3,8 @@ package app.bpartners.geojobs.service.cityjson.factory;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.lidar.utils.MathUtilities.round2;
 
+import app.bpartners.geojobs.model.lidar.Polygon3DArea;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
-import app.bpartners.geojobs.service.lidar.model.geometry.Polygon3DArea;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

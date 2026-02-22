@@ -27,6 +27,9 @@ public class FilePolygonDrawer implements TriFunction<List<List<List<IntXY>>>, C
   @Override
   public File apply(List<List<List<IntXY>>> multiPolygonPixels, Color color, File originalFile) {
     BufferedImage originalImage = ImageIO.read(originalFile);
+    if (originalImage == null) {
+      return null;
+    }
     BufferedImage imageWithAlpha =
         new BufferedImage(
             originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_ARGB);

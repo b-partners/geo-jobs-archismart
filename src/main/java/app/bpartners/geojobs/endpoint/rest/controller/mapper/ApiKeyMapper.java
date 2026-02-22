@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.controller.mapper;
 
 import static app.bpartners.geojobs.repository.model.SurfaceUnit.SQUARE_METER;
+import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.rest.model.CreateApiKey;
@@ -40,10 +41,9 @@ public class ApiKeyMapper {
   private CommunityAuthorization toCommunityAuthorization(
       CreateApiKey createApiKey, String newCommunityId) {
     var maxSurface = createApiKey.getMaxSurface();
-    var newApiKey = randomUUID().toString();
+    var newAnalysisApiKeyValue = randomUUID().toString();
     return CommunityAuthorization.builder()
         .id(newCommunityId)
-        .dashboardApiKey(newApiKey)
         .name(createApiKey.getConsumerName())
         .email(createApiKey.getConsumerEmail())
         .detectableObjectTypes(null) // deprecated
@@ -57,7 +57,8 @@ public class ApiKeyMapper {
                 CommunityAuthorizationApiKey.builder()
                     .id(randomUUID().toString())
                     .communityOwnerId(newCommunityId)
-                    .keyValue(newApiKey)
+                    .keyValue(newAnalysisApiKeyValue)
+                    .creationDatetime(now())
                     .build()))
         .build();
   }

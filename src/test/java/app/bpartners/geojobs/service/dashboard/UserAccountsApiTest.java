@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.dashboard;
 
+import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.DASHBOARD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -106,7 +107,9 @@ public class UserAccountsApiTest extends FacadeIT {
             any(HttpMethod.class),
             any(HttpEntity.class),
             any(ParameterizedTypeReference.class)))
-        .thenReturn(new ResponseEntity(new UserApiKey("_new-user-api-key_"), HttpStatus.OK));
+        .thenReturn(
+            new ResponseEntity<>(
+                List.of(new UserApiKey("_new-user-api-key_", DASHBOARD)), HttpStatus.OK));
 
     var actual =
         subject.getOrGenerateApiKey("_user-email_", "_new-user-api-key_", "_admin-api-key_");

@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.unit;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.file.ExtensionGuesser;

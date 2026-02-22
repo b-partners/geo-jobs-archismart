@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service;
 
+import static app.bpartners.geojobs.repository.model.detection.DetectableType.ESPACE_VERT;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
@@ -94,11 +95,14 @@ class VggPolygonDrawer {
               }
 
               String label = region.has("label") ? region.get("label").asText() : "unknown";
-              var color = getColorFromDetectedType(DetectableType.valueOf(label.toUpperCase()));
+              var detectableType = DetectableType.valueOf(label.toUpperCase());
+              var color = getColorFromDetectedType(detectableType);
 
               Polygon polygon = new Polygon(xPoints, yPoints, numPoints);
               g2d.setColor(color != null ? Color.decode(color) : Color.RED);
-              g2d.drawPolygon(polygon);
+              if (detectableType != ESPACE_VERT) {
+                g2d.drawPolygon(polygon);
+              }
 
               // Retenir la première position pour l’adresse
               if (firstPolygonX == -1 && firstPolygonY == -1) {
@@ -136,33 +140,32 @@ class VggPolygonDrawer {
 
   private static String getColorFromDetectedType(DetectableType detectableType) {
     return switch (detectableType) {
-      case ROAD -> null;
-      case TOITURE_REVETEMENT -> "#DFFF00";
-      case PANNEAU_PHOTOVOLTAIQUE -> "#0E4EB3";
-      case PISCINE -> "#0DCBD2";
-      case PASSAGE_PIETON -> "#F5F586";
-      case ARBRE -> "#4BFF33";
-      case TROTTOIR -> "#54deb7";
-      case LINE -> "#ff3388";
-      case ESPACE_VERT -> "#e39724";
-      case VOIE_CARROSSABLE -> "TODO";
-      case PARKING -> "#8c463e";
-      case MOISISSURE, MOISISSURE_CLAIR, MOISISSURE_COULEUR, MOISISSURE_NOIRCIE -> "#5d8c3e";
-      case USURE, USURE_IMPORTANTE, USURE_LEGER -> "#3e718c";
-      case FISSURE_CASSURE -> "#733e8c";
-      case OBSTACLE -> "#3e8c88";
-      case CHEMINEE -> "#a32a55";
-      case HUMIDITE, HUMIDITE_CLAIR, HUMIDITE_INTENSE -> "#f2f538";
-      case RISQUE_FEU -> "#361c1b";
-      case VELUX -> "#c71497";
-      case BATI_TUILES -> "#47e66c";
-      case BATI_BETON -> "#425c20";
-      case BATI_ARDOISE -> "#5299bf";
-      case BATI_AUTRES -> "#de6ce0";
-      case TOMBE -> null;
-      case ESPACE_VERT_PARKING -> "#93c47d";
-      case BACKGROUND -> null;
-      default -> null;
+
+      // 🌿 Espaces verts & arbres
+      case ARBRE, ESPACE_VERT, ESPACE_VERT_PARKING -> "#4CAF50"; // vert
+
+      // 🍄 Moisissures
+      case MOISISSURE, MOISISSURE_CLAIR, MOISISSURE_COULEUR, MOISISSURE_NOIRCIE ->
+          "#9C27B0"; // violet
+
+      // 💧 Humidité
+      case HUMIDITE, HUMIDITE_CLAIR, HUMIDITE_INTENSE -> "#2196F3"; // bleu
+
+      // ⚠️ Usure
+      case USURE, USURE_IMPORTANTE, USURE_LEGER -> "#F44336"; // rouge
+
+      // 🏠 Toiture
+      case TOITURE_REVETEMENT,
+              CHEMINEE,
+              VELUX,
+              BATI_TUILES,
+              BATI_BETON,
+              BATI_ARDOISE,
+              BATI_AUTRES ->
+          "#795548"; // marron
+
+      // ⬜ Tout le reste
+      default -> "#9E9E9E"; // gris
     };
   }
 }

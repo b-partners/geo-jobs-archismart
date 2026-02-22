@@ -54,6 +54,7 @@ public class DetectionMapper {
   public static final String TROTTOIR_STRING_VALUE = "TROTTOIR";
   public static final String PARKING_STRING_VALUE = "PARKING";
   public static final String ESPACE_VERT_STRING_VALUE = "ESPACE_VERT";
+  public static final String GREEN_SPACE_STRING_VALUE = "GREEN_SPACE";
   public static final String OBSTACLE_STRING_VALUE = "OBSTACLE";
   public static final String CHEMINEE_STRING_VALUE = "CHEMINEE";
   public static final String VELUX_STRING_VALUE = "VELUX";
@@ -82,6 +83,8 @@ public class DetectionMapper {
   public static final String TREE_STRING_VALUE = "TREE";
   public static final String PATHWAY_STRING_VALUE = "PATHWAY";
   public static final String POOL_STRING_VALUE = "POOL";
+  public static final String BATI_STRING_VALUE = "BATI";
+  public static final String SIDEWALK_STRING_VALUE = "SIDEWALK";
 
   private final TileValidator tileValidator;
 
@@ -95,14 +98,18 @@ public class DetectionMapper {
     var tileCoordinates = tile.getCoordinates();
     tileValidator.accept(tile);
 
-    var fileData = detectionResponse.getRstRaw().values().stream().toList().getFirst();
+    var fileDataList = detectionResponse.getRstRaw().values().stream().toList();
 
-    List<DetectionResponse.ImageData.Region> regions =
-        fileData.getRegions().values().stream().toList();
-    List<DetectedObject> machineDetectedObjects =
-        regions.stream()
-            .map(region -> toDetectedObject(region, detectedTileId, tileCoordinates.getZ()))
-            .toList();
+    List<DetectedObject> machineDetectedObjects = new ArrayList<>();
+    fileDataList.forEach(
+        fileData -> {
+          List<DetectionResponse.ImageData.Region> regions =
+              fileData.getRegions().values().stream().toList();
+          machineDetectedObjects.addAll(
+              regions.stream()
+                  .map(region -> toDetectedObject(region, detectedTileId, tileCoordinates.getZ()))
+                  .toList());
+        });
 
     return MachineDetectedTile.builder()
         .id(detectedTileId)
@@ -153,14 +160,15 @@ public class DetectionMapper {
       case TREE_STRING_VALUE, ARBRE_STRING_VALUE -> DetectableType.ARBRE;
       case PATHWAY_STRING_VALUE, PASSAGE_PIETON_STRING_VALUE -> DetectableType.PASSAGE_PIETON;
       case POOL_STRING_VALUE, PISCINE_STRING_VALUE -> DetectableType.PISCINE;
+      case BATI_STRING_VALUE -> DetectableType.BATI;
       case BATI_TUILES_STRING_VALUE, ROOF_TUILES_STRING_VALUE -> DetectableType.BATI_TUILES;
       case BATI_BETON_STRING_VALUE -> DetectableType.BATI_BETON;
       case BATI_ARDOISE_STRING_VALUE, ROOF_ARDOISE_STRING_VALUE -> DetectableType.BATI_ARDOISE;
       case BATI_AUTRES_STRING_VALUE, ROOF_AUTRES_STRING_VALUE -> DetectableType.BATI_AUTRES;
       case LINE_STRING_VALUE -> DetectableType.LINE;
-      case TROTTOIR_STRING_VALUE -> DetectableType.TROTTOIR;
+      case TROTTOIR_STRING_VALUE, SIDEWALK_STRING_VALUE -> DetectableType.TROTTOIR;
       case PARKING_STRING_VALUE -> DetectableType.PARKING;
-      case ESPACE_VERT_STRING_VALUE -> DetectableType.ESPACE_VERT;
+      case ESPACE_VERT_STRING_VALUE, GREEN_SPACE_STRING_VALUE -> DetectableType.ESPACE_VERT;
       case OBSTACLE_STRING_VALUE -> DetectableType.OBSTACLE;
       case CHEMINEE_STRING_VALUE -> DetectableType.CHEMINEE;
       case VELUX_STRING_VALUE -> DetectableType.VELUX;

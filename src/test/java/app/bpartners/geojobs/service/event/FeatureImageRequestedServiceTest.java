@@ -32,6 +32,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +83,8 @@ class FeatureImageRequestedServiceTest {
     var polygonGeometryMock = mock(org.locationtech.jts.geom.Polygon.class);
     when(geometryConverterMock.convertToPolygon(any())).thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA + 1);
+    when(detectionMock.getProvidedGeoJsonZone())
+        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20))));
 
     assertDoesNotThrow(
         () -> subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(), 0)));
@@ -127,6 +130,9 @@ class FeatureImageRequestedServiceTest {
     when(geometryConverterMock.retrieveZonePolygonGeometryProcessed(any(), any()))
         .thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA);
+    when(detectionMock.getProvidedGeoJsonZone())
+        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20))));
+
     var tilesWithImagesMock =
         List.of(
             Tile.builder()

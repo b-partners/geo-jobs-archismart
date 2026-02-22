@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.unit;
 
 import static app.bpartners.geojobs.file.zip.FileZipper.ZIP_FILE_SUFFIX;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.conf.FacadeIT;

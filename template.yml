@@ -55,6 +55,7 @@ Globals:
         ROOF_COVERING_DETECTION_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/covering/detection/api/url}}'
         GOOGLE_CAPTCHA_SECRET: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/captcha/secret}}'
         GOOGLE_CAPTCHA_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/captcha/url}}'
+        OPEN_SOURCE_LIDAR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/open-source/lidar/api/url}}'
 
 
 Parameters:

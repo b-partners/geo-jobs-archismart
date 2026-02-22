@@ -1,0 +1,86 @@
+{
+  "type": "Feature",
+  "properties": {
+    "source": "3j45.04664937919546, 5.0584810297111344\r\n\r\n\r\n",
+    "Classe_note": null,
+    "id": "164",
+    "superficie_toiture_m2": null,
+    "Revetement_Principal": null,
+    "Revetement_secondaire": null,
+    "NB_Pans": null,
+    "Pente_°": null,
+    "Taux_Usure %": null,
+    "Taux_Moisissure %": null,
+    "Taux_Humidite %": null,
+    "Mutatuion": null,
+    "Obstacle /Velux": null,
+    "Obstacle/Velux_PV": null,
+    "Fissure/Cassure": null,
+    "Risque_feu": null,
+    "Note_degradation_globale %": null,
+    "Rapport_Analyse": null,
+    "Potentiel_solarisation_Toiture_m2": null,
+    "Potentiel_solarisation_Parking_PV_m2": null,
+    "Surface_PV_TOTALE_m2": null,
+    "bat_id": null
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          5.058089354644427,
+          45.04681931486205
+        ],
+        [
+          5.059139705809228,
+          45.04677254362802
+        ],
+        [
+          5.059126466088664,
+          45.046604166868846
+        ],
+        [
+          5.05905585424565,
+          45.04659793068305
+        ],
+        [
+          5.059038201284899,
+          45.04622687640525
+        ],
+        [
+          5.058746927432473,
+          45.04623623074434
+        ],
+        [
+          5.05878223335398,
+          45.04661352114625
+        ],
+        [
+          5.058433587379111,
+          45.04663222969647
+        ],
+        [
+          5.058393868217416,
+          45.04625182130612
+        ],
+        [
+          5.058120247325744,
+          45.046279884306585
+        ],
+        [
+          5.058151140007062,
+          45.04664158396928
+        ],
+        [
+          5.058080528164051,
+          45.04664782015029
+        ],
+        [
+          5.058089354644427,
+          45.04681931486205
+        ]
+      ]
+    ]
+  }
+}

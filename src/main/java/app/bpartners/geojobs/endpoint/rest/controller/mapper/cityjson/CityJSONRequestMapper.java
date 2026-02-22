@@ -1,11 +1,11 @@
 package app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson;
 
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
-import app.bpartners.geojobs.endpoint.rest.model.CityJSONRequest;
-import app.bpartners.geojobs.endpoint.rest.model.CreateCityJSONRequest;
-import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import java.util.List;
@@ -40,8 +40,41 @@ public class CityJSONRequestMapper {
         .cityJsons(restCityJsons);
   }
 
+  public ThreeDResponseStatus toRestThreeDResponseStatus(
+      app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest cityJSONRequest) {
+    var restDelimitations =
+        cityJSONRequest.getDelimitations() == null
+            ? null
+            : cityJSONRequest.getDelimitations().stream()
+                .map(FeatureMapper::toRestFeature)
+                .toList();
+
+    List<CityJSON> cityJsons =
+        cityJSONRequest.getCityJsons() == null ? null : cityJSONRequest.getCityJsons();
+    var restCityJsons =
+        cityJsons == null
+            ? null
+            : cityJsons.parallelStream()
+                .map(
+                    cityJson -> {
+                      var fileUrl = bucketComponent.presign(cityJson.getS3FileKey());
+                      return CityJSONMapper.toRestCityJsonFileUrl(cityJson, fileUrl);
+                    })
+                .toList();
+
+    return new ThreeDResponseStatus()
+        .id(cityJSONRequest.getId())
+        .delimitations(restDelimitations)
+        .status(CityJSONRequestStatusMapper.toGenericStatusRest(cityJSONRequest.getStatus()))
+        .delimitationObjectType(BUILDING_ROOF)
+        .delimitationType(PARCEL_FREE_DELIMITATION)
+        .cityJsonFileUrls(restCityJsons);
+  }
+
   public app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest createToDomain(
-      CreateCityJSONRequest createCityJSONRequest, String communityOwnerId) {
+      String requestIdentifier,
+      CreateCityJSONRequest createCityJSONRequest,
+      String communityOwnerId) {
     List<Feature> delimitations =
         createCityJSONRequest.getDelimitations() == null
             ? List.of()
@@ -49,10 +82,30 @@ public class CityJSONRequestMapper {
     var domainDelimitations = delimitations.stream().map(FeatureMapper::toDomainFeature).toList();
 
     return app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
-        .id(createCityJSONRequest.getId())
+        .id(requestIdentifier)
         .creationDatetime(now())
         .communityOwnerId(communityOwnerId)
         .delimitations(domainDelimitations)
+        .build();
+  }
+
+  public app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest createToDomain(
+      String requestIdentifier, ThreeDRequest createCityJSONRequest, String communityOwnerId) {
+    List<Feature> delimitations =
+        createCityJSONRequest.getDelimitations() == null
+            ? List.of()
+            : createCityJSONRequest.getDelimitations();
+    var domainDelimitations = delimitations.stream().map(FeatureMapper::toDomainFeature).toList();
+
+    return app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
+        .id(requestIdentifier)
+        .creationDatetime(now())
+        .communityOwnerId(communityOwnerId)
+        .delimitations(domainDelimitations)
+        .delimitationObjectType(
+            createCityJSONRequest.getDelimitationObjectType() == null
+                ? BUILDING_ROOF
+                : createCityJSONRequest.getDelimitationObjectType())
         .build();
   }
 }

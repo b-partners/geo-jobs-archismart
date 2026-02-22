@@ -16,6 +16,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -42,12 +44,12 @@ public class AreaPictureApi {
     try {
       response =
           restTemplate.exchange(endpoint, PUT, requestEntity, AreaPictureDetails.class).getBody();
-    } catch (Exception e) {
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.info(
           "Error during converting address {} with payload {}",
           crupdateAreaPictureDetails.address(),
           crupdateAreaPictureDetails);
-      throw new ApiException(SERVER_EXCEPTION, e);
+      throw e;
     }
     return response;
   }

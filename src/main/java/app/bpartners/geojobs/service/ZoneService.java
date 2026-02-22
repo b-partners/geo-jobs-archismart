@@ -8,6 +8,7 @@ import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PENDING;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PROCESSING;
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.CLIENT_EXCEPTION;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.HUMAN;
+import static app.bpartners.geojobs.service.detection.DetectionCreationMapper.getOrSetFeatureIdentifier;
 import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.GEO_JSON_BUCKET_FOLDER;
 import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.GEO_JSON_EXTENSION;
 import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.ZIP_BUCKET_FOLDER;
@@ -326,6 +327,10 @@ public class ZoneService {
             detectionToBeProcessed.toBuilder()
                 .providedGeoJsonZone(
                     validatedCreateDetection.getGeoJsonZone().stream()
+                        .peek(
+                            getOrSetFeatureIdentifier(
+                                app.bpartners.geojobs.endpoint.rest.model.Feature::getProperties,
+                                app.bpartners.geojobs.endpoint.rest.model.Feature::setProperties))
                         .map(FeatureMapper::toDomainFeature)
                         .toList())
                 .build());

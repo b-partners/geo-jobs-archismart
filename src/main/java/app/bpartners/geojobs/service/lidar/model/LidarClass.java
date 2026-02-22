@@ -4,8 +4,10 @@ import lombok.Getter;
 
 @Getter
 public enum LidarClass {
+  NOT_CLASSIFIED(1),
   SOL(2),
   BATIMENT(6),
+  DIVERS_BATI(67),
   OTHER(0);
 
   private final int value;

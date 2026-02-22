@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.dashboard;
 
+import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.conf.FacadeIT;
@@ -41,6 +42,6 @@ class UserAccountsApiIT extends FacadeIT {
   void update_api_key_ok() {
     var actual = subject.getOrGenerateApiKey("lou@bpartners.app", userApiKey, adminApiKey);
 
-    assertEquals(new UserApiKey(userApiKey), actual);
+    assertEquals(new UserApiKey(userApiKey, ANALYSIS), actual);
   }
 }

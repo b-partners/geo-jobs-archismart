@@ -8,6 +8,7 @@ import static app.bpartners.geojobs.service.lidar.model.LidarClass.OTHER;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import app.bpartners.geojobs.model.lidar.IndexedLas;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import java.io.File;
 import java.util.Set;

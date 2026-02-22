@@ -46,16 +46,16 @@ public class AreaRateComputerFacade {
 
   public Rate getRate() {
     var globalRate = getGlobalRate();
-    if (globalRate < 8) {
+    if (globalRate < 4) {
       return Rate.A;
     }
-    if (globalRate >= 8 && globalRate < 20) {
+    if (globalRate >= 4 && globalRate < 11) {
       return Rate.B;
     }
-    if (globalRate >= 20 && globalRate < 30) {
+    if (globalRate >= 11 && globalRate < 21) {
       return Rate.C;
     }
-    if (globalRate >= 30 && globalRate < 40) {
+    if (globalRate >= 21 && globalRate < 41) {
       return Rate.D;
     }
     return Rate.E;

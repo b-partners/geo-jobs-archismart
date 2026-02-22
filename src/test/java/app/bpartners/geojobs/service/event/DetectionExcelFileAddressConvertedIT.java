@@ -28,6 +28,7 @@ import app.bpartners.geojobs.sqs.EventProducerInvocationMock;
 import app.bpartners.geojobs.sqs.LocalEventQueue;
 import app.bpartners.geojobs.utils.detection.DetectionIT;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterEach;
@@ -97,12 +98,27 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
     var actualDetection = detectionRepository.findById(detection.getId()).orElseThrow();
     verify(zoneService, only()).processDetectionSteps(actualDetection);
     assertNotNull(actualDetection.getMultiPolygonGeoJsonZone());
+    assertTrue(
+        actualDetection.getMultiPolygonGeoJsonZone().stream()
+            .allMatch(
+                feature ->
+                    feature.getProperties() != null
+                        && feature.getProperties().containsKey("feature_id")));
     assertEquals(
         List.of(
             someRestFeature(),
             someRestFeature()), // restFeature as getMultiPolygonGeoJsonZone returns rest Feature
         // not domain
-        actualDetection.getMultiPolygonGeoJsonZone());
+        actualDetection.getMultiPolygonGeoJsonZone().stream()
+            .map(
+                feature ->
+                    new app.bpartners.geojobs.endpoint.rest.model.Feature()
+                        .type(feature.getType())
+                        .properties(
+                            new HashMap<>()) // ignore properties as id generated randomly and
+                        // mismatched
+                        .geometry(feature.getGeometry()))
+            .toList());
     assertEquals(
         "http://dummy-geoserver.com", // Set from EnvConf
         actualDetection.getGeoServerProperties().getGeoServerUrl());
@@ -128,6 +144,7 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
   private Feature someFeature() {
     return Feature.builder()
         .zoom(20)
+        .properties(new HashMap<>())
         .geometry(
             Feature.FeatureGeometry.builder()
                 .geometryType(MULTI_POLYGON)

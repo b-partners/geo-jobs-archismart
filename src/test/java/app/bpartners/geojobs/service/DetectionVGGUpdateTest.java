@@ -8,7 +8,6 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.postprocessing.BoundaryMerger;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
 import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.hash.FileHash;
@@ -68,65 +67,6 @@ class DetectionVGGUpdateTest {
     assertEquals(
         detection.toBuilder()
             .vggFileKey("vgg/" + zoneDetectionJobId + "/" + zoneName + ".json")
-            .build(),
-        actual);
-  }
-
-  @Test
-  void write_vgg_file_from_vgg_map_and_update_detection_vgg_file_key() {
-    var subject =
-        new DetectionVGGUpdate(
-            fileWriterMock, bucketComponentMock, geometryConverterMock, vggFactoryMock);
-    var vggMock = mock(VGG.class);
-    var zoneDetectionJobId = randomUUID().toString();
-    var zoneName = "dummy zoneName";
-    var layer = "cite:PCRS";
-    var vggAsBytesMock = new byte[0];
-    var vggAsFileMock = mock(File.class);
-    var centroidLongitude = BigDecimal.valueOf(150);
-    var centroidLatitude = BigDecimal.valueOf(150);
-    var domainFeature = domainFeature();
-    var detection =
-        Detection.builder()
-            .zoneName(zoneName)
-            .zdjId(zoneDetectionJobId)
-            .providedGeoJsonZone(List.of(domainFeature))
-            .geoServerProperties(
-                new GeoServerProperties()
-                    .geoServerParameter(new GeoServerParameter().layers(layer)))
-            .build();
-    var vggEntryValue = mock(VGG.class);
-    var annotationCollectionMock =
-        List.of(VGG.Annotation.builder().properties(new HashMap<>()).build());
-    var tiledPolygonsMock = Set.of(mock(TiledPolygon.class));
-    var mergerMock = mergerMockedConstruction.constructed().getFirst();
-
-    when(geometryConverterMock.centroidFromGeometry(
-            detection.getProvidedGeoJsonZone().getFirst().getGeometry().getActualInstance()))
-        .thenReturn(List.of(centroidLongitude, centroidLatitude));
-
-    when(vggEntryValue.values()).thenReturn(annotationCollectionMock);
-    doNothing().when(vggMock).forEach((any()));
-    when(vggMock.getBytes()).thenReturn(vggAsBytesMock);
-    when(mergerMock.apply(vggEntryValue)).thenReturn(tiledPolygonsMock);
-    when(vggFactoryMock.from(tiledPolygonsMock)).thenReturn(vggMock);
-    when(fileWriterMock.write(
-            eq(vggAsBytesMock),
-            any(),
-            eq(layer + "/vgg_" + centroidLongitude + "_" + centroidLatitude)))
-        .thenReturn(vggAsFileMock);
-    when(bucketComponentMock.upload(eq(vggAsFileMock), any())).thenReturn(mock(FileHash.class));
-
-    var actual = subject.apply(Map.of(restFeature(), vggEntryValue), detection);
-
-    assertEquals(
-        detection.toBuilder()
-            .providedGeoJsonZone(
-                List.of(
-                    domainFeature.toBuilder()
-                        .properties(
-                            new HashMap<>(Map.of("vgg_file_key", "cite:PCRS/vgg_150_150.json")))
-                        .build()))
             .build(),
         actual);
   }

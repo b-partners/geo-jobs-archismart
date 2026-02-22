@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.lidar.utils;
 
-import app.bpartners.geojobs.service.lidar.model.geometry.LasPointGeometry;
+import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;

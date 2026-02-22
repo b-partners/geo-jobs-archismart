@@ -8,12 +8,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
+import lombok.Setter;
 
-public final class FeatureWithDelimitation {
+public class FeatureWithDelimitation {
   @JsonProperty("feature")
   private Feature feature;
 
   @JsonProperty("delimitations")
+  @Setter
   private List<Feature> delimitations;
 
   public FeatureWithDelimitation() {}

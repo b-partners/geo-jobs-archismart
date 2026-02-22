@@ -1,25 +1,13 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
-import static java.util.stream.Collectors.toSet;
-
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofSlopeAndHeightRequested;
-import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.event.model.FeatureRoofSlopeAndHeightRequested;
 import app.bpartners.geojobs.repository.DetectionRepository;
-import app.bpartners.geojobs.repository.model.Feature;
-import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
-import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
-import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor.RoofsAnalysisResult;
-import app.bpartners.geojobs.service.lidar.model.geometry.planes.Plane3D;
-import jakarta.persistence.EntityManager;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -30,12 +18,8 @@ public class DetectionRoofSlopeAndHeightRequestedService
   public static final String ROOF_SLOPE_PROPERTY_NAME = "roof_slope_in_degrees";
   public static final String ROOF_HEIGHT_PROPERTY_NAME = "roof_height_in_meters";
   public static final String LIDAR_DATA_STATUS_PROPERTY_NAME = "lidar_data_status";
-
   private final DetectionRepository detectionRepository;
-  private final LidarRoofsAnalysisProcessor lidarRoofsAnalysisProcessor;
-  private final FeatureMapper featureMapper;
-  private final EntityManager entityManager;
-  private final FeatureVggRequestedService zoneVggRequestedService;
+  private final EventProducer eventProducer;
 
   @Override
   public void accept(DetectionRoofSlopeAndHeightRequested requested) {
@@ -51,71 +35,12 @@ public class DetectionRoofSlopeAndHeightRequestedService
       throw new IllegalArgumentException(
           "FeatureWithDelimitation is null for detection={" + detectionIdentifier + "}");
     }
-
-    if (isAlreadyProcessedAsSuccess(featureWithDelimitations)) {
-      log.warn("Detection={{}} lidar properties has already been processed", detectionIdentifier);
-      return;
+    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
+    for (int i = 0; i < providedGeoJsonZone.size(); i++) {
+      eventProducer.accept(
+          List.of(
+              new FeatureRoofSlopeAndHeightRequested(
+                  detectionIdentifier, providedGeoJsonZone.get(i), i)));
     }
-
-    var roofGeometries = toGeometries(featureWithDelimitations);
-    var roofsAnalysesResult = lidarRoofsAnalysisProcessor.from(roofGeometries);
-    var featuresWithDelimitationsWithRoofProperties =
-        addRoofProperties(featureWithDelimitations, roofsAnalysesResult);
-
-    // Clear cache as between process begin and end, detection may be updated
-    entityManager.clear();
-    var actualDetection = detectionRepository.findById(detectionIdentifier).orElseThrow();
-    detectionRepository.save(
-        actualDetection.toBuilder()
-            .featureWithDelimitations(featuresWithDelimitationsWithRoofProperties)
-            .build());
-
-    zoneVggRequestedService.accept(
-        new FeatureVggRequested(detection.getId(), detection.getPolygonGeoJsonZone(), 0));
-  }
-
-  private boolean isAlreadyProcessedAsSuccess(
-      List<FeatureWithDelimitation> featureWithDelimitations) {
-    return featureWithDelimitations.stream()
-        .map(FeatureWithDelimitation::delimitations)
-        .flatMap(List::stream)
-        .anyMatch(
-            feature ->
-                feature.getProperties() != null
-                    && AVAILABLE.equals(
-                        feature.getProperties().get(LIDAR_DATA_STATUS_PROPERTY_NAME)));
-  }
-
-  private Set<Geometry> toGeometries(List<FeatureWithDelimitation> featureWithDelimitations) {
-    Set<Feature> flattedFeatures =
-        featureWithDelimitations.stream()
-            .map(FeatureWithDelimitation::delimitations)
-            .flatMap(List::stream)
-            .collect(toSet());
-    return flattedFeatures.stream().map(featureMapper::domainToGeometry).collect(toSet());
-  }
-
-  private List<FeatureWithDelimitation> addRoofProperties(
-      List<FeatureWithDelimitation> featureWithDelimitations,
-      RoofsAnalysisResult roofsAnalysisResult) {
-    for (var featureWithDelimitation : featureWithDelimitations) {
-      for (var delimitation : featureWithDelimitation.delimitations()) {
-        if (delimitation.getProperties() == null) {
-          delimitation.setProperties(new HashMap<>());
-        }
-
-        var properties = delimitation.getProperties();
-        var roofProperties =
-            roofsAnalysisResult.getProperties(featureMapper.domainToGeometry(delimitation));
-
-        var planes = roofProperties.getPlanes();
-        var firstPlane = planes.isEmpty() ? Plane3D.empty() : planes.getFirst();
-        properties.put(ROOF_SLOPE_PROPERTY_NAME, firstPlane.getSlopeInDegrees().getValue());
-        properties.put(ROOF_HEIGHT_PROPERTY_NAME, roofProperties.getHeightInMeters().getValue());
-        properties.put(LIDAR_DATA_STATUS_PROPERTY_NAME, roofProperties.getData().status());
-      }
-    }
-
-    return featureWithDelimitations;
   }
 }

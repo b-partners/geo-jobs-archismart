@@ -5,13 +5,13 @@ import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
 import static java.util.stream.Collectors.toSet;
 
+import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
-import app.bpartners.geojobs.service.lidar.api.LidarApi;
+import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.service.lidar.model.*;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
-import app.bpartners.geojobs.service.lidar.model.geometry.LasPointGeometry;
+import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.LidarRoofData;
-import app.bpartners.geojobs.service.lidar.model.geometry.roof.RoofProperties;
 import com.github.mreutegg.laszip4j.LASReader;
 import java.io.File;
 import java.io.IOException;
@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Component;
 
@@ -26,13 +27,14 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class LidarRoofsAnalysisProcessor {
-  private final LidarApi lidarApi;
+  private final LidarApiFacade lidarApi;
   private final GeometrySquareMeterArea projector;
 
   private static final int ROOF_GROUND_BUFFER_METERS = 3;
   private static final short ROOF_LIDAR_CLASS_VALUE = 6;
   private static final short GROUND_LIDAR_CLASS_VALUE = 2;
   private static final short NOT_CLASSIFIED_LIDAR_CLASS_VALUE = 1;
+  private static final short DIVERS_BATI_LIDAR_CLASS_VALUE = 67;
 
   public RoofsAnalysisResult from(Set<Geometry> roofsEPSG4326) {
     var polygonWithProperties =
@@ -48,7 +50,7 @@ public class LidarRoofsAnalysisProcessor {
     try {
       Map<String, Set<Geometry>> lidarFilesUrl =
           lidarApi.getUniqueLidarFilesUrls(
-              allRoofsData.stream().map(data -> data.roof().boundaryLambert93()).collect(toSet()));
+              allRoofsData.stream().map(data -> data.roof().boundaryEPSG4326()).collect(toSet()));
 
       if (lidarFilesUrl.isEmpty()) {
         return new RoofsAnalysisResult(
@@ -92,7 +94,7 @@ public class LidarRoofsAnalysisProcessor {
                     .anyMatch(
                         g ->
                             g.getEnvelopeInternal()
-                                .equals(data.roof().boundaryLambert93().getEnvelopeInternal())))
+                                .equals(data.roof().boundaryLambert93Envelope())))
         .collect(toSet());
   }
 
@@ -122,7 +124,9 @@ public class LidarRoofsAnalysisProcessor {
           var groundPoint = new LasPointGeometry(point, lasHeader);
           handleGroundPoint(groundPoint, roofsDataFromFile);
           break;
-        case ROOF_LIDAR_CLASS_VALUE, NOT_CLASSIFIED_LIDAR_CLASS_VALUE:
+        case ROOF_LIDAR_CLASS_VALUE,
+            DIVERS_BATI_LIDAR_CLASS_VALUE,
+            NOT_CLASSIFIED_LIDAR_CLASS_VALUE:
           var roofPoint = new LasPointGeometry(point, lasHeader);
           handleRoofPoint(roofPoint, roofsDataFromFile);
           break;
@@ -139,14 +143,13 @@ public class LidarRoofsAnalysisProcessor {
   private static void handleGroundPoint(
       LasPointGeometry groundPoint, Set<LidarRoofData> roofsData) {
     for (var roofData : roofsData) {
-      var groundLambert93Geometry = roofData.ground().boundaryLambert93();
+      var envelope = roofData.ground().boundaryLambert93Envelope();
 
-      if (!groundLambert93Geometry
-          .getEnvelopeInternal()
-          .contains(groundPoint.getX(), groundPoint.getY())) {
+      if (isOutsideEnvelope(envelope, groundPoint)) {
         continue;
       }
 
+      var groundLambert93Geometry = roofData.ground().boundaryLambert93();
       if (groundLambert93Geometry.contains(groundPoint)) {
         roofData.ground().points().add(groundPoint);
         break;
@@ -156,14 +159,13 @@ public class LidarRoofsAnalysisProcessor {
 
   private static void handleRoofPoint(LasPointGeometry roofPoint, Set<LidarRoofData> roofsData) {
     for (var roofData : roofsData) {
-      var roofLambert93Geometry = roofData.roof().boundaryLambert93();
+      var envelope = roofData.roof().boundaryLambert93Envelope();
 
-      if (!roofLambert93Geometry
-          .getEnvelopeInternal()
-          .contains(roofPoint.getX(), roofPoint.getY())) {
+      if (isOutsideEnvelope(envelope, roofPoint)) {
         continue;
       }
 
+      var roofLambert93Geometry = roofData.roof().boundaryLambert93();
       if (roofLambert93Geometry.contains(roofPoint)) {
         roofData.roof().points().add(roofPoint);
         break;
@@ -216,9 +218,19 @@ public class LidarRoofsAnalysisProcessor {
     }
   }
 
+  private static boolean isOutsideEnvelope(Envelope envelope, LasPointGeometry point) {
+    double x = point.getX();
+    double y = point.getY();
+
+    return x < envelope.getMinX()
+        || x > envelope.getMaxX()
+        || y < envelope.getMinY()
+        || y > envelope.getMaxY();
+  }
+
   public record RoofsAnalysisResult(Map<String, LidarRoofData> roofsData) {
-    public RoofProperties getProperties(Geometry roofEPSG4326) {
-      return new RoofProperties(getData(roofEPSG4326));
+    public Building3DProperties getProperties(Geometry roofEPSG4326) {
+      return new Building3DProperties(getData(roofEPSG4326));
     }
 
     public LidarRoofData getData(Geometry roofEPSG4326) {

@@ -27,6 +27,9 @@ public class DetectionPayload {
   @JsonProperty("base64_img_data")
   private String base64ImgData;
 
+  @JsonProperty("vegetation")
+  private Boolean vegetation;
+
   @JsonProperty("base64_mask_data")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String base64MaskData;

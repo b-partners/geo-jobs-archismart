@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.lidar.model.geometry;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import app.bpartners.geojobs.model.lidar.Polygon3DArea;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 

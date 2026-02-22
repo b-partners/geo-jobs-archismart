@@ -73,6 +73,7 @@ public class DetectionSavedService implements Consumer<DetectionSaved> {
     var shapeFilePresignURL = getShapeFilePresignURL(detection, bucketComponent);
     var excelFilePresignURL = getExcelFilePresignURL(detection, bucketComponent);
     var detectableObjectModel = detection.getDetectableObjectModel();
+    var detectableObjectModelList = detection.getDetectableObjectModelList();
     var geoServerProperties = detection.getGeoServerProperties();
     var geoServerParameter =
         getGeoServerParameter(detectionGeoServerParameterModelMapper, geoServerProperties);
@@ -81,6 +82,13 @@ public class DetectionSavedService implements Consumer<DetectionSaved> {
     var htmlTemplateParser = new HTMLTemplateParser();
     Context context = new Context();
     context.setVariable("detectableObjectModel", detectableObjectModel);
+    context.setVariable(
+        "detectableObjectModelListStringValue",
+        detectableObjectModelList == null || detectableObjectModelList.isEmpty()
+            ? "Aucun"
+            : detectableObjectModelList.stream()
+                .map(objectModel -> objectModel.getModelName().toString())
+                .toList());
     context.setVariable(
         "geoServerParameterStringMapValues", requireNonNullElse(geoServerParameter, List.of()));
     context.setVariable("geoServerUrl", geoServerUrl);
