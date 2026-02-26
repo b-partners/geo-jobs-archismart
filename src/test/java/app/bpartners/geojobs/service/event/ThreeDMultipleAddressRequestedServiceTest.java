@@ -5,6 +5,8 @@ import static app.bpartners.geojobs.model.DelimitationObjectType.BUILDING;
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.POINTS_CLOUD_PRE_PROCESSING;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.REQUEST_ACCEPTED;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,7 +68,8 @@ class ThreeDMultipleAddressRequestedServiceTest {
         .apply(any(), any(), any()); // refers to Point conversion
     verify(eventProducerMock, never()).accept(any());
     assertEquals(
-        CityJSONRequest.builder().status(FAILED).build(), savedFailedRequestCaptor.getValue());
+        CityJSONRequest.builder().status(FAILED).step(REQUEST_ACCEPTED).build(),
+        savedFailedRequestCaptor.getValue());
   }
 
   @Test
@@ -106,6 +109,7 @@ class ThreeDMultipleAddressRequestedServiceTest {
             .id(requestIdentifier)
             .communityOwnerId(communityOwnerId)
             .delimitations(List.of(convertedAddressFeature))
+            .step(POINTS_CLOUD_PRE_PROCESSING)
             .build();
     when(cityJSONRequestRepositoryMock.findByIdAndCommunityOwnerId(
             requestIdentifier, communityOwnerId))

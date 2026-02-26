@@ -2,6 +2,8 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.PROCESSING;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.POINTS_CLOUD_PRE_PROCESSING;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.REQUEST_ACCEPTED;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,6 +69,7 @@ class CityJSONRequestServiceTest {
     assertEquals(
         cityJSONRequest.toBuilder()
             .status(PROCESSING)
+            .step(POINTS_CLOUD_PRE_PROCESSING)
             .featuresWithDelimitation(
                 List.of(
                     new FeatureWithDelimitation(
@@ -110,7 +113,12 @@ class CityJSONRequestServiceTest {
 
     verify(eventProducerMock, never()).accept(any());
     assertEquals(
-        cityJSONRequest.toBuilder().status(FAILED).featuresWithDelimitation(null).build(), actual);
+        cityJSONRequest.toBuilder()
+            .status(FAILED)
+            .step(REQUEST_ACCEPTED)
+            .featuresWithDelimitation(null)
+            .build(),
+        actual);
   }
 
   @SneakyThrows
@@ -146,7 +154,11 @@ class CityJSONRequestServiceTest {
     var actual = subject.process(cityJSONRequest);
 
     assertEquals(
-        cityJSONRequest.toBuilder().status(PROCESSING).featuresWithDelimitation(null).build(),
+        cityJSONRequest.toBuilder()
+            .status(PROCESSING)
+            .step(REQUEST_ACCEPTED)
+            .featuresWithDelimitation(null)
+            .build(),
         actual);
     var listCaptor = ArgumentCaptor.forClass(List.class);
     verify(eventProducerMock, times(1)).accept(listCaptor.capture());

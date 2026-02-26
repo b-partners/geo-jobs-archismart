@@ -61,14 +61,39 @@ public class CityJSONRequestMapper {
                       return CityJSONMapper.toRestCityJsonFileUrl(cityJson, fileUrl);
                     })
                 .toList();
-
+    var step = toRestStep(cityJSONRequest);
     return new ThreeDResponseStatus()
         .id(cityJSONRequest.getId())
         .delimitations(restDelimitations)
+        .step(step)
         .status(CityJSONRequestStatusMapper.toGenericStatusRest(cityJSONRequest.getStatus()))
         .delimitationObjectType(BUILDING_ROOF)
         .delimitationType(PARCEL_FREE_DELIMITATION)
         .cityJsonFileUrls(restCityJsons);
+  }
+
+  private ThreeDRequestStep toRestStep(
+      app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest cityJSONRequest) {
+    if (cityJSONRequest.getStep() == null) {
+      return null;
+    }
+    switch (cityJSONRequest.getStep()) {
+      case REQUEST_ACCEPTED -> {
+        return ThreeDRequestStep.REQUEST_ACCEPTED;
+      }
+      case POINTS_CLOUD_PRE_PROCESSING -> {
+        return ThreeDRequestStep.POINTS_CLOUD_PRE_PROCESSING;
+      }
+      case GEOMETRY_CONSTRUCTION -> {
+        return ThreeDRequestStep.GEOMETRY_CONSTRUCTION;
+      }
+      case POST_PROCESSING -> {
+        return ThreeDRequestStep.POST_PROCESSING;
+      }
+      default ->
+          throw new IllegalStateException(
+              "Unexpected 3d request step value: " + cityJSONRequest.getStep());
+    }
   }
 
   public app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest createToDomain(

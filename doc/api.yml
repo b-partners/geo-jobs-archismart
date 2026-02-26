@@ -7,6 +7,7 @@ info:
     
     # Versioning
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+    - [v1.3.2 (2026-02-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-2-api.yml)
     - [v1.3.1 (2026-02-20)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-1-api.yml) *(current)*
     - [v1.3.0 (2026-02-16)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-api.yml) 
     - [v1.2.0 (2025-12-10)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-2-api.yml) 
@@ -84,10 +85,10 @@ info:
     
     ### Request 3D city models from textual, human-readable, addresses
     1. Submit a 3D request through `POST /3d/{id}/addresses` where `{id}` is yours to be created
-    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_addresses_requestexample.json).
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_addresses_request_example.json).
     2. Track the progress of your 3D request through `GET /3d/{id}`.
     When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files.
-    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_example.json).
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
     3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
     Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
     
@@ -96,7 +97,7 @@ info:
     using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_point_delimitation_request_v1_3_1_example.json).
     2. Track the progress of your 3D request through `GET /3d/{id}`.
     When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files. 
-    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_example.json).
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
     3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
     Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
     
@@ -105,7 +106,7 @@ info:
     using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_delimitation_request_v1_3_1_example.json).
     2. Track the progress of your 3D request through `GET /3d/{id}`.
     When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files. 
-    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_example.json).
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
     3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
     Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
 
@@ -1432,6 +1433,7 @@ components:
       summary: 3D response template with SUCCEEDED status
       value:
         id: "<your-id>"
+        step: "POST_PROCESSING"
         status:
           progression: "FINISHED"
           health: "SUCCEEDED"
@@ -1440,15 +1442,17 @@ components:
           - type: "Feature"
             geometry:
               type: "Polygon"
-              coordinates:
-                - [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
+              coordinates: [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
         cityJsonFileUrls:
           - id: "<random-id>"
-            url: "https://prod-bucket-geo-jobs-bucket.s3.eu-west-3.amazonaws.com/city_jsons/5ecb363a-b1f5-4b47-b767-ec746ddfcf9a"
+            url: "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json"
+        delimitationObjectType: "BUILDING_ROOF"
+        delimitationType: "PARCEL_FREE_DELIMITATION"
     ThreeDResponseWithProcessingStatusExample:
       summary: 3D response template with PROCESSING status
       value:
         id: "<your-id>"
+        step: "REQUEST_ACCEPTED"
         status:
           progression: "PROCESSING"
           health: "UNKNOWN"
@@ -1457,9 +1461,10 @@ components:
           - type: "Feature"
             geometry:
               type: "Polygon"
-              coordinates:
-                - [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
+              coordinates: [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
         cityJsonFileUrls: null
+        delimitationObjectType: "BUILDING_ROOF"
+        delimitationType: "PARCEL_FREE_DELIMITATION"
   responses:
     400:
       description: Bad request
@@ -2376,10 +2381,19 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/Status'
+        step:
+          $ref: '#/components/schemas/ThreeDRequestStep'
         cityJsonFileUrls:
           type: array
           items:
             $ref: '#/components/schemas/CityJsonFileUrl'
+    ThreeDRequestStep:
+      type: string
+      enum:
+        - REQUEST_ACCEPTED
+        - POINTS_CLOUD_PRE_PROCESSING
+        - GEOMETRY_CONSTRUCTION
+        - POST_PROCESSING
     CityJSONRequest:
       deprecated: true
       type: object

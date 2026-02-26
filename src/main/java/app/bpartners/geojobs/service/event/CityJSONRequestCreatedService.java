@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.*;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.*;
 import static java.util.stream.Collectors.toSet;
 
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
@@ -11,6 +12,7 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus;
+import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
@@ -50,24 +52,31 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
       var requestDelimitations = getRequestDelimitations(request);
       var lidarAnalysisResult =
           lidarProcessor.apply(toGeometryWithProperties(requestDelimitations));
+
       if (isError(lidarAnalysisResult)) {
         log.error("All data from lidar analysis was failed");
-        updateStatus(request, FAILED);
+        updateStatus(request, FAILED, POINTS_CLOUD_PRE_PROCESSING);
         return;
       }
 
       if (isUnavailable(lidarAnalysisResult)) {
-        updateStatus(request, UNAVAILABLE);
+        updateStatus(request, UNAVAILABLE, POINTS_CLOUD_PRE_PROCESSING);
         return;
       }
 
       var cityJson = toCityJSON(request, lidarAnalysisResult);
-      var updated = request.toBuilder().status(FINISHED).cityJsons(List.of(cityJson)).build();
+
+      var updated =
+          request.toBuilder()
+              .status(FINISHED)
+              .step(GEOMETRY_CONSTRUCTION)
+              .cityJsons(List.of(cityJson))
+              .build();
       entityManager.clear();
       cityJSONRequestRepository.save(updated);
     } catch (Exception e) {
       log.error(e.getMessage());
-      updateStatus(request, FAILED);
+      updateStatus(request, FAILED, GEOMETRY_CONSTRUCTION);
     }
   }
 
@@ -116,8 +125,9 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
         .collect(toSet());
   }
 
-  private void updateStatus(CityJSONRequest request, CityJSONRequestStatus status) {
-    var updatedStatus = request.toBuilder().status(status).build();
+  private void updateStatus(
+      CityJSONRequest request, CityJSONRequestStatus status, CityJSONRequestStep step) {
+    var updatedStatus = request.toBuilder().status(status).step(step).build();
     entityManager.clear();
     cityJSONRequestRepository.save(updatedStatus);
   }

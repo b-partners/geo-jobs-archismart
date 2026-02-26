@@ -4,6 +4,8 @@ import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.POINT;
 import static app.bpartners.geojobs.model.DelimitationObjectType.BUILDING;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.POINTS_CLOUD_PRE_PROCESSING;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.REQUEST_ACCEPTED;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
@@ -62,13 +64,17 @@ public class ThreeDMultipleAddressRequestedService
       log.error(
           "Conversion of addresses to features failed with API exception from dashboard {}",
           e.getMessage());
-      cityJSONRequestRepository.save(persistedRequest.toBuilder().status(FAILED).build());
+      cityJSONRequestRepository.save(
+          persistedRequest.toBuilder().step(REQUEST_ACCEPTED).status(FAILED).build());
       return;
     }
 
     var saved =
         cityJSONRequestRepository.save(
-            persistedRequest.toBuilder().delimitations(convertedFeatures).build());
+            persistedRequest.toBuilder()
+                .delimitations(convertedFeatures)
+                .step(POINTS_CLOUD_PRE_PROCESSING)
+                .build());
 
     eventProducer.accept(
         List.of(
