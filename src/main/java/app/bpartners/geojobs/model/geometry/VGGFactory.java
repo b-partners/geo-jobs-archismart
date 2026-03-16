@@ -1,17 +1,17 @@
 package app.bpartners.geojobs.model.geometry;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.model.geometry.area.AreaRateComputerFacade.*;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.*;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.*;
 import static java.util.UUID.randomUUID;
-import static java.util.stream.Collectors.flatMapping;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
+import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
 import app.bpartners.geojobs.model.geometry.area.AreaRateComputerFacade;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
@@ -27,41 +27,62 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.geom.util.AffineTransformation;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @AllArgsConstructor
-public class VGGFactory implements Converter<Set<Polygon>, VGG> {
+public class VGGFactory {
+  private static final String VGG_ANNOTATION_FILETYPE = "png";
   private static final int DEFAULT_IMG_SIZE = 1024;
   private final TileCoordinatesPolygonIntersection tilePolygonIntersection;
   private final GeometryConverter geometryConverter;
   private final GeometrySquareMeterArea geometrySquareMeterArea;
   private final ObjectMapper objectMapper;
+  private final DetectionBoundaryMerger merger;
 
-  @Override
-  public VGG convert(Set<Polygon> polygons) {
+  public VGG convert(VGG originalVgg, Set<Polygon> polygons) {
     var vgg = new VGG();
-    for (Polygon p : polygons) {
-      var metadata = (HashMap) p.getUserData();
-      var key = metadata.get("filename").toString();
-      var label = metadata.get("label").toString();
-      var confidence = metadata.get("confidence");
-      var confidenceAsDouble =
-          confidence == null ? null : Double.parseDouble(confidence.toString());
-      Map<String, VGG.Annotation.Region> newRegions = new HashMap<>();
-      newRegions.put(randomUUID().toString(), toVGGRegion(label, confidenceAsDouble, null, p));
-      if (vgg.containsKey(key)) {
-        var annotation = vgg.get(key);
-        newRegions.putAll(annotation.getRegions());
-        annotation.setRegions(newRegions);
-        vgg.put(key, annotation);
-      }
-      var annotation = VGG.Annotation.builder().filename(key).regions(newRegions).build();
-      vgg.putIfAbsent(key, annotation);
-    }
+    originalVgg.forEach(
+        (key, originalAnnotation) -> {
+          Map<String, Object> properties = originalAnnotation.getProperties();
+          for (Polygon p : polygons) {
+            var metadata = (Map<String, Object>) p.getUserData();
+            var label = metadata.get("label").toString();
+            var confidence = metadata.get("confidence");
+            var confidenceAsDouble =
+                confidence == null ? null : Double.parseDouble(confidence.toString());
+            Map<String, VGG.Annotation.Region> newRegions = new HashMap<>();
+            newRegions.put(
+                randomUUID().toString(), toVGGRegion(label, confidenceAsDouble, null, p));
+            if (vgg.containsKey(key)) {
+              var annotation = vgg.get(key);
+              newRegions.putAll(annotation.getRegions());
+              annotation.setRegions(newRegions);
+              annotation.setProperties(properties);
+              vgg.put(key, annotation);
+            }
+            var annotation =
+                VGG.Annotation.builder()
+                    .filename(key)
+                    .properties(properties)
+                    .regions(newRegions)
+                    .build();
+            vgg.putIfAbsent(key, annotation);
+          }
+        });
+
     return vgg;
+  }
+
+  public Set<VGG> unifyVggSet(Collection<VGG> vggCollection) {
+    return vggCollection.stream().map(this::unifyVgg).collect(toSet());
+  }
+
+  public VGG unifyVgg(VGG vgg) {
+    var mergedTiledPolygons = merger.applyVgg(vgg);
+    var mergedPolygons = mergedTiledPolygons.stream().map(TiledPolygon::polygon).collect(toSet());
+    return convert(vgg, mergedPolygons);
   }
 
   public Map<Feature, VGG> from(
@@ -195,7 +216,13 @@ public class VGGFactory implements Converter<Set<Polygon>, VGG> {
                       detectedRoofCovering,
                       addresses,
                       polygonObjectTypesFromProjectedPolygonGroup);
-              var key = randomUUID().toString();
+
+              int zoom = tiledPixelPolygonGroupByFeature.getFirst().zoom();
+
+              var key =
+                  String.format(
+                      "%s_%s_%s_%s.%s",
+                      randomUUID(), zoom, minTileXGlobal, minTileYGlobal, VGG_ANNOTATION_FILETYPE);
               var annotation =
                   VGG.Annotation.builder()
                       .filename(key)

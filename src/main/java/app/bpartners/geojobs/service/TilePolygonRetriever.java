@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 
+import app.bpartners.geojobs.repository.model.ArcgisImageZoom;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.TileFinder;
 import java.util.List;
@@ -18,8 +19,12 @@ public class TilePolygonRetriever implements Function<Polygon, List<Polygon>> {
 
   @Override
   public List<Polygon> apply(Polygon geometryPolygon) {
+    return apply(geometryPolygon, HOUSES_0);
+  }
+
+  public List<Polygon> apply(Polygon geometryPolygon, ArcgisImageZoom imageZoom) {
     var tileCoordinatesFromPolygon =
-        tileFinder.getFromGeoJsonPolygon(geometryPolygon, HOUSES_0.getZoomLevel());
+        tileFinder.getFromGeoJsonPolygon(geometryPolygon, imageZoom.getZoomLevel());
     return tileCoordinatesFromPolygon.stream()
         .map(
             coordinates ->

@@ -14,11 +14,11 @@ import org.locationtech.jts.math.Vector3D;
 @Builder
 @RequiredArgsConstructor
 public class Kernel {
-  private final Conf conf;
+  private final KernelConf conf;
   @Getter private final KernelChains chains;
 
   public static Optional<Kernel> from(
-      Collection<LasPointGeometry> points, Conf conf, SecureRandom random) {
+      Collection<LasPointGeometry> points, KernelConf conf, SecureRandom random) {
     var optionalChains = getKernelChains(new ArrayList<>(points), conf, random);
     return optionalChains.map(chains -> Kernel.builder().conf(conf).chains(chains).build());
   }
@@ -28,7 +28,7 @@ public class Kernel {
   }
 
   private static Optional<KernelChains> getKernelChains(
-      List<LasPointGeometry> points, Conf conf, SecureRandom random) {
+      List<LasPointGeometry> points, KernelConf conf, SecureRandom random) {
     for (int i = 0; i < conf.attempts(); i++) {
       var p1 = points.get(random.nextInt(points.size()));
       var candidates = getNeighborsCandidates(p1, points, conf);
@@ -48,7 +48,7 @@ public class Kernel {
   }
 
   private static List<Candidate> getNeighborsCandidates(
-      LasPointGeometry p1, List<LasPointGeometry> points, Conf conf) {
+      LasPointGeometry p1, List<LasPointGeometry> points, KernelConf conf) {
     return points.stream()
         .filter(point -> point != p1 && p1.squaredDistance(point) < conf.squaredThreshold())
         .map(point -> Candidate.from(p1, point))
@@ -57,7 +57,7 @@ public class Kernel {
   }
 
   private static List<Candidate> getP2Candidates(
-      List<Candidate> neighbors, Conf conf, SecureRandom random) {
+      List<Candidate> neighbors, KernelConf conf, SecureRandom random) {
     if (neighbors.size() <= conf.attempts()) {
       return neighbors;
     }
@@ -70,7 +70,7 @@ public class Kernel {
   }
 
   private static KernelChain getMainKernelChain(
-      Candidate p2Candidate, List<LasPointGeometry> points, Conf conf, SecureRandom random) {
+      Candidate p2Candidate, List<LasPointGeometry> points, KernelConf conf, SecureRandom random) {
     var chain = new KernelChain(p2Candidate.a(), p2Candidate.b());
     var direction = p2Candidate.vector();
 
@@ -92,7 +92,7 @@ public class Kernel {
       Set<LasPointGeometry> used,
       LasPointGeometry last,
       Vector3D direction,
-      Conf conf) {
+      KernelConf conf) {
     List<LasPointGeometry> candidates = new ArrayList<>();
     for (var p : points) {
       if (used.contains(p)) continue;
@@ -111,7 +111,7 @@ public class Kernel {
   }
 
   private static Optional<KernelChain> getPerpendicularKernelChain(
-      KernelChain main, List<LasPointGeometry> points, Conf conf, SecureRandom random) {
+      KernelChain main, List<LasPointGeometry> points, KernelConf conf, SecureRandom random) {
     var optionalChain = getStartPerpendicularChain(main, points, conf);
     if (optionalChain.isEmpty()) return Optional.empty();
 
@@ -132,7 +132,7 @@ public class Kernel {
   }
 
   private static Optional<KernelChain> getStartPerpendicularChain(
-      KernelChain main, List<LasPointGeometry> points, Conf conf) {
+      KernelChain main, List<LasPointGeometry> points, KernelConf conf) {
     var set = new HashSet<>(points);
     var mainPointsCandidates = main.getFurthestPoints();
     for (var p3 : set) {
@@ -260,8 +260,8 @@ public class Kernel {
     }
   }
 
-  @Builder
-  public record Conf(
+  @Builder(toBuilder = true)
+  public record KernelConf(
       int attempts,
       int maxLength,
       double degEpsilon,

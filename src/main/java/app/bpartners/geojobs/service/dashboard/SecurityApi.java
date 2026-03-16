@@ -18,8 +18,12 @@ public class SecurityApi {
   private final ApiConfiguration apiConfiguration;
   private final ObjectMapper objectMapper;
 
-  @SneakyThrows
   public String retrieveUserId(String apiKey) {
+    return retrieveDashboardUserByApiKey(apiKey).id();
+  }
+
+  @SneakyThrows
+  public DashboardUser retrieveDashboardUserByApiKey(String apiKey) {
     var endpoint = String.format("%s/whoami", apiConfiguration.getDashboardApiUrl());
     var headers = new HttpHeaders();
     headers.add(API_KEY_HEADER, apiKey);
@@ -28,6 +32,9 @@ public class SecurityApi {
     var responseBody = restTemplate.exchange(endpoint, GET, requestEntity, String.class).getBody();
 
     var root = objectMapper.readTree(responseBody);
-    return root.path("user").path("id").asText();
+    var userJsonNode = root.path("user");
+    var userJsonText = userJsonNode.toString();
+
+    return objectMapper.readValue(userJsonText, DashboardUser.class);
   }
 }

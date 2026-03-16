@@ -134,7 +134,11 @@ public record TiledPolygon(
     var coordsExtractor = new TileCoordinatesFromFileName(isZXYDotFiletype);
     var originTile = new IntXY(coordsExtractor.x(filename), coordsExtractor.y(filename));
     var polygon = polygon(shapeAttribute);
-    polygon.setUserData(Map.of("label", label));
+    var userData = new HashMap<String, Object>();
+    userData.put("label", label);
+    userData.put("filename", filename);
+    polygon.setUserData(userData);
+
     return new TiledPolygon(polygon, routeTypeFrom(label), originTile, tilingConf);
   }
 

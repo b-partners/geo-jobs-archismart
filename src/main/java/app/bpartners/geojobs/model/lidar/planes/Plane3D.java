@@ -6,12 +6,16 @@ import static app.bpartners.geojobs.model.lidar.planes.algorithm.PointsDelimitat
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.LasPointsDelimiter;
 import app.bpartners.geojobs.model.lidar.Polygon3DArea;
+import app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities;
+import app.bpartners.geojobs.model.lidar.planes.algorithm.Vector3DUtils;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
 import java.util.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.math.Vector2D;
+import org.locationtech.jts.math.Vector3D;
 
 @Slf4j
 @Getter
@@ -26,61 +30,16 @@ public class Plane3D {
   @EqualsAndHashCode.Include protected final double d;
   @EqualsAndHashCode.Exclude protected final Kernel kernel;
   @EqualsAndHashCode.Exclude protected final Set<LasPointGeometry> points;
-
   @EqualsAndHashCode.Exclude protected final double delimitationConcaveRatio;
   @EqualsAndHashCode.Exclude protected final double delimitationSimplificationEpsilon;
-  @EqualsAndHashCode.Exclude protected final Plane3DExtractionStepExporter exporter;
 
   @EqualsAndHashCode.Include private Double norm;
   @EqualsAndHashCode.Exclude private Polygon3DArea area;
   @EqualsAndHashCode.Exclude protected Polygon delimitation;
+  @EqualsAndHashCode.Exclude private LasPointGeometry centroid;
   @EqualsAndHashCode.Exclude protected Polygon convexDelimitation;
   @EqualsAndHashCode.Exclude private Plane3DSlopeInDegrees slopeInDegrees;
-
-  public static Plane3D fit(
-      Kernel kernel,
-      double delimitationConcaveRatio,
-      double delimitationSimplificationEpsilon,
-      Plane3DExtractionStepExporter exporter) {
-    var chains = kernel.getChains();
-    var triplet = chains.getOrthogonalTriplet();
-    var p1 = triplet.getFirst();
-    var p2 = triplet.get(1);
-    var p3 = triplet.getLast();
-    var plane = fromTriplet(p1, p2, p3);
-
-    return plane.toBuilder()
-        .kernel(kernel)
-        .exporter(exporter)
-        .delimitationConcaveRatio(delimitationConcaveRatio)
-        .delimitationSimplificationEpsilon(delimitationSimplificationEpsilon)
-        .build();
-  }
-
-  private static Plane3D fromTriplet(
-      LasPointGeometry p1, LasPointGeometry p2, LasPointGeometry p3) {
-    var v1 = p2.subtract(p1);
-    var v2 = p3.subtract(p1);
-    var normal = v1.cross(v2).normalized();
-
-    if (normal.getZ() > 0) {
-      normal = normal.negate();
-    }
-
-    var d = -normal.dot(p1);
-    var a = normal.getX();
-    var b = normal.getY();
-    var c = normal.getZ();
-
-    return Plane3D.builder()
-        .a(normal.getX())
-        .b(normal.getY())
-        .c(normal.getZ())
-        .d(d)
-        .norm(Math.sqrt(a * a + b * b + c * c))
-        .points(Set.of(p1, p2, p3))
-        .build();
-  }
+  @EqualsAndHashCode.Exclude protected final Plane3DExtractionStepExporter exporter;
 
   public double distance(LasPointGeometry p) {
     return Math.abs(a * p.getX() + b * p.getY() + c * p.getZ() + d) / getNorm();
@@ -174,5 +133,56 @@ public class Plane3D {
       throw new IllegalStateException("Plane is vertical: z cannot be computed for given x,y");
     }
     return -(a * x + b * y + d) / c;
+  }
+
+  private Vector3D normal;
+
+  private Vector3D getNormal() {
+    if (normal == null) {
+      normal = new Vector3D(a, b, c).normalize();
+    }
+    return normal;
+  }
+
+  private Vector3D axisU;
+
+  private Vector3D getAxisU() {
+    if (axisU == null) {
+      axisU = Vector3DUtils.cross(getNormal(), new Vector3D(0, 0, 1));
+      if (axisU.length() < 1e-6) {
+        axisU = Vector3DUtils.cross(getNormal(), new Vector3D(0, 1, 0));
+      }
+      axisU = axisU.normalize();
+    }
+
+    return axisU;
+  }
+
+  private Vector3D axisV;
+
+  private Vector3D getAxisV() {
+    if (axisV == null) {
+      axisV = Vector3DUtils.cross(getNormal(), getAxisU()).normalize();
+    }
+    return axisV;
+  }
+
+  public Vector2D projectToLocal(LasPointGeometry p) {
+    var cen = this.getCentroid();
+    var dx = p.getX() - cen.getX();
+    var dy = p.getY() - cen.getY();
+    var dz = p.getZ() - cen.getZ();
+    var local = new Vector3D(dx, dy, dz);
+
+    double u = local.dot(getAxisU());
+    double v = local.dot(getAxisV());
+    return new Vector2D(u, v);
+  }
+
+  public LasPointGeometry getCentroid() {
+    if (centroid == null) {
+      centroid = GeometryUtilities.centroid(points);
+    }
+    return centroid;
   }
 }

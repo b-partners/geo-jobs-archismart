@@ -1,7 +1,9 @@
 package app.bpartners.geojobs.model.lidar.planes.postprocessing;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities.intersection;
 import static app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStep.*;
+import static java.util.Comparator.comparingDouble;
 import static java.util.function.Predicate.not;
 
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
@@ -13,7 +15,8 @@ import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -21,7 +24,8 @@ public class ChimneyFixer implements Function<Collection<Plane3D>, List<Plane3D>
   private final double maxChimneyArea;
   private final OBB3DComputer obb3DComputer;
   private final Plane3DExtractionStepExporter exporter;
-  private static final double ROOF_BUFFER_IN_METERS = 1;
+  private static final double ROOF_BUFFER_IN_METERS = 0.1;
+  private static final double HEIGHT_TOLERANCE = 0.2;
 
   public ChimneyFixer(double maxChimneyArea, Plane3DExtractionStepExporter exporter) {
     this(maxChimneyArea, new OBB3DComputer(), exporter);
@@ -83,7 +87,7 @@ public class ChimneyFixer implements Function<Collection<Plane3D>, List<Plane3D>
       Collection<Plane3D> planes, double minArea) {
     return planes.stream()
         .filter(plane -> plane.getArea() > minArea)
-        .sorted(Comparator.comparingDouble(Plane3D::get2DArea).reversed())
+        .sorted(comparingDouble(Plane3D::get2DArea).reversed())
         .toList();
   }
 
@@ -98,7 +102,18 @@ public class ChimneyFixer implements Function<Collection<Plane3D>, List<Plane3D>
               if (!smallDelimitation.intersects(bigDelimitationWithBuffer)) {
                 return false;
               }
-              return getMinZ(bigDelimitation) < getMinZ(smallDelimitation);
+              var intersection = intersection(smallDelimitation, bigDelimitationWithBuffer);
+              if (intersection.isEmpty() || intersection instanceof Point) {
+                return false;
+              }
+
+              var smallMaxZ = getMaxZ(smallDelimitation);
+              var bigZ = big.zAt(smallMaxZ.getX(), smallMaxZ.getY());
+              if (smallMaxZ.getZ() > bigZ) {
+                return true;
+              }
+
+              return bigZ - smallMaxZ.getZ() <= HEIGHT_TOLERANCE;
             });
   }
 
@@ -106,10 +121,9 @@ public class ChimneyFixer implements Function<Collection<Plane3D>, List<Plane3D>
     return planes.stream().filter(not(plane -> plane.getArea() > maxArea)).toList();
   }
 
-  private static double getMinZ(Polygon polygon) {
+  static Coordinate getMaxZ(Geometry polygon) {
     return Arrays.stream(polygon.getCoordinates())
-        .mapToDouble(Coordinate::getZ)
-        .min()
+        .max(comparingDouble(Coordinate::getZ))
         .orElseThrow();
   }
 

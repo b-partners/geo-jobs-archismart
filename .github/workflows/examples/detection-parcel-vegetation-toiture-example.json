@@ -1,0 +1,27 @@
+{
+  "emailReceiver": "tech@birdia.fr",
+  "zoneName": "github actions detection vegation and toiture it",
+  "needsImageOutput": true,
+  "geoJsonDelimitationType": "PARCEL",
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_TOITURE"
+    },
+    {
+      "modelName": "BP_VEGETATION"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "geometry": {
+        "coordinates": [
+          3.068299423393144,
+          50.63012080308718
+        ],
+        "type": "Point"
+      },
+      "properties": {},
+      "type": "Feature"
+    }
+  ]
+}

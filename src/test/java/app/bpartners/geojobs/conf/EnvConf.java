@@ -44,5 +44,6 @@ public class EnvConf {
     registry.add("open-source.lidar.api.url", () -> OPEN_SOURCE_LIDAR_API_URL);
     registry.add("google.captcha.secret", () -> "dummy");
     registry.add("google.captcha.url", () -> "https://google.com");
+    registry.add("google.geocode.api.key", () -> "https://google.com");
   }
 }

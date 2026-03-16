@@ -24,6 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
+import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
+import software.amazon.awssdk.services.eventbridge.model.PutEventsResponse;
 
 class CityJSONControllerIT extends FacadeIT {
   @Autowired CityJSONController subject;
@@ -32,6 +35,7 @@ class CityJSONControllerIT extends FacadeIT {
   @MockBean AuthProvider authProviderMock;
   @MockBean BucketComponent bucketComponentMock;
   @MockBean EventProducer<CityJSONRequestCreated> eventProducerMock;
+  @MockBean EventBridgeClient eventBridgeClient;
 
   @BeforeEach
   void setUp() {
@@ -42,6 +46,8 @@ class CityJSONControllerIT extends FacadeIT {
     when(principal.isAdmin()).thenReturn(true);
     when(principal.getPassword()).thenReturn(randomUUID().toString());
     when(authProviderMock.getPrincipal()).thenReturn(principal);
+    when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
+        .thenReturn(PutEventsResponse.builder().failedEntryCount(0).build());
   }
 
   @Test

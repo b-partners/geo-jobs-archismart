@@ -68,11 +68,25 @@ info:
     4. Processing time is variable due to address conversion, 
     expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/toiture_analysis_result_example.geojson). 
     
+    ### Detection on parcels including roof objects and trees providing excel file containing textual addresses
+    1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/detection_parcel_payload_example.json). 
+    Especially, note that both `BP_TOITURE` and `BP_VEGETATION` must be specified during creation through `detectableObjectModelList` property.
+    Also, `geoJsonDelimitationType` property must be set as `PARCEL` to consider the address's parcel.
+    In case you need to get images and its detections result for each address detected, set `needsImageOutput` property to `true`.
+    2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
+    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/excel/excel_addresses_example.xlsx)
+    3. Track the progress of your detection through `GET /detections/{id}`. 
+    Once detection is on step POST_PROCESSING with status progression FINISHED and status health SUCCEEDED : 
+    - Images result, if needed, can be obtained through each feature corresponding to each detected address inside `geoJsonZone` where `original_image_url` allow to retrieve address's image and `vgg_url` detection results to be displayed on obtained image. 
+      Expected result can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/toiture_and_vegetation_example_response.json).
+    - GeoJson result can be obtained through `geoJsonUrl` and can be displayed on a map as QGIS.
+    
     # 3D request examples
     
     ### Request 3D city models from textual, human-readable, addresses
     1. Submit a 3D request through `POST /3d/{id}/addresses` where `{id}` is yours to be created
-    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_addresses_requestexample.json).
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_addresses_request_example.json).
     2. Track the progress of your 3D request through `GET /3d/{id}`.
     When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files.
     API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).

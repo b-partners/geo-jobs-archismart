@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.endpoint.rest.security.authenticator;
 
+import app.bpartners.geojobs.endpoint.rest.security.authorizer.CommunityUserSubscriptionAuthorizer;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
@@ -14,9 +15,13 @@ import org.springframework.stereotype.Component;
 public class ApiKeyAuthenticator implements UsernamePasswordAuthenticator {
   public static final String API_KEY_HEADER = "x-api-key";
   private final CommunityAuthorizationRepository caRepository;
+  private final CommunityUserSubscriptionAuthorizer communityUserSubscriptionAuthorizer;
 
-  public ApiKeyAuthenticator(CommunityAuthorizationRepository communityAuthorizationRepository) {
+  public ApiKeyAuthenticator(
+      CommunityAuthorizationRepository communityAuthorizationRepository,
+      CommunityUserSubscriptionAuthorizer communityUserSubscriptionAuthorizer) {
     this.caRepository = communityAuthorizationRepository;
+    this.communityUserSubscriptionAuthorizer = communityUserSubscriptionAuthorizer;
   }
 
   @Override
@@ -32,12 +37,13 @@ public class ApiKeyAuthenticator implements UsernamePasswordAuthenticator {
 
   private HashSet<Authority> getAuthorities(String candidateApiKey) {
     HashSet<Authority> authorities = new HashSet<>();
-    var authenticatedUser =
+    var authenticatedCommunity =
         caRepository
             .findByApiKey(candidateApiKey)
             .filter(authorization -> !authorization.isApiKeyRevoked())
             .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
-    authorities.add(new Authority(authenticatedUser.getRole()));
+    // communityUserSubscriptionAuthorizer.accept(authenticatedCommunity); TODO: uncomment
+    authorities.add(new Authority(authenticatedCommunity.getRole()));
     return authorities;
   }
 

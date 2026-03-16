@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_2;
+import static app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob.ZoomLevelEnum.HOUSES_0;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.*;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.GEO_JSON;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
@@ -279,7 +280,7 @@ class ZoneServiceTest {
                 new CommunityAuthorization().builder().dashboardApiKey("apiKey").build()));
     when(areaPictureApiMock.getAreaPictureMapLayers(anyDouble(), anyDouble(), anyString()))
         .thenReturn(
-            List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24))));
+            List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24), 5)));
 
     var actual = subject.processDetection(detectionIdentifier, createDetection, communityOwnerId);
 
@@ -882,7 +883,7 @@ class ZoneServiceTest {
     when(authProviderMock.getPrincipal())
         .thenReturn(new Principal("mockApiKey", Set.of(new Authority(authorityRole))));
     when(tilingJobMapperMock.from(any()))
-        .thenReturn(new CreateZoneTilingJob().geoServerUrl("http://localhost"));
+        .thenReturn(new CreateZoneTilingJob().geoServerUrl("http://localhost").zoomLevel(HOUSES_0));
     when(tilingJobMapperMock.toDomain(any(), any())).thenReturn(new ZoneTilingJob());
     when(tilingJobServiceMock.create(any(), any())).thenReturn(new ZoneTilingJob());
     when(detectionRepositoryMock.save(any()))

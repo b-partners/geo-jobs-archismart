@@ -1,10 +1,10 @@
 package app.bpartners.geojobs.repository.model.community;
 
 import static app.bpartners.geojobs.endpoint.rest.security.authenticator.ApiKeyAuthenticator.API_KEY_HEADER;
+import static app.bpartners.geojobs.service.dashboard.DashboardUserStatus.ACTIVE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
@@ -19,6 +19,9 @@ import app.bpartners.geojobs.endpoint.rest.validator.CreateDetectionValidator;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.SurfaceUnit;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.dashboard.DashboardUser;
+import app.bpartners.geojobs.service.dashboard.DashboardUserSubscription;
+import app.bpartners.geojobs.service.dashboard.SecurityApi;
 import app.bpartners.geojobs.service.detection.DetectionCreationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -44,6 +47,7 @@ class CommunityAuthorizationIT extends FacadeIT {
   @LocalServerPort private int port;
 
   @Autowired CommunityAuthorizationRepository communityAuthorizationRepository;
+  @MockBean SecurityApi securityApiMock;
 
   @BeforeEach
   void setUp() {
@@ -51,6 +55,11 @@ class CommunityAuthorizationIT extends FacadeIT {
     doNothing().when(createDetectionValidatorMock).accept(any());
     doNothing().when(eventProducerMock).accept(any());
     doNothing().when(detectionAuthorizerMock).accept(anyString(), any(), any());
+
+    var dashboardUserMock = mock(DashboardUser.class);
+    when(dashboardUserMock.subscription())
+        .thenReturn(new DashboardUserSubscription(ACTIVE, null, null));
+    when(securityApiMock.retrieveDashboardUserByApiKey(any())).thenReturn(dashboardUserMock);
   }
 
   @Test

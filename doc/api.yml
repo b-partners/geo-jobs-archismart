@@ -660,22 +660,49 @@ paths:
     get:
       tags:
         - Image
-      summary: Retrieve aerial image from a textual, human-readable, address
+      summary: Retrieve an aerial image from a human-readable address or geographic coordinates.
+      description: |
+        Retrieve an aerial image by providing either a human-readable address
+        or a pair of geographic coordinates (longitude and latitude). 
+        
+        When `ROOF_DAMAGE_DETECTION` is provided, only images with 5cm precision is returned.
       operationId: getImage
       security:
         - ApiKeyAuth: [ ]
       parameters:
         - in: query
+          name: usage
+          schema:
+            $ref: '#/components/schemas/ImageUsage'
+          required: false
+        - in: query
           name: address
           schema:
             type: string
-          required: true
+          required: false
+        - in: query
+          name: longitude
+          schema:
+            type: number
+          required: false
+        - in: query
+          name: latitude
+          schema:
+            type: number
+          required: false
+        - in: query
+          name: zoom
+          schema:
+            $ref: '#/components/schemas/ImageZoomLevel'
+          required: false
+          description: Default value is BUILDING.
         - in: query
           name: isExtended
           schema:
             type: boolean
-            default: false
+            default: true
           required: false
+          deprecated: true
         - in: query
           name: shiftNb
           schema:
@@ -1351,6 +1378,78 @@ paths:
               examples:
                 3DResponseWithStatusSucceeded:
                   $ref: '#/components/examples/ThreeDResponseWithProcessingStatusExample'
+  '/geocode':
+    get:
+      tags:
+        - Geocode
+      operationId: geocodeAddress
+      summary: Resolve an address into a GeoJSON Feature
+      description: |
+        Converts a textual address into a geographic location and returns the result as a GeoJSON Feature.
+        The service performs forward geocoding by querying external geocoding providers and transforms the response into a standardized GeoJSON Feature object.
+      parameters:
+        - in: query
+          name: address
+          required: true
+          description: Address to geocode
+          schema:
+            type: string
+      responses:
+        200:
+          description: GeoJSON Feature corresponding to address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+  '/geoCodingJobs/{id}':
+    get:
+      tags:
+        - Geocode
+      operationId: retrieveGeoCodingJobById
+      summary: Retrieve a geo-coding job resolving list of addresses to GeoJSON features
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: GeoCodingJob with its status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoCodingJob'
+  '/geoCodingJobs/{id}/excel':
+    post:
+      tags:
+        - Geocode
+      operationId: geocodeAddressesThroughExcelAddresses
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      summary: Resolve addresses contain inside provided excel file to GeoJSON Features
+      description: |
+        Converts list textual addresses inside provided excel file into a geographic location and returns the result as list of GeoJSON features.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Created GeoCodingJob
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoCodingJob'
 components:
   securitySchemes:
     ReadmeAuth:
@@ -1649,6 +1748,12 @@ components:
             - HOUSES_1
             - HOUSES_2
             - HOUSE_PROPERTY
+    ImageZoomLevel:
+      type: string
+      enum:
+        - BUILDING
+        - NEIGHBORHOOD
+        - DISTRICT
     RevokeApiKeyResponse:
       type: object
       properties:
@@ -1893,6 +1998,15 @@ components:
         updatedAt:
           type: string
           format: date-time
+    GeoCodingJob:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        geoJsonUrl:
+          type: string
     TaskStatusStatistic:
       allOf:
         - $ref: '#/components/schemas/StatusStatistic'
@@ -2298,6 +2412,8 @@ components:
           $ref: '#/components/schemas/TileCoordinates'
         currentGeoPosition:
           $ref: '#/components/schemas/GeoPosition'
+        zoomLevel:
+          $ref: '#/components/schemas/ImageZoomLevel'
     GeoPosition:
       type: object
       properties:
@@ -2439,3 +2555,8 @@ components:
       enum:
         - GEO_JSON
         - ZIP
+    ImageUsage:
+      type: string
+      enum:
+        - ROOF_DAMAGE_DETECTION
+        - UNKNOWN

@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.detection;
 
-import static app.bpartners.geojobs.service.tiling.ZoneTilingJobService.getTilingTasks;
+import static app.bpartners.geojobs.service.tiling.ZoneTilingJobService.getTilingTasksFromJob;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoneTilingJobMapper;
 import app.bpartners.geojobs.repository.DetectionRepository;
@@ -28,7 +28,7 @@ public class DetectionTilingCreation
   public Detection processTiling(Detection detection) {
     var createJob = zoneTilingJobMapper.from(detection);
     var job = zoneTilingJobMapper.toDomain(createJob, detection.isSynchronous());
-    var tilingTasks = getTilingTasks(createJob, job.getId());
+    var tilingTasks = getTilingTasksFromJob(createJob, job.getId());
     var ztj = zoneTilingJobService.create(job, tilingTasks);
 
     // /!\ From ZTJMapper.from detection.splitPolygonGeoJsonZone may be updated

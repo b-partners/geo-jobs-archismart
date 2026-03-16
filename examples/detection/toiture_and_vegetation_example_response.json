@@ -1,0 +1,83 @@
+{
+  "id": "<your-id>>",
+  "step": {
+    "name": "MACHINE_DETECTION",
+    "status": {
+      "progression": "FINISHED",
+      "health": "SUCCEEDED",
+      "creationDatetime": "2026-01-01T00:00:00.00Z"
+    },
+    "statistics": [],
+    "updatedAt": "2026-02-27T07:38:05.668123660Z"
+  },
+  "geoJsonUrl": null,
+  "shapeUrl": null,
+  "excelUrl": null,
+  "imageUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg",
+  "imageTileInfoOrigin": {
+    "size": {
+      "width": 1024,
+      "height": 1024
+    },
+    "coordinates": {
+      "x": 533224,
+      "y": 352743,
+      "z": 20
+    }
+  },
+  "pdfUrl": null,
+  "vggUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+  "addresses": [],
+  "roofDelimiter": null,
+  "creationDatetime": "2026-02-27T07:37:11.816593Z",
+  "emailReceiver": "tech@birdia.fr",
+  "zoneName": "205 Bd des Roses, 06210 Mandelieu-la-Napoule, France",
+  "geoServerProperties": {
+    "geoServerUrl": "http://35.181.83.111/geoserver/cite/wms",
+    "geoServerParameter": {
+      "service": "WMS",
+      "request": "GetMap",
+      "layers": "Haut-de-france",
+      "styles": "",
+      "format": "image/jpeg",
+      "transparent": true,
+      "version": "1.3.0",
+      "width": 1024,
+      "height": 1024,
+      "srs": "EPSG:3857"
+    }
+  },
+  "detectableObjectModel": {
+    "modelName": "BP_TOITURE"
+  },
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_TOITURE"
+    },
+    {
+      "modelName": "BP_VEGETATION"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          3.068299423393144,
+          50.63012080308718
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "feature_id": "c7854595-4d5f-4dfc-aac0-b64be0a9c91f",
+        "vgg_file_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+        "zoom": 20,
+        "original_image_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg"
+      }
+    }
+  ],
+  "geoJsonDelimitationType": "PARCEL",
+  "geoJsonOutput": "ZIP",
+  "needsImageOutput": true,
+  "toNotify": false
+}

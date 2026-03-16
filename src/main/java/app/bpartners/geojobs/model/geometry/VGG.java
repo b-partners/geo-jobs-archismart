@@ -11,9 +11,10 @@ import java.util.Map;
 import lombok.*;
 
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
 @EqualsAndHashCode(callSuper = false)
 public class VGG extends HashMap<String, VGG.Annotation> {
   @AllArgsConstructor
@@ -44,6 +45,7 @@ public class VGG extends HashMap<String, VGG.Annotation> {
     @Data
     @Builder(toBuilder = true)
     @NoArgsConstructor
+    @EqualsAndHashCode(callSuper = false)
     public static class Region {
       @JsonProperty("shape_attributes")
       private ShapeAttribute shapeAttribute;
@@ -55,6 +57,7 @@ public class VGG extends HashMap<String, VGG.Annotation> {
       @Data
       @Builder
       @NoArgsConstructor
+      @EqualsAndHashCode
       public static class ShapeAttribute {
         private String name;
 

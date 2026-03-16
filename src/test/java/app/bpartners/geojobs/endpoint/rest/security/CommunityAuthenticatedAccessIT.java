@@ -5,11 +5,12 @@ import static app.bpartners.geojobs.endpoint.rest.security.authenticator.ApiKeyA
 import static app.bpartners.geojobs.endpoint.rest.security.model.Authority.Role.ROLE_COMMUNITY;
 import static app.bpartners.geojobs.repository.model.SurfaceUnit.SQUARE_METER;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.TOITURE_REVETEMENT;
+import static app.bpartners.geojobs.service.dashboard.DashboardUserStatus.ACTIVE;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.rest.api.DetectionApi;
@@ -22,6 +23,9 @@ import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.community.CommunityDetectableObjectType;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
+import app.bpartners.geojobs.service.dashboard.DashboardUser;
+import app.bpartners.geojobs.service.dashboard.DashboardUserSubscription;
+import app.bpartners.geojobs.service.dashboard.SecurityApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +44,7 @@ class CommunityAuthenticatedAccessIT extends FacadeIT {
   @Autowired ObjectMapper om;
   @Autowired CommunityAuthorizationRepository caRepository;
   @MockBean CreateDetectionValidator createDetectionValidatorMock;
+  @MockBean SecurityApi securityApiMock;
 
   @LocalServerPort private int port;
 
@@ -48,6 +53,10 @@ class CommunityAuthenticatedAccessIT extends FacadeIT {
     caRepository.save(communityAuthorization(false));
     setupClientWithApiKey();
     doNothing().when(createDetectionValidatorMock).accept(any());
+    var dashboardUserMock = mock(DashboardUser.class);
+    when(dashboardUserMock.subscription())
+        .thenReturn(new DashboardUserSubscription(ACTIVE, null, null));
+    when(securityApiMock.retrieveDashboardUserByApiKey(any())).thenReturn(dashboardUserMock);
   }
 
   @AfterEach

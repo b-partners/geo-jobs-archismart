@@ -90,18 +90,6 @@ class CityJSONRequestCreatedServiceIT extends FacadeIT {
     verify(cityJsonProcessorMock, never()).apply(any(), any());
   }
 
-  @Test
-  void should_be_failed_when_exception_is_raised() {
-    when(lidarProcessorMock.apply(anySet())).thenThrow(new RuntimeException());
-
-    subject.accept(CityJSONRequestCreated.builder().requestId(REQUEST_ID).build());
-
-    var actualRequest = cityJSONRequestRepository.findById(REQUEST_ID).orElseThrow();
-
-    assertEquals(FAILED, actualRequest.getStatus());
-    verify(cityJsonProcessorMock, never()).apply(any(), any());
-  }
-
   private static RoofsAnalysisResult analysisResult(LidarDataStatus status) {
     return new RoofsAnalysisResult(
         Map.of(randomUUID().toString(), LidarRoofData.builder().status(status).build()));

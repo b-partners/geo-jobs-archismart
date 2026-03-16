@@ -49,7 +49,7 @@ class ChimneyFixerTest {
     when(area.getValue()).thenReturn(100.d);
 
     var delimitation = geometryFactory.createPolygon(coordinates);
-    return Plane3D.builder().delimitation(delimitation).area(area).build();
+    return Plane3D.builder().a(0).b(0).c(1).d(0).delimitation(delimitation).area(area).build();
   }
 
   private static Plane3D chimney() {

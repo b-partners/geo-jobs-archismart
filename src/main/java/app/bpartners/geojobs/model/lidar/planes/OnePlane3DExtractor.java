@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.toSet;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.algorithm.XYZPointsCluster;
-import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.function.Function;
@@ -16,13 +15,9 @@ public class OnePlane3DExtractor
     implements Function<Set<LasPointGeometry>, OnePlane3DExtractor.Result> {
   private final Plane3DExtractorConf conf;
   private final XYZPointsCluster xyzPointsCluster;
-  private final Plane3DExtractionStepExporter exporter;
 
-  public OnePlane3DExtractor(Plane3DExtractorConf conf, Plane3DExtractionStepExporter exporter) {
-    this(
-        conf,
-        new XYZPointsCluster(conf.planeExtractionConf().pointContinuationThreshold()),
-        exporter);
+  public OnePlane3DExtractor(Plane3DExtractorConf conf) {
+    this(conf, new XYZPointsCluster(conf.planeExtractionConf().pointContinuationThreshold()));
   }
 
   @Override
@@ -40,37 +35,25 @@ public class OnePlane3DExtractor
     var kernelConf = conf.kernelConf();
     var planeExtractionConf = conf.planeExtractionConf();
     var planeDelimitationConf = conf.planeDelimitationConf();
-    var kernelValueConf =
-        Kernel.Conf.builder()
-            .attempts(kernelConf.attempts())
-            .maxLength(kernelConf.maxLength())
-            .squaredThreshold(kernelConf.threshold() * kernelConf.threshold())
-            .degEpsilon(kernelConf.degEpsilon())
-            .minVectorNorm(kernelConf.minVectorNorm())
-            .build();
 
     for (int i = 0; i < planeExtractionConf.iteration(); i++) {
-      var optionalKernel = Kernel.from(points, kernelValueConf, random);
+      var optionalKernel = Kernel.from(points, kernelConf, random);
       if (optionalKernel.isEmpty()) continue;
 
       var kernel = optionalKernel.get();
       if (bestModel != null && kernel.size() < 2) continue;
 
-      // --- 2. Fit plane
-      var box =
-          new Box(
-              kernel,
-              boxConf.threshold(),
-              planeDelimitationConf.concaveRatio(),
-              planeDelimitationConf.simplificationEpsilon(),
-              exporter);
-
-      // --- 3. Compute distances
-      box.add(points);
+      var box = new Box(boxConf, kernel);
+      box.grow(points);
       var inliers = box.getPoints();
 
-      // --- 4. Keep best
       if (inliers.size() < bestInliers.size()) {
+        continue;
+      }
+
+      if (!box.isDidInfiniteGrow()) {
+        bestModel = box.getPlane();
+        bestInliers = new ArrayList<>(inliers);
         continue;
       }
 
@@ -88,7 +71,15 @@ public class OnePlane3DExtractor
     // --- 5. Compute outliers
     var inlierSet = new HashSet<>(bestInliers);
     var outliers = points.stream().filter(not(inlierSet::contains)).collect(toSet());
-    return new Result(bestModel.with(inlierSet), outliers);
+
+    assert bestModel != null;
+    var plane =
+        bestModel.toBuilder()
+            .points(inlierSet)
+            .delimitationConcaveRatio(planeDelimitationConf.concaveRatio())
+            .delimitationSimplificationEpsilon(planeDelimitationConf.simplificationEpsilon())
+            .build();
+    return new Result(plane, outliers);
   }
 
   private List<LasPointGeometry> getBestXYZCluster(Collection<LasPointGeometry> points) {

@@ -2,8 +2,7 @@ package app.bpartners.geojobs.service.lidar;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -58,17 +57,12 @@ class LidarRoofsAnalysisProcessorTest {
     var geometry1 = roofGeometry1();
     var lidarApiMock = mock(LidarApiFacade.class);
 
-    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenThrow();
+    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenThrow(new RuntimeException());
 
     var subject = processorCreator.create(lidarApiMock);
 
-    var roofsAnalysisResult = subject.from(Set.of(geometry1));
-
-    var property = roofsAnalysisResult.getProperties(geometry1);
-
-    assertEquals(EXTRACTION_ERROR, property.getData().status());
-    assertEquals(0, property.getHeightInMeters().getValue());
-    assertTrue(property.getRoofPlanes().isEmpty());
+    var geometries = Set.of(geometry1);
+    assertThrows(RuntimeException.class, () -> subject.from(geometries));
   }
 
   @Test

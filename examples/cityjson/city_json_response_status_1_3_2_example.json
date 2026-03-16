@@ -5,6 +5,7 @@
     "health": "SUCCEEDED",
     "creationDatetime": "2026-01-21T10:12:54Z"
   },
+  "step": "POST_PROCESSING",
   "delimitations": [
     {
       "type": "Feature",

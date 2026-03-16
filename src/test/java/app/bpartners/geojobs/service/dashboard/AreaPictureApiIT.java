@@ -84,7 +84,7 @@ class AreaPictureApiIT extends FacadeIT {
     var building19 = new Zoom("BUILDING", 19);
     return new AreaPictureDetails(
         actual.id(),
-        new AreaPictureMapLayer(actual.actualLayer().id(), "IGN_PHOTO_AERIENNE", houses0),
+        new AreaPictureMapLayer(actual.actualLayer().id(), "IGN_PHOTO_AERIENNE", houses0, 20),
         new GeoPosition(48.8589892, 2.2847458),
         new TileCoordinates(265468, 180361, building19));
   }

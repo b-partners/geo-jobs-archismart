@@ -6,6 +6,7 @@ import static java.lang.Double.POSITIVE_INFINITY;
 import static java.util.Comparator.comparingDouble;
 
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
+import app.bpartners.geojobs.model.lidar.planes.postprocessing.model.ChimneyPlane3D;
 import java.util.*;
 import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,12 @@ public class Plane3DMerger implements UnaryOperator<Collection<Plane3D>> {
     List<Plane3D> sorted = getSortedPlanesByArea(planes);
 
     for (var p1 : sorted) {
+      if (p1 instanceof ChimneyPlane3D) {
+        result.add(p1);
+        visited.add(p1);
+        continue;
+      }
+
       if (visited.contains(p1)) {
         continue;
       }
@@ -33,6 +40,10 @@ public class Plane3DMerger implements UnaryOperator<Collection<Plane3D>> {
       var merged = p1;
       for (var p2 : sorted) {
         if (p1 == p2 || visited.contains(p2)) {
+          continue;
+        }
+
+        if (p2 instanceof ChimneyPlane3D) {
           continue;
         }
 

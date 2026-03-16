@@ -28,7 +28,7 @@ public class IgnLidarApiConf implements LidarApiConf {
     params.put("service", "WFS");
     params.put("version", "2.0.0");
     params.put("request", "GetFeature");
-    params.put("typeNames", "IGNF_LIDAR-HD_TA:nuage-dalle");
+    params.put("typeNames", "IGNF_NUAGES-DE-POINTS-LIDAR-HD:bloc");
     params.put("srsName", "EPSG:2154");
     params.put("outputFormat", "application/json");
     params.put("bbox", bboxAsString);

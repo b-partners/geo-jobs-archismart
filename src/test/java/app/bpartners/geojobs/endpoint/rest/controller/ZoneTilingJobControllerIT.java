@@ -199,7 +199,7 @@ class ZoneTilingJobControllerIT extends FacadeIT {
     var parcels = controller.getZTJParcels(createdJob.getId());
     var parcel = parcels.getFirst();
     assertEquals(ZoomLevelEnum.TOWN, createdJob.getZoomLevel());
-    assertEquals(1, parcels.size());
+    assertEquals(16, parcels.size());
     assertNotNull(parcel.getId());
     assertNotNull(parcel.getCreationDatetime());
     assertNotNull(parcel.getFeature());

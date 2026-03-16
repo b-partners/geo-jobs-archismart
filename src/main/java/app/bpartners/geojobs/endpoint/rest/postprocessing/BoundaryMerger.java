@@ -170,46 +170,41 @@ public class BoundaryMerger
   }
 
   private Set<LatLonPolygon> merge(Set<TiledPolygon> tiledPolygonsWithOffset, IntXY origin) {
-    var type = tiledPolygonsWithOffset.iterator().next().type();
     var result = new HashSet<TiledPolygon>();
-
-    if (type.equals(green_space)) {
-      var toUnify = tiledPolygonsWithOffset.stream().map(TiledPolygon::polygon).collect(toSet());
-      var prettyPolygons = prettier.apply(toUnify);
-      var unified = new UnifiedRoute(prettyPolygons, unionConf).unified();
-      for (var p : unified) {
-        result.add(new TiledPolygon(p, type, origin, tilingConf));
-      }
-      return result.stream().map(tp -> tp.latLonPolygon(origin)).collect(Collectors.toSet());
-    }
-
-    var alreadyUnified = new HashSet<Integer>();
-    var progress = 0;
+    var visited = new HashSet<TiledPolygon>();
 
     for (var tp : tiledPolygonsWithOffset) {
-      if (alreadyUnified.contains(Objects.hash(tp.polygon()))) {
-        continue;
+
+      if (visited.contains(tp)) continue;
+
+      var component = new HashSet<TiledPolygon>();
+      var stack = new ArrayDeque<TiledPolygon>();
+
+      component.add(tp);
+      stack.push(tp);
+
+      while (!stack.isEmpty()) {
+        var current = stack.pop();
+
+        for (var other : tiledPolygonsWithOffset) {
+          if (shouldBeMerged(current, other) && component.add(other)) {
+            stack.push(other);
+          }
+        }
       }
 
-      var aroundPolygons =
-          tiledPolygonsWithOffset.stream()
-              .filter(p -> shouldBeMerged(tp, p))
-              .collect(Collectors.toSet());
+      visited.addAll(component);
 
-      var toUnify = aroundPolygons.stream().map(TiledPolygon::polygon).collect(Collectors.toSet());
-      toUnify.add(tp.polygon());
+      // --- Merge whole component ---
+      var polygonsToMerge =
+          component.stream().map(TiledPolygon::polygon).collect(Collectors.toSet());
 
-      alreadyUnified.addAll(hash(toUnify));
-
-      var prettyPolygons = prettier.apply(toUnify);
-
+      var prettyPolygons = prettier.apply(polygonsToMerge);
       var unified = new UnifiedRoute(prettyPolygons, unionConf).unified();
 
       for (var p : unified) {
         result.add(new TiledPolygon(p, tp.type(), tp.originTile(), tp.tilingConf()));
       }
-
-      log.info("progression: {}/{}", ++progress, tiledPolygonsWithOffset.size());
     }
 
     return result.stream().map(tp -> tp.latLonPolygon(origin)).collect(Collectors.toSet());
@@ -223,15 +218,14 @@ public class BoundaryMerger
     try {
       var baseTile = base.originTile();
       var otherTile = other.originTile();
+      var basePolygon = base.polygon();
+      var otherPolygon = other.polygon();
 
-      if (baseTile.equals(otherTile)) return false;
+      if (baseTile.equals(otherTile) && basePolygon.equals(otherPolygon)) return false;
 
       int dx = Math.abs(otherTile.x() - baseTile.x());
       int dy = Math.abs(otherTile.y() - baseTile.y());
       if (dx > 1 || dy > 1) return false;
-
-      var basePolygon = base.polygon();
-      var otherPolygon = other.polygon();
 
       if (basePolygon.distance(otherPolygon) > 50) return false;
 

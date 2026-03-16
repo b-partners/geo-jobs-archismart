@@ -200,6 +200,8 @@ dependencies {
     implementation 'org.apache.tika:tika-core:2.9.1'
     implementation 'org.apache.poi:poi-ooxml:5.4.1'
 
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
+
 
     implementation 'org.reflections:reflections:0.10.2'
 
@@ -215,6 +217,7 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.2'
     testImplementation 'org.junit-pioneer:junit-pioneer:2.2.0'
 
+    implementation 'com.google.maps:google-maps-services:2.2.0'
 
     implementation 'io.sentry:sentry-logback:7.6.0'
     implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.4.0'

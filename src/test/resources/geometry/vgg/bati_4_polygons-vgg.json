@@ -1,0 +1,110 @@
+[
+  {
+    "c2f4b6f0-5d5e-4b7e-9c1a-1f3e8c7d9a21": {
+      "size": null,
+      "filename": "bati-4-polygones_18_2_3.png",
+      "base64_img_data": null,
+      "properties": {
+        "usure_rate": 3.88,
+        "addresses": ["1 rue de la vau saint jacques Parthenay 79200", "14 rue godineau Parthenay 79200", "26 rue godineau Parthenay 79200"],
+        "revetement_1": "ROOF_TUILES",
+        "global_rate_value": 22.62,
+        "global_rate_type": "D",
+        "roof_area_in_m2": 218.28811629570816,
+        "revetement_2": null,
+        "moisissure_rate": 26.34,
+        "humidite_rate": 0.0
+      },
+      "regions": {
+        "100000000001": {
+          "shape_attributes": {
+            "name": "Polygon",
+            "all_points_x": [
+              808.5113565477535,
+              2151.6677032413045,
+              1951.5205277005307,
+              586.6614752277899,
+              808.5113565477535
+            ],
+            "all_points_y": [
+              850.3109232387947,
+              1405.9796495986775,
+              2196.5652358983134,
+              1677.0375649088019,
+              850.3109232387947
+            ]
+          },
+          "region_attributes": {
+            "label": "bati_autres"
+          }
+        },
+        "100000000002": {
+          "shape_attributes": {
+            "name": "Polygon",
+            "all_points_x": [
+              2158.9019385021134,
+              3506.8811086989144,
+              3292.2654626397593,
+              1951.5205277005307,
+              2158.9019385021134
+            ],
+            "all_points_y": [
+              1405.9796495986775,
+              2020.3775909596686,
+              2838.068968803253,
+              2196.5652358983134,
+              1405.9796495986775
+            ]
+          },
+          "region_attributes": {
+            "label": "bati_autres"
+          }
+        },
+        "100000000003": {
+          "shape_attributes": {
+            "name": "Polygon",
+            "all_points_x": [
+              581.8386517213032,
+              1946.697704194044,
+              1686.2652348167926,
+              369.6344174143128,
+              581.8386517213032
+            ],
+            "all_points_y": [
+              1681.5551968220132,
+              2201.0828678115245,
+              3203.9971544525165,
+              2463.1055192952263,
+              1681.5551968220132
+            ]
+          },
+          "region_attributes": {
+            "label": "bati_autres"
+          }
+        },
+        "100000000004": {
+          "shape_attributes": {
+            "name": "Polygon",
+            "all_points_x": [
+              1951.5205277005307,
+              3311.5567566678637,
+              3104.175345866281,
+              1681.4424113103062,
+              1951.5205277005307
+            ],
+            "all_points_y": [
+              2201.0828678115245,
+              2833.5513368577012,
+              3881.6419427278274,
+              3203.9971544525165,
+              2201.0828678115245
+            ]
+          },
+          "region_attributes": {
+            "label": "bati_autres"
+          }
+        }
+      }
+    }
+  }
+]

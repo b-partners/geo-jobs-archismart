@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: geo-jobs - Schedulers
+
+Parameters:
+  Env:
+    Type: String
+Conditions:
+  IsProd: !Equals [!Ref Env, "prod"]
+
+Resources:
+  ScheduledEventExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ geo-jobs-, !Ref Env, -ScheduledEventExecutionRole ] ]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+
+  DashboardApiKeyVerificationScheduler:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Scheduler that trigger the dashboard api keys verification
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Name: !Join ['', [!Ref Env, -DashboardApiKeyVerification]]
+      ScheduleExpression: "cron(0 0 * * ? *)"
+      Target:
+        Arn: !Sub '{{resolve:ssm:/geo-jobs/${Env}/eventbridge/bus-arn}}'
+        RoleArn: !GetAtt ScheduledEventExecutionRole.Arn
+        DeadLetterConfig:
+          Arn: !Sub '{{resolve:ssm:/geo-jobs/${Env}/1/sqs/dead-letter-queue-arn}}'
+        EventBridgeParameters:
+          DetailType: 'app.bpartners.geojobs.endpoint.event.model.AllDashboardApiKeyCheckTriggered'
+          Source: 'app.bpartners.geojobs.event1'

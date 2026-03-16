@@ -194,6 +194,12 @@ public class SecurityConf {
                     .authenticated()
                     .requestMatchers(POST, "/3d/*/addresses")
                     .authenticated()
+                    .requestMatchers(GET, "/geocode")
+                    .authenticated() // TODO: change later
+                    .requestMatchers(GET, "/geoCodingJobs/*")
+                    .authenticated() // TODO: change later
+                    .requestMatchers(POST, "/geoCodingJobs/*/excel")
+                    .authenticated() // TODO: change later
                     .anyRequest()
                     .denyAll())
         .csrf(AbstractHttpConfigurer::disable)

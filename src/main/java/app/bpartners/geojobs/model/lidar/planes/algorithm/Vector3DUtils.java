@@ -28,4 +28,15 @@ public class Vector3DUtils {
   public static Vector3D from(Plane3D plane) {
     return new Vector3D(plane.getA(), plane.getB(), plane.getC());
   }
+
+  public static Vector3D cross(Vector3D a, Vector3D b) {
+    return new Vector3D(
+        a.getY() * b.getZ() - a.getZ() * b.getY(),
+        a.getZ() * b.getX() - a.getX() * b.getZ(),
+        a.getX() * b.getY() - a.getY() * b.getX());
+  }
+
+  public static Vector3D negate(Vector3D v) {
+    return new Vector3D(-v.getX(), -v.getY(), -v.getZ());
+  }
 }

@@ -18,9 +18,7 @@ import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobWithoutTasks
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.TilingTaskMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoomMapper;
-import app.bpartners.geojobs.endpoint.rest.model.BucketSeparatorType;
-import app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob;
-import app.bpartners.geojobs.endpoint.rest.model.GeoServerParameter;
+import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.job.model.Task;
 import app.bpartners.geojobs.job.repository.JobStatusRepository;
@@ -28,11 +26,13 @@ import app.bpartners.geojobs.job.repository.TaskRepository;
 import app.bpartners.geojobs.job.service.JobService;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.repository.TaskStatisticRepository;
+import app.bpartners.geojobs.repository.model.ArcgisImageZoom;
 import app.bpartners.geojobs.repository.model.FilteredTilingJob;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.JobFilteredMailer;
 import app.bpartners.geojobs.service.NotFinishedTaskRetriever;
+import app.bpartners.geojobs.service.TilePolygonRetriever;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.event.TilingTaskConsumer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -296,6 +297,32 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   @SneakyThrows
   public static List<ParcelTilingTask> getTilingTasks(CreateZoneTilingJob job, String jobId) {
     var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
+    var providedFeatures = Objects.requireNonNull(job.getFeatures());
+    var geometryConverter = new GeometryConverter(null, null);
+    var imageZoom = computeSupportedImageZoom(job);
+    var tilePolygonRetriever = new TilePolygonRetriever(new TileFinder(), geometryConverter);
+    var featuresSplitByTiles =
+        splitFeaturesByTiles(providedFeatures, geometryConverter, tilePolygonRetriever, imageZoom);
+
+    return featuresSplitByTiles.stream()
+        .map(
+            feature -> {
+              feature
+                  .getProperties()
+                  .put(
+                      "zoom",
+                      zoomMapper
+                          .toDomain(Objects.requireNonNull(job.getZoomLevel()))
+                          .getZoomLevel());
+              return tilingTaskMapper.from(feature, serverUrl, job.getGeoServerParameter(), jobId);
+            })
+        .collect(toList());
+  }
+
+  @SneakyThrows
+  public static List<ParcelTilingTask> getTilingTasksFromJob(
+      CreateZoneTilingJob job, String jobId) {
+    var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
     return Objects.requireNonNull(job.getFeatures()).stream()
         .map(
             feature -> {
@@ -309,5 +336,62 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
               return tilingTaskMapper.from(feature, serverUrl, job.getGeoServerParameter(), jobId);
             })
         .collect(toList());
+  }
+
+  @NotNull
+  private static List<Feature> splitFeaturesByTiles(
+      List<Feature> providedFeatures,
+      GeometryConverter geometryConverter,
+      TilePolygonRetriever tilePolygonRetriever,
+      ArcgisImageZoom imageZoom) {
+    return providedFeatures.stream()
+        .map(
+            feature -> {
+              if (feature.getGeometry() == null
+                  || feature.getGeometry().getActualInstance() == null) {
+                return null;
+              }
+              Object geometryInstance = feature.getGeometry().getActualInstance();
+              if (geometryInstance instanceof Polygon p) {
+                return geometryConverter.apply(List.of(p.getCoordinates()));
+              } else if (geometryInstance instanceof MultiPolygon mp) {
+                return geometryConverter.apply(mp.getCoordinates());
+              } else {
+                return null;
+              }
+            })
+        .filter(Objects::nonNull)
+        .map(
+            multiPolygon -> {
+              for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+                var geometry = multiPolygon.getGeometryN(i);
+                if (geometry instanceof org.locationtech.jts.geom.Polygon jtsPolygon) {
+                  return tilePolygonRetriever.apply(jtsPolygon, imageZoom);
+                }
+              }
+              return null;
+            })
+        .filter(Objects::nonNull)
+        .flatMap(List::stream)
+        .map(geometryConverter::toRestFeature)
+        .toList();
+  }
+
+  @NotNull
+  private static ArcgisImageZoom computeSupportedImageZoom(CreateZoneTilingJob job) {
+    ArcgisImageZoom imageZoom;
+    var zoomLevel = job.getZoomLevel();
+    if (zoomLevel == null) {
+      throw new BadRequestException("Zoom level is required to process tiling");
+    }
+    switch (zoomLevel) {
+      case TOWN -> imageZoom = ArcgisImageZoom.TOWN;
+      case BUILDINGS -> imageZoom = ArcgisImageZoom.BUILDINGS;
+      case BUILDING -> imageZoom = ArcgisImageZoom.BUILDING;
+      case HOUSES_0 -> imageZoom = ArcgisImageZoom.HOUSES_0;
+      case HOUSES_1 -> imageZoom = ArcgisImageZoom.HOUSES_1;
+      default -> throw new BadRequestException("Unsupported zoom level: " + zoomLevel);
+    }
+    return imageZoom;
   }
 }
