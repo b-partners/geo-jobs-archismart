@@ -2,6 +2,7 @@ package app.bpartners.geojobs.endpoint.rest.security.authorizer;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectType;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
@@ -11,6 +12,7 @@ import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -73,12 +75,24 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
         communityZoneAuthorizer.accept(communityAuthorization, features, principal);
       }
     }
-    var detectableObjects =
-        detectableObjectTypeMapper.mapFromModel(
-            Objects.requireNonNull(createDetection.getDetectableObjectModel()));
+    var detectableObjects = getDetectableObjectTypes(createDetection, communityAuthorization);
     detectableObjects.forEach(
         candidateObjectType ->
             communityDetectableObjectTypeAuthorizer.accept(
                 communityAuthorization, candidateObjectType));
+  }
+
+  private List<DetectableObjectType> getDetectableObjectTypes(
+      CreateDetection createDetection, CommunityAuthorization communityAuthorization) {
+    if (createDetection.getDetectableObjectModelList() != null
+        && !createDetection.getDetectableObjectModelList().isEmpty()) {
+      return createDetection.getDetectableObjectModelList().stream()
+          .map(detectableObjectTypeMapper::mapFromModel)
+          .flatMap(List::stream)
+          .toList();
+    } else {
+      return detectableObjectTypeMapper.mapFromModel(
+          Objects.requireNonNull(createDetection.getDetectableObjectModel()));
+    }
   }
 }
