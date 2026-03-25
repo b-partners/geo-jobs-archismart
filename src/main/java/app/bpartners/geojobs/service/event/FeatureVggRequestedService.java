@@ -6,6 +6,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE
 import static app.bpartners.geojobs.endpoint.rest.model.Polygon.TypeEnum.POLYGON;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.getMultiPolygonZoneProcessed;
+import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
@@ -27,6 +28,7 @@ import app.bpartners.geojobs.service.tiling.TileFinder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
 
   @Override
   public void accept(FeatureVggRequested event) {
+    var featureVggComputationStart = now();
     entityManager.clear();
     var detectionIdentifier = event.getDetectionIdentifier();
     var feature = event.getFeature();
@@ -110,6 +113,12 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     var newDetection = detectionVGGUpdate.apply(vggMap.values(), detection, event.getFeatureNb());
 
     detectionRepository.save(newDetection);
+    log.info(
+            "VGG computation finished in {} seconds for detection(e2Id={}) and feature(geometry={})",
+            Duration.between(featureVggComputationStart, now()).toSeconds(),
+            detection.getEndToEndId(),
+            feature.getGeometry());
+
   }
 
   private Feature getPolygonGeoJsonFromFeature(
@@ -288,11 +297,6 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
                                       var geometryProcessed =
                                           getMultiPolygonZoneProcessed(
                                               roofFeature, isParcelDetection, detectableType);
-                                      log.info(
-                                          "Considered geometry for detectableType {} : {}",
-                                          detectableType,
-                                          geometryConverter.writeGeometryAsString(
-                                              geometryProcessed));
                                       var providedZoneAndGeometryProcessedInsideTileGeometry =
                                           providedZoneInsideTileGeometry.intersection(
                                               geometryProcessed);
@@ -327,30 +331,6 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
                                               .intersection(
                                                   providedZoneAndGeometryProcessedInsideTilePixelGeometry)
                                               .buffer(0);
-                                      if (Arrays.stream(
-                                              intersectionBetweenDetectedObjectAndConsideredZone
-                                                  .getCoordinates())
-                                          .anyMatch(
-                                              coordinate ->
-                                                  coordinate.getX() < 0 || coordinate.getY() < 0)) {
-                                        var multiPolygonFromTile =
-                                            geometryConverter.getMultiPolygonFromTile(
-                                                tileCoordinates.getX(),
-                                                tileCoordinates.getY(),
-                                                tileCoordinates.getZ());
-                                        log.info(
-                                            "Debug negative coordinates for detectableType={}"
-                                                + " geojsonZone={} inside tile multiPolygon geojson"
-                                                + " zone {} \n"
-                                                + " Pixel converted {}",
-                                            detectedObject.getDetectableObjectType(),
-                                            geometryConverter.writeGeometryAsString(
-                                                providedZoneAndGeometryProcessedInsideTileGeometry),
-                                            geometryConverter.writeGeometryAsString(
-                                                multiPolygonFromTile),
-                                            geometryConverter.writeGeometryAsString(
-                                                intersectionBetweenDetectedObjectAndConsideredZone));
-                                      }
                                       if (intersectionBetweenDetectedObjectAndConsideredZone
                                           instanceof Polygon polygon) {
                                         return new PolygonObjectType(
@@ -359,8 +339,8 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
                                         log.info(
                                             "Intersection between detected object and considered"
                                                 + " zone not polygon, but was {}",
-                                            geometryConverter.writeGeometryAsString(
-                                                intersectionBetweenDetectedObjectAndConsideredZone));
+                                            intersectionBetweenDetectedObjectAndConsideredZone
+                                                .getGeometryType());
                                       }
                                       return null;
                                     })

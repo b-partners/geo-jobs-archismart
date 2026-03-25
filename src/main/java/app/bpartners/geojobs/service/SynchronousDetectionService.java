@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.MACHINE_DETECTION;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
+import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.concurrency.Workers;
@@ -10,6 +11,7 @@ import app.bpartners.geojobs.endpoint.event.model.FeatureImageRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.mapper.DetectionFromStatisticRestMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.model.exception.ImageSourcesTimeoutException;
 import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.service.detection.*;
@@ -51,15 +53,41 @@ public class SynchronousDetectionService
   @SneakyThrows
   @Override
   public Detection apply(app.bpartners.geojobs.repository.model.detection.Detection detection) {
+    var delimitationRetrievingStart = now();
     detectionDelimitationRetriever.accept(detection);
+    log.info(
+        "Retrieving delimitation finished in {} seconds for detection(e2Id={}, feature={})",
+        Duration.between(delimitationRetrievingStart, now()).toSeconds(),
+        detection.getEndToEndId(),
+        detection.getFeatureWithDelimitations());
 
     // Tiling step
+    var tilingJobStart = now();
     var detectionWithCreatedZTJ = detectionTilingCreation.processTiling(detection);
     var zoneTilingJobId = detectionWithCreatedZTJ.getZtjId();
     var tilingTasks = zoneTilingJobService.consumeTasks(zoneTilingJobId);
     var finishedZoneTilingJob = zoneTilingJobService.findById(zoneTilingJobId);
+    var tilingJobProcessingDuration = Duration.between(tilingJobStart, now()).toSeconds();
+    log.info(
+        "Tiling job finished in {} seconds for detection(e2Id={}, tilingTasks.size={})",
+        tilingJobProcessingDuration,
+        detection.getEndToEndId(),
+        tilingTasks.size());
+    if (tilingJobProcessingDuration > 30L) {
+      throw new ImageSourcesTimeoutException(
+          String.format(
+              "Image sources%s are experiencing performance issues, which are preventing images"
+                  + " from loading.",
+                  detection.getGeoServerProperties() == null
+                          || detection.getGeoServerProperties().getGeoServerParameter() == null
+                          || detection.getGeoServerProperties().getGeoServerParameter().getLayers() == null
+                  ? ""
+                  : " from "
+                      + detection.getGeoServerProperties().getGeoServerParameter().getLayers()));
+    }
 
     // Machine detection job creation
+    var parallelMachineDetectionAndImageRequestStart = now();
     var createdZoneDetectionJob = zoneDetectionJobService.saveZDJFromZTJ(finishedZoneTilingJob);
     var zoneDetectionJobDetectableConf =
         detection.getDetectableObjectConfigurations().stream()
@@ -94,7 +122,14 @@ public class SynchronousDetectionService
     }
     firstCallableVoidList.add(machineDetectionProcessCallableVoidList);
     workers.invokeAll(firstCallableVoidList);
+    log.info(
+        "Machine detection and image request finished in {} seconds for detection(e2Id={},"
+            + " imagesCount={})",
+        Duration.between(parallelMachineDetectionAndImageRequestStart, now()).toSeconds(),
+        detection.getEndToEndId(),
+        tilingTasks.size());
 
+    var vggRequestAndGeoJsonEventTriggerStart = now();
     Callable<Void> featureVggRequestedCallableVoid =
         () -> {
           // VGG result computing step
@@ -116,6 +151,10 @@ public class SynchronousDetectionService
     }
     secondVoidCallable.add(geoJsonRequestedCallableVoid);
     workers.invokeAll(secondVoidCallable);
+    log.info(
+        "GeoJSON conversion request and VGG computation done in {} seconds for detection(e2Id={})",
+        Duration.between(vggRequestAndGeoJsonEventTriggerStart, now()).toSeconds(),
+        detection.getEndToEndId());
 
     return attemptVggFileKeyRetrieve(detection);
   }
@@ -123,9 +162,7 @@ public class SynchronousDetectionService
   @SneakyThrows
   private Detection attemptVggFileKeyRetrieve(
       app.bpartners.geojobs.repository.model.detection.Detection detection) {
-    log.info(
-        "Waiting for ZoneVGGRequested to be computed for detection.e2Id: {}",
-        detection.getEndToEndId());
+    var retrievingVggFileKeyStart = now();
     for (int attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
       entityManager.clear();
       var actualDetection = detectionRepository.findById(detection.getId()).orElseThrow();
@@ -145,6 +182,11 @@ public class SynchronousDetectionService
         Thread.sleep(Duration.ofSeconds(5L));
       }
     }
+
+    log.info(
+        "VGG file key retrieved in {} seconds for detection(e2Id={})",
+        Duration.between(retrievingVggFileKeyStart, now()).toSeconds(),
+        detection.getEndToEndId());
 
     return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
         detectionRepository.findById(detection.getId()).orElseThrow(),

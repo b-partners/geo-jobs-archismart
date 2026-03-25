@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.Status.HealthEnum.SUCCEE
 import static app.bpartners.geojobs.endpoint.rest.model.Status.ProgressionEnum.FINISHED;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -14,6 +15,7 @@ import app.bpartners.geojobs.endpoint.rest.mapper.DetectionFromStatisticRestMapp
 import app.bpartners.geojobs.endpoint.rest.model.DetectionStep;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.Status;
+import app.bpartners.geojobs.model.exception.ImageSourcesTimeoutException;
 import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
@@ -31,9 +33,14 @@ import app.bpartners.geojobs.service.event.FeatureVggRequestedService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import jakarta.persistence.EntityManager;
+
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 class SynchronousDetectionServiceTest {
   DetectionRepository detectionRepositoryMock = mock();
@@ -126,5 +133,24 @@ class SynchronousDetectionServiceTest {
     assertEquals(MACHINE_DETECTION, actual.getStep().getName());
     assertEquals(FINISHED, actual.getStep().getStatus().getProgression());
     assertEquals(SUCCEEDED, actual.getStep().getStatus().getHealth());
+  }
+
+  @Test
+  void throws_image_sources_timeout_when_tiling_duration_exceeds_30_seconds_duration() {
+    var detectionMock = mock(Detection.class);
+    var detectionWithCreatedZTJMock = mock(Detection.class);
+    var parcelTilingTaskMock = mock(ParcelTilingTask.class);
+    doNothing().when(detectionDelimitationRetrieverMock).accept(detectionMock);
+    when(detectionTilingCreationMock.processTiling(detectionMock)).thenReturn(detectionWithCreatedZTJMock);
+    when(zoneTilingJobServiceMock.consumeTasks(any()))
+            .thenAnswer(invocation -> {
+              Thread.sleep(Duration.ofSeconds(31)); // TODO: deprecated but simulates real case
+              return List.of(parcelTilingTaskMock);
+            });
+
+
+    ImageSourcesTimeoutException actual = assertThrows(ImageSourcesTimeoutException.class, () -> subject.apply(detectionMock));
+
+    assertEquals("Image sources are experiencing performance issues, which are preventing images from loading.", actual.getMessage());
   }
 }

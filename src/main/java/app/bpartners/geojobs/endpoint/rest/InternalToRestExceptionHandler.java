@@ -101,6 +101,12 @@ public class InternalToRestExceptionHandler {
     return new ResponseEntity<>(toRest(e, HttpStatus.NOT_FOUND), HttpStatus.NOT_FOUND);
   }
 
+  @ExceptionHandler(value = {ImageSourcesTimeoutException.class})
+  ResponseEntity<RestException> handleTimeout(ImageSourcesTimeoutException e) {
+    log.info("Image sources timeout", e);
+    return new ResponseEntity<>(toRest(e, HttpStatus.GATEWAY_TIMEOUT), HttpStatus.GATEWAY_TIMEOUT);
+  }
+
   @ExceptionHandler(value = {NotImplementedException.class})
   ResponseEntity<RestException> handleNotFound(NotImplementedException e) {
     log.info("Not implemented", e);

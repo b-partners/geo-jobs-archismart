@@ -15,15 +15,18 @@ import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.TaskConsumer;
 import app.bpartners.geojobs.service.tiling.downloader.TilesDownloader;
 import java.io.File;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @AllArgsConstructor
 @Component
+@Slf4j
 public class TilingTaskConsumer implements TaskConsumer<ParcelTilingTask> {
   private static final int DEFAULT_TILE_SIZE = 1024;
   private final TilesDownloader tilesDownloader;
@@ -31,6 +34,7 @@ public class TilingTaskConsumer implements TaskConsumer<ParcelTilingTask> {
 
   @Override
   public void accept(ParcelTilingTask parcelTilingTask) {
+    var tilingTaskStart = now();
     var parcel = parcelTilingTask.getParcelContent();
 
     File downloadedTiles = tilesDownloader.apply(parcel);
@@ -40,6 +44,20 @@ public class TilingTaskConsumer implements TaskConsumer<ParcelTilingTask> {
     downloadedTiles.delete();
 
     setParcelTiles(downloadedTiles, parcel, bucketKey);
+    log.info(
+        "Tiling task finished in {} seconds for tiles={}",
+        Duration.between(tilingTaskStart, now()).toSeconds(),
+        parcelTilingTask.getTiles().stream()
+            .map(
+                tile ->
+                    "(x="
+                        + tile.getCoordinates().getX()
+                        + ", y="
+                        + tile.getCoordinates().getY()
+                        + ", z="
+                        + tile.getCoordinates().getZ()
+                        + ")")
+            .collect(Collectors.joining(",")));
   }
 
   private void setParcelTiles(File tilesDir, ParcelContent parcelContent, String bucketKey) {

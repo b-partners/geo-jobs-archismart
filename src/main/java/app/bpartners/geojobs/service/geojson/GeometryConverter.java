@@ -528,18 +528,12 @@ public class GeometryConverter {
         && isParcelDetection) {
       var parcelFetcher = new IgnCadastreFeatureFetcher(new RestTemplate());
       var internalConverter = new GeometryConverter(null, parcelFetcher);
-      log.info(
-          "Roof multiPolygon used to retrieve parcel : {}",
-          internalConverter.writeGeometryAsString(roofMultiPolygon));
       var parcelFeaturesFromPoint = parcelFetcher.apply(roofMultiPolygon.getCentroid());
       if (parcelFeaturesFromPoint.isEmpty()) {
         log.warn("No parcel found for roofMultiPolygon {}", roofMultiPolygon.toText());
         return null;
       }
-      var parcelMultiPolygon =
-          internalConverter.retrieveNearestParcelMultiPolygon(parcelFeaturesFromPoint);
-      log.info("Parcel retrieved {}", internalConverter.writeGeometryAsString(parcelMultiPolygon));
-      return parcelMultiPolygon;
+      return internalConverter.retrieveNearestParcelMultiPolygon(parcelFeaturesFromPoint);
     }
     return roofMultiPolygon;
   }
