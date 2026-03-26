@@ -1,0 +1,77 @@
+<html lang="fr">
+<head>
+    <title>3D request monitoring</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F1E4E7;
+            color: #582d37;
+            margin: 0;
+            padding: 20px;
+        }
+
+        section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+            border-left: 6px solid rgba(171, 0, 86, 0.2);
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #660033;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        ul li {
+            background-color: rgba(0, 0, 0, 0.05);
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid rgba(171, 0, 86, 0.5);
+            border-radius: 4px;
+        }
+
+        ul li span {
+            font-weight: bold;
+            color: rgba(122, 0, 61, 0.7);
+        }
+
+        ul li:not(:last-child) {
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: rgba(171, 0, 86, 0.7);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <h1>Informations de la requête 3D ID = <span th:text="${request.id}"></span></h1>
+    <p>Bonjour,</p>
+    <p>Voici la liste des Feature correspondant à la requête du consommateur d'API <span th:if="${community != null}">
+            <span th:text="${community.name}"></span> ayant comme email <span th:text="${community.email}"></span>
+            et ID <span th:text="${community.id}"></span>
+        </span> :
+    </p>
+    <ul>
+        <li th:each="f : ${features}">
+            Type <span th:text="${f.geometryType()}"></span> - Géometrie : <span
+                th:text="${f.geometryString()}"></span>
+        </li>
+    </ul>
+    <p>Cordialement.</p>
+    <p>L'équipe BirdIA.</p>
+</section>
+</body>
+</html>

@@ -4,10 +4,13 @@ import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestSta
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.*;
 import static java.util.stream.Collectors.toSet;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
+import app.bpartners.geojobs.endpoint.event.model.ThreeDRequestMonitoringTriggered;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
+import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
@@ -40,9 +43,20 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
   private final FeatureMapper featureMapper;
   private final EntityManager entityManager;
   private final BucketComponent bucketComponent;
+  private final EventProducer eventProducer;
+  private final CommunityAuthorizationRepository communityAuthorizationRepository;
 
   @Override
   public void accept(CityJSONRequestCreated created) {
+    var communityAuthorization =
+        communityAuthorizationRepository.findById(created.getCommunityOwnerId()).orElseThrow();
+    if (!communityAuthorization.isIntegrationTestUsage()) {
+      eventProducer.accept(
+          List.of(
+              new ThreeDRequestMonitoringTriggered(
+                  created.getRequestId(), created.getCommunityOwnerId())));
+    }
+
     var request =
         cityJSONRequestRepository
             .findByIdAndCommunityOwnerId(created.getRequestId(), created.getCommunityOwnerId())

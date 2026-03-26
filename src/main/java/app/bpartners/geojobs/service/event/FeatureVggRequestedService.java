@@ -114,11 +114,10 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
 
     detectionRepository.save(newDetection);
     log.info(
-            "VGG computation finished in {} seconds for detection(e2Id={}) and feature(geometry={})",
-            Duration.between(featureVggComputationStart, now()).toSeconds(),
-            detection.getEndToEndId(),
-            feature.getGeometry());
-
+        "VGG computation finished in {} seconds for detection(e2Id={}) and feature(geometry={})",
+        Duration.between(featureVggComputationStart, now()).toSeconds(),
+        detection.getEndToEndId(),
+        feature.getGeometry());
   }
 
   private Feature getPolygonGeoJsonFromFeature(

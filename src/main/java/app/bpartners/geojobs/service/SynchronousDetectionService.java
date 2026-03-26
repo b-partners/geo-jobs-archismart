@@ -78,9 +78,10 @@ public class SynchronousDetectionService
           String.format(
               "Image sources%s are experiencing performance issues, which are preventing images"
                   + " from loading.",
-                  detection.getGeoServerProperties() == null
-                          || detection.getGeoServerProperties().getGeoServerParameter() == null
-                          || detection.getGeoServerProperties().getGeoServerParameter().getLayers() == null
+              detection.getGeoServerProperties() == null
+                      || detection.getGeoServerProperties().getGeoServerParameter() == null
+                      || detection.getGeoServerProperties().getGeoServerParameter().getLayers()
+                          == null
                   ? ""
                   : " from "
                       + detection.getGeoServerProperties().getGeoServerParameter().getLayers()));

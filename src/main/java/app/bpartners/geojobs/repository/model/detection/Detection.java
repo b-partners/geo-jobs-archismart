@@ -59,6 +59,8 @@ public class Detection implements Serializable {
   private String pdfFileKey;
   private String vggFileKey;
 
+  private boolean integrationTest;
+
   @Column(name = "zdj_id")
   private String zdjId;
 

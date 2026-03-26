@@ -15,10 +15,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.context.Context;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class DetectionSucceededService implements Consumer<DetectionSucceeded> {
@@ -56,12 +58,18 @@ public class DetectionSucceededService implements Consumer<DetectionSucceeded> {
     var emailReceiver = detection.getEmailReceiver();
     var detectionJobStatus = actualStatusFromStep(detection);
 
-    this.accept(
-        zoneDetectionJobIdentifier,
-        detectionJobStatus,
-        detection.getZoneName(),
-        formattedSucceededDatetime,
-        emailReceiver);
+    if (!detection.isIntegrationTest()) {
+      this.accept(
+          zoneDetectionJobIdentifier,
+          detectionJobStatus,
+          detection.getZoneName(),
+          formattedSucceededDatetime,
+          emailReceiver);
+    } else {
+      log.info(
+          "Detection(e2Id={}) finished successfully. Email will not be sent.",
+          detection.getEndToEndId());
+    }
   }
 
   public void accept(

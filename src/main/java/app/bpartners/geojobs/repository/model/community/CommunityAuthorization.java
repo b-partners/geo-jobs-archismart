@@ -49,6 +49,8 @@ public class CommunityAuthorization implements Serializable {
   @JdbcTypeCode(NAMED_ENUM)
   private SurfaceUnit maxSurfaceUnit;
 
+  @Column private boolean integrationTestUsage;
+
   private @CreationTimestamp Instant creationDatetime;
 
   @OneToMany(fetch = EAGER, mappedBy = "communityAuthorizationId", cascade = ALL)

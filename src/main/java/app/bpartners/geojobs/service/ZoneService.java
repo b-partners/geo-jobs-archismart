@@ -418,10 +418,21 @@ public class ZoneService {
             createDetection, detectionE2Id, communityOwnerId, isSynchronous);
     List<Feature> geoJsonZone =
         createDetection.getGeoJsonZone() == null ? List.of() : createDetection.getGeoJsonZone();
+    var detectionToSaveBuilder = detectionToSave.toBuilder();
+    if (communityOwnerId != null) {
+      var communityOwner = communityAuthRepository.findById(communityOwnerId).orElseThrow();
+      if (communityOwner.isIntegrationTestUsage()) {
+        detectionToSaveBuilder.integrationTest(true);
+      }
+    }
     var savedDetection =
-        communityUsedSurfaceService.persistDetectionWithSurfaceUsage(detectionToSave, geoJsonZone);
-    eventProducer.accept(
-        List.of(DetectionSaved.builder().detectionIdentifier(savedDetection.getId()).build()));
+        communityUsedSurfaceService.persistDetectionWithSurfaceUsage(
+            detectionToSaveBuilder.build(), geoJsonZone);
+
+    if (!savedDetection.isIntegrationTest()) {
+      eventProducer.accept(
+          List.of(DetectionSaved.builder().detectionIdentifier(savedDetection.getId()).build()));
+    }
     return savedDetection;
   }
 
