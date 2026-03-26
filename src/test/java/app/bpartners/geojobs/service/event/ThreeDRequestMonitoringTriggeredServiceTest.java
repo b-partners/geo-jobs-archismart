@@ -72,7 +72,7 @@ class ThreeDRequestMonitoringTriggeredServiceTest {
                 new InternetAddress("tech@birdia.fr"),
                 List.of(),
                 List.of(),
-                "[geo-jobs/null] Requête 3D portant ID " + requestId,
+                "[archismart/null] Requête 3D portant ID " + requestId,
                 getHtmlBody(requestId, communityOwnerId),
                 List.of()));
   }

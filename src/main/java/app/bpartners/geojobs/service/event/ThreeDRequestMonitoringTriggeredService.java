@@ -59,7 +59,7 @@ public class ThreeDRequestMonitoringTriggeredService
             new InternetAddress("tech@birdia.fr"),
             List.of(),
             List.of(),
-            "[geo-jobs/" + env + "] Requête 3D portant ID " + requestId,
+            "[archismart/" + env + "] Requête 3D portant ID " + requestId,
             getHtmlBody(cityJSONRequest, communityOwner, featuresProcessed),
             List.of()));
   }
