@@ -70,7 +70,7 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
       if (isError(lidarAnalysisResult)) {
         log.error("All data from lidar analysis was failed");
         updateStatus(request, FAILED, POINTS_CLOUD_PRE_PROCESSING);
-        return;
+        throw new LidarAllDataFailedException("All data from lidar analysis was failed");
       }
 
       if (isUnavailable(lidarAnalysisResult)) {
@@ -88,9 +88,12 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
               .build();
       entityManager.clear();
       cityJSONRequestRepository.save(updated);
+    } catch (LidarAllDataFailedException e) {
+      throw e;
     } catch (Exception e) {
       log.error(e.getMessage());
       updateStatus(request, FAILED, GEOMETRY_CONSTRUCTION);
+      throw e;
     }
   }
 
@@ -144,5 +147,11 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
     var updatedStatus = request.toBuilder().status(status).step(step).build();
     entityManager.clear();
     cityJSONRequestRepository.save(updatedStatus);
+  }
+
+  public static class LidarAllDataFailedException extends RuntimeException {
+    public LidarAllDataFailedException(String message) {
+      super(message);
+    }
   }
 }

@@ -9,6 +9,7 @@ import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightReq
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Detection;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.ImageProperties;
 import app.bpartners.geojobs.endpoint.rest.model.RoofDelimiter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.detection.DetectionStep;
@@ -17,6 +18,7 @@ import app.bpartners.geojobs.service.DetectionFeaturesResultImageRetriever;
 import app.bpartners.geojobs.service.DetectionImageAttributeRetriever;
 import app.bpartners.geojobs.service.DetectionImageTileInfoOriginRetriever;
 import app.bpartners.geojobs.service.DetectionVggAttributeRetriever;
+import java.awt.*;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -87,6 +89,12 @@ public class DetectionFromStepMapper
         .roofDelimiter(retrieveRoofDelimiter(detection))
         .geoJsonOutput(detection.isOutputZipped() ? ZIP : GEO_JSON)
         .needsImageOutput(detection.needsImageOutput())
+        .imageProperties(
+            detection.getImageHeight() == null && detection.getImageWidth() == null
+                ? null
+                : new ImageProperties()
+                    .width(detection.getImageWidth())
+                    .height(detection.getImageHeight()))
         .creationDatetime(detection.getCreationDatetime());
   }
 

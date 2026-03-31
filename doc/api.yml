@@ -1450,6 +1450,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GeoCodingJob'
+
+  /roof/overallScore:
+    get:
+      tags:
+        - Roof
+      operationId: computeRoofOverallScore
+      summary: Compute overall roof degradation score and category
+      description: |
+        Computes the overall degradation score and corresponding category (A, B, C, D, E)
+        of a roof based on humidite, usure, and moisissure rates.
+      parameters:
+        - in: query
+          name: humiditeRate
+          required: true
+          schema:
+            type: number
+            description: Moisture rate of the roof area (0–100).
+
+        - in: query
+          name: usureRate
+          required: true
+          schema:
+            type: number
+            description: Wear rate of the roof area (0–100).
+
+        - in: query
+          name: moisissureRate
+          required: true
+          schema:
+            type: number
+            description: Mold rate of the roof area (0–100).
+      responses:
+        200:
+          description: Computed roof score
+          content:
+            applicatin/json:
+              schema:
+                $ref: '#/components/schemas/RoofScore'
 components:
   securitySchemes:
     ReadmeAuth:
@@ -1596,6 +1634,26 @@ components:
           schema:
             $ref: '#/components/schemas/InternalServerException'
   schemas:
+    RoofScore:
+      type: object
+      description: Represents the overall damage rate score of a roof based on multiple degradation factors.
+      properties:
+        score:
+          type: number
+          description: Overall roof degradation score, expressed as a percentage between 0 (best) and 100 (worst).
+        category:
+          $ref: "#/components/schemas/RoofScoreCategory"
+
+    RoofScoreCategory:
+      type: string
+      description: "Classification of the roof damage rate based on the computed score. (A. best, E. worst)"
+      enum:
+        - "A"
+        - "B"
+        - "C"
+        - "D"
+        - "E"
+
     CreateApiKey:
       type: object
       properties:
@@ -2052,6 +2110,13 @@ components:
           type: integer
         z:
           type: integer
+    ImageProperties:
+      type: object
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
     TileInfo:
       properties:
         size:
@@ -2364,6 +2429,8 @@ components:
           type: string
         imageUrl:
           type: string
+        imageProperties:
+         $ref: '#/components/schemas/ImageProperties'
         imageTileInfoOrigin:
           $ref: '#/components/schemas/TileInfo'
         pdfUrl:

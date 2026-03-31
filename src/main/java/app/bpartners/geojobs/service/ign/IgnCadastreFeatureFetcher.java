@@ -1,32 +1,39 @@
 package app.bpartners.geojobs.service.ign;
 
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.staticWriteGeometryAsString;
+import static java.time.Instant.now;
 import static org.springframework.http.HttpMethod.GET;
 
+import app.bpartners.geojobs.model.exception.IgnTimeoutException;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.service.ign.schemas.IgnFeature;
 import app.bpartners.geojobs.service.ign.schemas.IgnResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class IgnCadastreFeatureFetcher implements Function<Geometry, List<Feature>> {
   private static final String URL = "https://apicarto.ign.fr/api/cadastre/parcelle?geom={geom}";
+  private static final int MAXIMUM_DURATION_TIMEOUT = 10;
 
   private final RestTemplate restTemplate;
 
   @Override
   public List<Feature> apply(Geometry geometry) {
+    var ignCadastreFetcherStart = now();
     String geoJson;
     if (geometry.getDimension() < 2) {
       geoJson = staticWriteGeometryAsString(createBoundingBoxAroundOneMeter(geometry));
@@ -40,7 +47,23 @@ public class IgnCadastreFeatureFetcher implements Function<Geometry, List<Featur
       throw new IllegalStateException(
           "Unable to convert geometry " + geometry + " to Feature as empty features obtained");
     }
-    return responseBody.features.stream().map(this::mapToFeature).toList();
+    var features = responseBody.features.stream().map(this::mapToFeature).toList();
+    var ignCadastreFetchDuration = Duration.between(ignCadastreFetcherStart, now());
+    log.info(
+        "IGN cadastre fetched in {} seconds for geometry {}",
+        ignCadastreFetchDuration.toSeconds(),
+        staticWriteGeometryAsString(geometry));
+    if (ignCadastreFetchDuration.toSeconds() > MAXIMUM_DURATION_TIMEOUT) {
+      throw new IgnTimeoutException(
+          "Unable to fetch IGN cadastre in less than "
+              + MAXIMUM_DURATION_TIMEOUT
+              + " seconds for "
+              + geometry
+              + ". Actual duration is "
+              + ignCadastreFetchDuration.toSeconds()
+              + " seconds");
+    }
+    return features;
   }
 
   @SneakyThrows

@@ -1,18 +1,17 @@
 package app.bpartners.geojobs.model.lidar.planes;
 
-import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities.project;
 import static app.bpartners.geojobs.model.lidar.planes.algorithm.PointsDelimitationComputer.getConvex;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
-import app.bpartners.geojobs.model.lidar.LasPointsDelimiter;
 import app.bpartners.geojobs.model.lidar.Polygon3DArea;
+import app.bpartners.geojobs.model.lidar.planes.PlaneDelimitation.PlaneDelimitationConf;
 import app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities;
 import app.bpartners.geojobs.model.lidar.planes.algorithm.Vector3DUtils;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
 import java.util.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.math.Vector2D;
 import org.locationtech.jts.math.Vector3D;
@@ -30,8 +29,7 @@ public class Plane3D {
   @EqualsAndHashCode.Include protected final double d;
   @EqualsAndHashCode.Exclude protected final Kernel kernel;
   @EqualsAndHashCode.Exclude protected final Set<LasPointGeometry> points;
-  @EqualsAndHashCode.Exclude protected final double delimitationConcaveRatio;
-  @EqualsAndHashCode.Exclude protected final double delimitationSimplificationEpsilon;
+  @EqualsAndHashCode.Exclude protected final PlaneDelimitationConf delimitationConf;
 
   @EqualsAndHashCode.Include private Double norm;
   @EqualsAndHashCode.Exclude private Polygon3DArea area;
@@ -56,10 +54,9 @@ public class Plane3D {
         .c(0)
         .d(0)
         .norm(1d)
-        .points(Set.of())
-        .delimitationConcaveRatio(0)
-        .delimitationSimplificationEpsilon(0)
         .exporter(null)
+        .points(Set.of())
+        .delimitationConf(null)
         .build();
   }
 
@@ -73,11 +70,9 @@ public class Plane3D {
 
   public Polygon getDelimitation() {
     if (delimitation == null) {
-      var delimiter =
-          new LasPointsDelimiter(
-              points, delimitationConcaveRatio, delimitationSimplificationEpsilon, exporter);
+      var delimiter = new PlaneDelimitation(delimitationConf, points, exporter);
       delimitation = delimiter.getPolygon();
-      delimitation = projectPolygonToPlane(delimitation);
+      delimitation = project(this, delimitation);
     }
 
     return delimitation;
@@ -102,24 +97,10 @@ public class Plane3D {
     return area.getValue();
   }
 
-  /* Or simply with average */
-  private Polygon projectPolygonToPlane(Polygon polygon) {
-    var coordinates =
-        Arrays.stream(polygon.getCoordinates())
-            .map(
-                coordinate ->
-                    new Coordinate(
-                        coordinate.getX(),
-                        coordinate.getY(),
-                        zAt(coordinate.getX(), coordinate.getY())))
-            .toArray(Coordinate[]::new);
-    return geometryFactory.createPolygon(coordinates);
-  }
-
   public Polygon getConvexDelimitation() {
     if (convexDelimitation == null) {
       var convex = getConvex(points);
-      convexDelimitation = projectPolygonToPlane(convex);
+      convexDelimitation = project(this, convex);
     }
     return convexDelimitation;
   }

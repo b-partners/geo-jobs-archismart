@@ -168,8 +168,8 @@ class GeoJsonConversionAssemblyInitiatedServiceTest {
     var fileKey = fileKeyCaptor.getValue();
     var file = fileCaptor.getValue();
     var finalGeoJsonContent = Files.readString(Path.of(file.getPath()));
-    assertEquals("dummyZoneName-final.geojson.txt", file.getName());
-    assertEquals("geoJson/zoneDetectionJobId/dummyZoneName-final.geojson", fileKey);
+    assertEquals("dummyZoneName.geojson.txt", file.getName());
+    assertEquals("geoJson/zoneDetectionJobId/dummyZoneName.geojson", fileKey);
     assertEquals(expectedFinalGeojsonContent(), finalGeoJsonContent);
 
     var geoJsonConversionJobCaptor = ArgumentCaptor.forClass(GeoJsonConversionJob.class);

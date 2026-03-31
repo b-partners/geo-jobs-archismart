@@ -11,8 +11,7 @@ public class ChimneyPlane3D extends Plane3D {
         plane.getD(),
         plane.getKernel(),
         plane.getPoints(),
-        plane.getDelimitationConcaveRatio(),
-        plane.getDelimitationSimplificationEpsilon(),
+        plane.getDelimitationConf(),
         plane.getExporter());
     this.delimitation = plane.getDelimitation();
   }

@@ -14,10 +14,9 @@ class Plane3DMergerTest {
   private static final double EPSILON_SLOPE = 7;
   private static final double EPSILON_Z_DISTANCE = 0.3;
   private static final double EPSILON_XY_DISTANCE = 0.5;
-  private static final double CONCAVE_RATIO = 0.2;
 
   private static final Plane3DMerger subject =
-      new Plane3DMerger(CONCAVE_RATIO, EPSILON_SLOPE, EPSILON_Z_DISTANCE, EPSILON_XY_DISTANCE);
+      new Plane3DMerger(EPSILON_SLOPE, EPSILON_Z_DISTANCE, EPSILON_XY_DISTANCE);
 
   @Test
   void should_not_merge_if_z_not_closed() {

@@ -20,10 +20,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionTask;
-import app.bpartners.geojobs.service.DetectionBackgroundRetriever;
-import app.bpartners.geojobs.service.DetectionService;
-import app.bpartners.geojobs.service.DetectionZoneToProcessProvider;
-import app.bpartners.geojobs.service.GeoFeatureConverter;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -57,6 +54,7 @@ public class ZipGeoJsonAssembler implements Consumer<GeoJsonConversionJob> {
   private final DetectionZoneToProcessProvider detectionProvidedZoneUnifier;
   private final GeometryConverter geometryConverter;
   private final DetectionBackgroundRetriever detectionBackgroundRetriever;
+  private final GeometrySquareMeterArea geometrySquareMeterArea;
 
   @Override
   public void accept(GeoJsonConversionJob geoJsonConversionJob) {
@@ -64,7 +62,7 @@ public class ZipGeoJsonAssembler implements Consumer<GeoJsonConversionJob> {
     var conversionTasks = geoJsonConversionTaskRepository.findAllByJobId(conversionJobId);
     var zoneDetectionJob =
         zoneDetectionJobService.findById(geoJsonConversionJob.getZoneDetectionJobId());
-    var outputFileName = zoneDetectionJob.getZoneName() + "-final.zip";
+    var outputFileName = zoneDetectionJob.getZoneName().replace(" ", "_") + ".zip";
     var combinedFileKey = GEO_JSON_BUCKET_FOLDER + zoneDetectionJob.getId() + "/" + outputFileName;
     var detection = detectionService.getByZoneDetectionJob(zoneDetectionJob);
     var unifiedProvidedZone = detectionProvidedZoneUnifier.apply(detection);
@@ -180,8 +178,21 @@ public class ZipGeoJsonAssembler implements Consumer<GeoJsonConversionJob> {
               var intersectedMultiPolygonRest =
                   filterRoofMultiPolygonByProvidedZoneIntersection(
                       unifiedProvidedZone, convertedMultiPolygon);
-              return new GeoJson.GeoFeature(
-                  restFeature.getProperties(), intersectedMultiPolygonRest);
+              var computedArea =
+                  geometrySquareMeterArea.apply(
+                      geometryConverter.toPolygon(intersectedMultiPolygonRest.getCoordinates()));
+              var featureProperties =
+                  restFeature.getProperties() == null
+                      ? new HashMap<String, Object>()
+                      : restFeature.getProperties();
+              if (featureProperties.containsKey("Superficie_en_m2")) {
+                if (feature.getProperties().get("Superficie_en_m2") == null) {
+                  featureProperties.put("Superficie_en_m2", computedArea);
+                }
+              } else {
+                featureProperties.put("area_in_m2", computedArea);
+              }
+              return new GeoJson.GeoFeature(featureProperties, intersectedMultiPolygonRest);
             })
         .toList();
   }

@@ -3,18 +3,20 @@ package app.bpartners.geojobs.model.geometry.lidar.planes;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.model.lidar.planes.Plane3DExtractorConf;
 import app.bpartners.geojobs.model.lidar.planes.Planes3DExtractor;
+import app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Polygon;
 
 class Planes3DExtractorTest {
   private static final Planes3DExtractor subject =
       new Planes3DExtractor(
+          null,
           Plane3DExtractorConf.getDefault().toBuilder()
               .planeConf(
                   Plane3DExtractorConf.PlaneConf.builder()
@@ -34,7 +36,8 @@ class Planes3DExtractorTest {
     var processResult = processor.from(roofGeometries);
 
     var property = new Building3DProperties(processResult.getData(roofGeometry1));
-    var planes = subject.apply(property.getCleanedRoofPoints());
+    var extractor = subject.toBuilder().roofDelimitation((Polygon) roofGeometry1).build();
+    var planes = extractor.apply(property.getCleanedRoofPoints());
 
     assertEquals(1, planes.size());
   }
@@ -47,7 +50,8 @@ class Planes3DExtractorTest {
     var processResult = processor.from(roofGeometries);
 
     var properties = new Building3DProperties(processResult.getData(roofGeometry3));
-    var planes = subject.apply(properties.getCleanedRoofPoints());
+    var extractor = subject.toBuilder().roofDelimitation((Polygon) roofGeometry3).build();
+    var planes = extractor.apply(properties.getCleanedRoofPoints());
 
     assertEquals(2, planes.size());
   }

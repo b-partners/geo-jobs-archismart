@@ -83,7 +83,7 @@ public class DelimitationFiller
     }
 
     var newDelimitation =
-        new PolylineSimplifier(plane.getDelimitationSimplificationEpsilon())
+        new PolylineSimplifier(plane.getDelimitationConf().simplificationEpsilon())
             .simplifyPolygon(plane.getConvexDelimitation());
     return plane.toBuilder().area(null).delimitation(newDelimitation).build();
   }

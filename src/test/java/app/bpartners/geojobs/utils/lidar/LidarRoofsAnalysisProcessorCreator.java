@@ -15,6 +15,7 @@ import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
+import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.util.*;
@@ -33,11 +34,18 @@ public class LidarRoofsAnalysisProcessorCreator {
         geometries.stream().map(g -> projector.project(g, WGS84, LAMBERT_93)).collect(toSet());
     var lidarApiMock = lidarApiMock(projected, createTempFileFromResources(LARGE_LIDAR_FILE_PATH));
 
-    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
+    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector, swissBoundaryCheckerMock());
+  }
+
+  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
+    var checker = mock(SwissBoundaryChecker.class);
+    when(checker.isGeometryInSwiss(any())).thenReturn(false);
+
+    return checker;
   }
 
   public LidarRoofsAnalysisProcessor create(LidarApiFacade lidarApi) {
-    return new LidarRoofsAnalysisProcessor(lidarApi, projector);
+    return new LidarRoofsAnalysisProcessor(lidarApi, projector, swissBoundaryCheckerMock());
   }
 
   public LidarRoofsAnalysisProcessor create(Geometry delimitation, List<String> files) {
@@ -56,7 +64,7 @@ public class LidarRoofsAnalysisProcessorCreator {
               return Optional.of(filesData.get(files.indexOf(filename)));
             });
 
-    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
+    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector, swissBoundaryCheckerMock());
   }
 
   @SneakyThrows

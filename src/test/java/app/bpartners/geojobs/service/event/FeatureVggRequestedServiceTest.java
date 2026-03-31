@@ -12,7 +12,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
 import app.bpartners.geojobs.model.geometry.TiledPixelPolygon;
@@ -30,6 +29,7 @@ import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.DetectionVGGUpdate;
 import app.bpartners.geojobs.service.PolygonCoordinatesCloser;
 import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
+import app.bpartners.geojobs.service.TileCoordinatesService;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import app.bpartners.geojobs.service.tiling.TileFinder;
@@ -50,10 +50,10 @@ class FeatureVggRequestedServiceTest {
   DetectionVGGUpdate detectionVGGUpdateMock = mock();
   PolygonCoordinatesCloser polygonCoordinatesCloser = new PolygonCoordinatesCloser();
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersectionMock = mock();
-  FeatureMapper featureMapperMock = mock();
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
   TileFinder tileFinderMock = mock();
   IgnCadastreFeatureFetcher ignCadastreFeatureFetcherMock = mock();
+  TileCoordinatesService tileCoordinatesService = new TileCoordinatesService();
 
   FeatureVggRequestedService subject =
       new FeatureVggRequestedService(
@@ -64,11 +64,11 @@ class FeatureVggRequestedServiceTest {
           detectionVGGUpdateMock,
           polygonCoordinatesCloser,
           tileCoordinatesPolygonIntersectionMock,
-          featureMapperMock,
           detectionRoofPropertiesRequestedServiceMock,
           tileFinderMock,
           mock(),
-          ignCadastreFeatureFetcherMock);
+          ignCadastreFeatureFetcherMock,
+          tileCoordinatesService);
 
   @Test
   void compute_vgg_for_zone_and_update_detection_vgg() {
@@ -89,6 +89,7 @@ class FeatureVggRequestedServiceTest {
             .build();
     int featureNb = 0;
     var featureWithDelimitation = getFeatureWithDelimitation(polygonGeoJsonZoneFeature);
+    var detectionBuilder = mock(Detection.DetectionBuilder.class);
     Map<app.bpartners.geojobs.endpoint.rest.model.Feature, VGG> vggMapMock = mock();
     List<VGG> vggCollectionMock = List.of(mock(VGG.class));
 
@@ -98,6 +99,10 @@ class FeatureVggRequestedServiceTest {
     when(detectionMock.getZdjId()).thenReturn(zoneDetectionJobIdentifier);
     when(detectionMock.getZtjId()).thenReturn(zoneTilingJobIdentifier);
     when(detectionMock.getFeatureWithDelimitations()).thenReturn(List.of(featureWithDelimitation));
+    when(detectionMock.toBuilder()).thenReturn(detectionBuilder);
+    when(detectionBuilder.imageWidth(anyInt())).thenReturn(detectionBuilder);
+    when(detectionBuilder.imageHeight(anyInt())).thenReturn(detectionBuilder);
+    when(detectionBuilder.build()).thenReturn(detectionMock);
     when(detectionRoofPropertiesRequestedServiceMock.applyRoofPropertiesOnDelimitation(
             anyList(), any(FeatureWithDelimitation.class)))
         .thenReturn(featureWithDelimitation);
@@ -159,6 +164,8 @@ class FeatureVggRequestedServiceTest {
     when(geometryConverterMock.apply(any())).thenReturn(someMultiPolygon());
     when(vggFactoryMock.from(anyList(), anyList())).thenReturn(vggMapMock);
     when(detectionRepositoryMock.save(detectionMock)).thenReturn(detectionMock);
+    when(detectionVGGUpdateMock.apply(vggCollectionMock, detectionMock, featureNb))
+        .thenReturn(detectionMock);
 
     assertDoesNotThrow(
         () ->
@@ -167,7 +174,6 @@ class FeatureVggRequestedServiceTest {
                     detectionIdentifier, toRestFeature(polygonGeoJsonZoneFeature), featureNb)));
 
     verify(detectionVGGUpdateMock, times(1)).apply(vggCollectionMock, detectionMock, featureNb);
-    // TODO: add more assertions
   }
 
   private static @NotNull FeatureWithDelimitation getFeatureWithDelimitation(

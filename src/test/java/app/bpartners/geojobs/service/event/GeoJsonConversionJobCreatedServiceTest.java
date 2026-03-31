@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionAssemblyInitiated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobStatusRecomputingSubmitted;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionTaskCreated;
@@ -78,8 +79,14 @@ class GeoJsonConversionJobCreatedServiceTest {
     assertDoesNotThrow(
         () -> subject.accept(new GeoJsonConversionJobCreated(geoJsonConversionJobMock)));
 
-    verify(eventProducerMock, never()).accept(any());
-    assertEquals(1, inMemoryAppender.getLogEvents().size());
+    var listCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock).accept(listCaptor.capture());
+    var geoJsonConversionAssemblyInitiated =
+        (GeoJsonConversionAssemblyInitiated) listCaptor.getValue().getFirst();
+    assertEquals(
+        new GeoJsonConversionAssemblyInitiated(geoJsonConversionJobId),
+        geoJsonConversionAssemblyInitiated);
+    assertEquals(2, inMemoryAppender.getLogEvents().size());
     assertTrue(
         inMemoryAppender
             .getLogEvents()
@@ -87,9 +94,19 @@ class GeoJsonConversionJobCreatedServiceTest {
             .getFormattedMessage()
             .contains(
                 String.format(
-                    "Any geo json task generated for ZoneDetectionJob(id=%s, type=%s) with"
-                        + " detectableTypes %s",
+                    "Any detected tile found to convert into task for ZoneDetectionJob(id=%s,"
+                        + " type=%s) with detectableTypes %s",
                     zoneDetectionJobId, zoneDetectionJobType, List.of(TOITURE_REVETEMENT))));
+    assertTrue(
+        inMemoryAppender
+            .getLogEvents()
+            .get(1)
+            .getFormattedMessage()
+            .contains(
+                String.format(
+                    "Processing GeoJsonConversionAssemblyInitiated event for"
+                        + " geoJsonConversionJob.id: %s",
+                    geoJsonConversionJobId)));
   }
 
   @Test

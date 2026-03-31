@@ -28,7 +28,7 @@ class OBB3DComputerTest {
 
     when(obb2DComputerMock.apply(any(Plane3D.class))).thenReturn(data.getSecond());
 
-    var plane = new Plane3D(0, 0, 1, -0, null, Set.of(), 0, 0, null); // z = 0 plane horizontal
+    var plane = new Plane3D(0, 0, 1, -0, null, Set.of(), null, null); // z = 0 plane horizontal
 
     var actualPolygon = subject.apply(plane);
 

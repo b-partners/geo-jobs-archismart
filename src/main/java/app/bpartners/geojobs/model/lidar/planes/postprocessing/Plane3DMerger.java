@@ -1,7 +1,5 @@
 package app.bpartners.geojobs.model.lidar.planes.postprocessing;
 
-import static app.bpartners.geojobs.model.lidar.planes.algorithm.LasPointGeometryUtilities.project;
-import static app.bpartners.geojobs.model.lidar.planes.algorithm.PointsDelimitationComputer.getConcave;
 import static java.lang.Double.POSITIVE_INFINITY;
 import static java.util.Comparator.comparingDouble;
 
@@ -15,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class Plane3DMerger implements UnaryOperator<Collection<Plane3D>> {
-  private final double concaveRatio;
   private final double epsilonSlope;
   private final double epsilonZDistance;
   private final double epsilonXYDistance;
@@ -48,7 +45,7 @@ public class Plane3DMerger implements UnaryOperator<Collection<Plane3D>> {
         }
 
         if (shouldMerge(merged, p2)) {
-          merged = merge(merged, p2, concaveRatio);
+          merged = merge(merged, p2);
           visited.add(p2);
         }
       }
@@ -100,18 +97,17 @@ public class Plane3DMerger implements UnaryOperator<Collection<Plane3D>> {
     return dz <= epsilonZDistance;
   }
 
-  public static Plane3D merge(Plane3D p1, Plane3D p2, double concaveRatio) {
+  public static Plane3D merge(Plane3D p1, Plane3D p2) {
     if (p1.getArea() < p2.getArea()) {
-      return merge(p2, p1, concaveRatio);
+      return merge(p2, p1);
     }
 
     var points = new ArrayList<>(p1.getPoints());
-    points.addAll(project(p2.getPoints(), p1));
-    var delimitation3D = getConcave(points, concaveRatio);
+    points.addAll(p2.getPoints());
 
     return p1.toBuilder()
         .points(new HashSet<>(points))
-        .delimitation(delimitation3D)
+        .delimitation(null)
         .convexDelimitation(null)
         .build();
   }

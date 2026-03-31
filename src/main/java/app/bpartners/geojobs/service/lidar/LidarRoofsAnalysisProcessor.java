@@ -1,13 +1,14 @@
 package app.bpartners.geojobs.service.lidar;
 
-import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
-import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.*;
+import static app.bpartners.geojobs.service.lidar.model.LidarClass.BATIMENT;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
 import static java.util.stream.Collectors.toSet;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
+import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import app.bpartners.geojobs.service.lidar.model.*;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
@@ -29,12 +30,14 @@ import org.springframework.stereotype.Component;
 public class LidarRoofsAnalysisProcessor {
   private final LidarApiFacade lidarApi;
   private final GeometrySquareMeterArea projector;
+  private final SwissBoundaryChecker swissBoundaryChecker;
 
   private static final int ROOF_GROUND_BUFFER_METERS = 3;
   private static final short ROOF_LIDAR_CLASS_VALUE = 6;
   private static final short GROUND_LIDAR_CLASS_VALUE = 2;
   private static final short NOT_CLASSIFIED_LIDAR_CLASS_VALUE = 1;
   private static final short DIVERS_BATI_LIDAR_CLASS_VALUE = 67;
+  private static final short MIN_BATIMENT_POINTS_COUNT = 20;
 
   public RoofsAnalysisResult from(Set<Geometry> roofsEPSG4326) {
     var polygonWithProperties =
@@ -65,7 +68,19 @@ public class LidarRoofsAnalysisProcessor {
                           entry.getKey(), getRoofsDataToProcess(allRoofsData, entry.getValue())))
               .toList();
 
-      return new RoofsAnalysisResult(mergeSameRoofBoundary(roofsDataPerFiles));
+      var merged = mergeSameRoofBoundary(roofsDataPerFiles);
+      merged
+          .values()
+          .forEach(
+              data -> {
+                var batimentPointsCount = data.roof().classifications().getOrDefault(BATIMENT, 0);
+                if (batimentPointsCount < MIN_BATIMENT_POINTS_COUNT) {
+                  throw new IllegalStateException(
+                      "Roof found but no BATIMENT points detected for one of the buildings. "
+                          + "Lidar data exists but roof analysis failed for this roof.");
+                }
+              });
+      return new RoofsAnalysisResult(merged);
     } catch (Exception e) {
       log.error("Failed to retrieve lidar data", e);
       throw e;
@@ -97,7 +112,7 @@ public class LidarRoofsAnalysisProcessor {
         .collect(toSet());
   }
 
-  private Set<LidarRoofData> getRoofsDataFromFileUrl(String fileUrl, Set<LidarRoofData> roofsData) {
+  public Set<LidarRoofData> getRoofsDataFromFileUrl(String fileUrl, Set<LidarRoofData> roofsData) {
     File file;
     try {
       var optionalFile = lidarApi.download(fileUrl);
@@ -167,6 +182,7 @@ public class LidarRoofsAnalysisProcessor {
       var roofLambert93Geometry = roofData.roof().boundaryLambert93();
       if (roofLambert93Geometry.contains(roofPoint)) {
         roofData.roof().points().add(roofPoint);
+        roofData.roof().incrementClassificationCount(roofPoint.getClassification());
         break;
       }
     }
@@ -175,8 +191,8 @@ public class LidarRoofsAnalysisProcessor {
   private Set<LidarRoofData> emptyFromEPSG4326(Set<GeometryWithProperties> roofsEPSG4326) {
     Set<LidarRoofData> lidarData = new HashSet<>();
     for (var roofEPSG4326WithProperties : roofsEPSG4326) {
-      var roofLambert93 =
-          projector.project(roofEPSG4326WithProperties.geometry(), WGS84, LAMBERT_93);
+      // TODO: rename roofLambert93 can it can be an EPSG_2056
+      var roofLambert93 = project(roofEPSG4326WithProperties.geometry());
       var groundLambert93 = roofLambert93.buffer(ROOF_GROUND_BUFFER_METERS);
       Map<String, Object> properties =
           roofEPSG4326WithProperties.properties() == null
@@ -225,6 +241,13 @@ public class LidarRoofsAnalysisProcessor {
         || x > envelope.getMaxX()
         || y < envelope.getMinY()
         || y > envelope.getMaxY();
+  }
+
+  private Geometry project(Geometry roofEPSG4326) {
+    if (swissBoundaryChecker.isGeometryInSwiss(roofEPSG4326)) {
+      return projector.project(roofEPSG4326, WGS84, EPSG_2056);
+    }
+    return projector.project(roofEPSG4326, WGS84, LAMBERT_93);
   }
 
   public record RoofsAnalysisResult(Map<String, LidarRoofData> roofsData) {

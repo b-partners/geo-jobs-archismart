@@ -53,7 +53,7 @@ public class PlaneFitter {
     else normal = v2;
 
     normal = normal.normalize();
-    if (normal.getZ() > 0) {
+    if (normal.getZ() < 0) {
       normal = Vector3DUtils.negate(normal);
     }
 

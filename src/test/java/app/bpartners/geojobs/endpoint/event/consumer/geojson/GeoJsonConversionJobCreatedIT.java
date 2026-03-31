@@ -143,9 +143,14 @@ class GeoJsonConversionJobCreatedIT extends DetectionIT {
                     .health(Status.HealthEnum.SUCCEEDED)
                     .creationDatetime(actualGeoJsonUrl.getStatus().getCreationDatetime())),
         actualGeoJsonUrl);
-    verify(eventProducerMock, times(1)).accept(eventListCaptor.capture());
+    verify(eventProducerMock, times(3)).accept(eventListCaptor.capture());
     var geoJsonConversionJobCreated =
-        (GeoJsonConversionJobCreated) eventListCaptor.getValue().getFirst();
+        (GeoJsonConversionJobCreated)
+            eventListCaptor.getAllValues().stream()
+                .filter(list -> list.getFirst() instanceof GeoJsonConversionJobCreated)
+                .findAny()
+                .orElseThrow()
+                .getFirst();
     var geoJsonConversionJob = geoJsonConversionJobCreated.getGeoJsonConversionJob();
     assertEquals(
         GeoJsonConversionJob.builder()

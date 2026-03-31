@@ -9,7 +9,6 @@ import static app.bpartners.geojobs.service.geojson.GeometryConverter.getMultiPo
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.model.Detection;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
@@ -22,6 +21,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.service.DetectionVGGUpdate;
 import app.bpartners.geojobs.service.PolygonCoordinatesCloser;
 import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
+import app.bpartners.geojobs.service.TileCoordinatesService;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import app.bpartners.geojobs.service.tiling.TileFinder;
@@ -41,6 +41,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class FeatureVggRequestedService implements Consumer<FeatureVggRequested> {
+  private static final int DEFAULT_TILE_SIZE = 1024;
   private final DetectionRepository detectionRepository;
   private final MachineDetectedTileRepository detectedTileRepository;
   private final VGGFactory vggFactory;
@@ -48,11 +49,11 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
   private final DetectionVGGUpdate detectionVGGUpdate;
   private final PolygonCoordinatesCloser polygonCoordinatesCloser;
   private final TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection;
-  private final FeatureMapper featureMapper;
   private final DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedService;
   private final TileFinder tileFinder;
   private final EntityManager entityManager;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
+  private final TileCoordinatesService tileCoordinatesService;
 
   @Override
   public void accept(FeatureVggRequested event) {
@@ -106,13 +107,20 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     var tileCoordinatesRetrievedFromFeature =
         retrieveFeatureTileCoordinates(feature, detection.getGeoJsonDelimitationType());
     var completedQuadrilateralCoordinates =
-        completeToFullQuadrilateral(tileCoordinatesRetrievedFromFeature);
+        tileCoordinatesService.completeQuadrilateral(tileCoordinatesRetrievedFromFeature);
 
     var vggMap = vggFactory.from(tiledPixelPolygons, completedQuadrilateralCoordinates);
 
     var newDetection = detectionVGGUpdate.apply(vggMap.values(), detection, event.getFeatureNb());
 
-    detectionRepository.save(newDetection);
+    var tilesColNumbers = tileCoordinatesService.colNumbers(completedQuadrilateralCoordinates);
+    var tileRowNumbers = tileCoordinatesService.rowNumbers(completedQuadrilateralCoordinates);
+    var imageWidth = tilesColNumbers * DEFAULT_TILE_SIZE;
+    var imageHeight = tileRowNumbers * DEFAULT_TILE_SIZE;
+
+    detectionRepository.save(
+        newDetection.toBuilder().imageWidth(imageWidth).imageHeight(imageHeight).build());
+
     log.info(
         "VGG computation finished in {} seconds for detection(e2Id={}) and feature(geometry={})",
         Duration.between(featureVggComputationStart, now()).toSeconds(),
@@ -219,44 +227,6 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
                 .thenComparing(TileCoordinates::getY)
                 .thenComparing(TileCoordinates::getX))
         .toList();
-  }
-
-  // TODO: handle inside specific class and method ?
-  private List<TileCoordinates> completeToFullQuadrilateral(List<TileCoordinates> tiles) {
-    if (tiles == null || tiles.size() <= 2) {
-      return tiles;
-    }
-    int zoom = tiles.getFirst().getZ();
-    int minX = tiles.stream().mapToInt(TileCoordinates::getX).min().orElseThrow();
-    int maxX = tiles.stream().mapToInt(TileCoordinates::getX).max().orElseThrow();
-    int minY = tiles.stream().mapToInt(TileCoordinates::getY).min().orElseThrow();
-    int maxY = tiles.stream().mapToInt(TileCoordinates::getY).max().orElseThrow();
-
-    int cols = (maxX - minX) + 1;
-    int rows = (maxY - minY) + 1;
-    int expectedTileCount = cols * rows;
-    if (tiles.size() == expectedTileCount) {
-      return tiles;
-    }
-    Set<TileCoordinates> completed = new HashSet<>(tiles);
-    for (int x = minX; x <= maxX; x++) {
-      for (int y = minY; y <= maxY; y++) {
-        completed.add(new TileCoordinates().x(x).y(y).z(zoom));
-      }
-    }
-    return new ArrayList<>(completed);
-  }
-
-  private List<List<List<List<BigDecimal>>>> getRestMultipolygonData(
-      app.bpartners.geojobs.repository.model.Feature feature) {
-    var restFeature = toRestFeature(feature);
-    var jtsGeometry = featureMapper.toDomainGeometry(restFeature);
-
-    if (jtsGeometry instanceof Polygon) {
-      return List.of(restFeature.getGeometry().getPolygon().getCoordinates());
-    }
-
-    return restFeature.getGeometry().getMultiPolygon().getCoordinates();
   }
 
   private List<TiledPixelPolygon> getTiledPixelPolygon(

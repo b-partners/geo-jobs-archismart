@@ -14,7 +14,7 @@ import java.util.Collection;
 import org.locationtech.jts.geom.Polygon;
 
 public class UsureAreaRateComputer extends AreaRateComputer {
-  private static final double weight = 0.4;
+  static final double WEIGHT = 0.4;
   private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
   private final double roofArea;
   private final DetectedTile tile;
@@ -75,6 +75,6 @@ public class UsureAreaRateComputer extends AreaRateComputer {
   }
 
   public double getGlobalRate() {
-    return weight * getUsureAreaRate();
+    return WEIGHT * getUsureAreaRate();
   }
 }

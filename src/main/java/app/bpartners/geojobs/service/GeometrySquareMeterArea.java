@@ -12,11 +12,13 @@ public class GeometrySquareMeterArea implements Function<Geometry, Double> {
 
   public static final CoordinateReferenceSystem WGS84;
   public static final CoordinateReferenceSystem LAMBERT_93;
+  public static final CoordinateReferenceSystem EPSG_2056;
 
   static {
     try {
       WGS84 = CRS.decode("EPSG:4326", true);
       LAMBERT_93 = CRS.decode("EPSG:2154", true);
+      EPSG_2056 = CRS.decode("EPSG:2056", true);
     } catch (Exception e) {
       throw new RuntimeException("Erreur chargement des CRS", e);
     }

@@ -50,6 +50,7 @@ class ZipGeoJsonAssemblerTest {
   GeometryConverter geometryConverter =
       new GeometryConverter(mock(BuildingApi.class), mock(IgnCadastreFeatureFetcher.class));
   DetectionBackgroundRetriever detectionBackgroundRetrieverMock = mock();
+  GeometrySquareMeterArea geometrySquareMeterAreaMock = mock();
   ZipGeoJsonAssembler subject =
       new ZipGeoJsonAssembler(
           geoJsonConversionTaskRepositoryMock,
@@ -62,7 +63,8 @@ class ZipGeoJsonAssemblerTest {
           geoFeatureConverter,
           detectionProvidedZoneUnifierMock,
           geometryConverter,
-          detectionBackgroundRetrieverMock);
+          detectionBackgroundRetrieverMock,
+          geometrySquareMeterAreaMock);
 
   @SneakyThrows
   @Test
@@ -89,6 +91,7 @@ class ZipGeoJsonAssemblerTest {
         new ClassPathResource("features/feature_usure_leger.json").getFile();
     var featureMoisissureFile =
         new ClassPathResource("features/feature_moisissure_couleur.json").getFile();
+    var sampleArea = 100.0;
 
     when(detectionBackgroundRetrieverMock.apply(detection)).thenReturn(null);
     when(taskUsureLegerMock.getDetectableType()).thenReturn(USURE_LEGER);
@@ -109,6 +112,7 @@ class ZipGeoJsonAssemblerTest {
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
     when(detectionRepositoryMock.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(geometrySquareMeterAreaMock.apply(any())).thenReturn(sampleArea);
     doNothing().when(eventProducerMock).accept(any());
 
     assertDoesNotThrow(() -> subject.accept(geoJsonConversionJob));
@@ -145,10 +149,10 @@ class ZipGeoJsonAssemblerTest {
       File featureMoisissureFile, File featureUsuerLegerFile) throws IOException {
     HashMap<String, String> expectedFileSize = new HashMap<>();
     expectedFileSize.put(
-        "dummy zone name-final_MOISISSURE_NOIRCIE.geojson",
+        "dummy_zone_name_MOISISSURE_NOIRCIE.geojson",
         new GeoJson(geoFeatureConverter.apply(featureMoisissureFile)).getStringValue());
     expectedFileSize.put(
-        "dummy zone name-final_USURE_LEGER.geojson",
+        "dummy_zone_name_USURE_LEGER.geojson",
         new GeoJson(geoFeatureConverter.apply(featureUsuerLegerFile)).getStringValue());
     return expectedFileSize;
   }

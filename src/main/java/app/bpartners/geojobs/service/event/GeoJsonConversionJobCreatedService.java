@@ -7,6 +7,7 @@ import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionAssemblyInitiated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobStatusRecomputingSubmitted;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionTaskCreated;
@@ -69,13 +70,18 @@ public class GeoJsonConversionJobCreatedService implements Consumer<GeoJsonConve
 
     if (tasksCount.get() == 0) {
       log.info(
-          "Any geo json task generated for ZoneDetectionJob(id={}, type={}) with detectableTypes"
-              + " {}",
+          "Any detected tile found to convert into task for ZoneDetectionJob(id={}, type={}) with"
+              + " detectableTypes {}",
           zoneDetectionJobId,
           zoneDetectionJobType,
           detectableObjectConfigurations.stream()
               .map(DetectableObjectConfiguration::getObjectType)
               .toList());
+      log.info(
+          "Processing GeoJsonConversionAssemblyInitiated event for geoJsonConversionJob.id: {}",
+          geoJsonConversionJob.getId());
+      eventProducer.accept(
+          List.of(new GeoJsonConversionAssemblyInitiated(geoJsonConversionJob.getId())));
       return;
     }
     eventProducer.accept(

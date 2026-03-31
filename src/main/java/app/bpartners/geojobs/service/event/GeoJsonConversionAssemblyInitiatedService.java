@@ -75,7 +75,7 @@ public class GeoJsonConversionAssemblyInitiatedService
     var conversionTasks = geoJsonConversionTaskRepository.findAllByJobId(conversionJobId);
     var geoFeaturesList = getGeoFeaturesList(conversionTasks);
     var geoJson = new GeoJson(geoFeaturesList);
-    var outputFileName = zoneDetectionJob.getZoneName() + "-final" + GEO_JSON_EXTENSION;
+    var outputFileName = zoneDetectionJob.getZoneName().replace(" ", "_") + GEO_JSON_EXTENSION;
     var geoJsonFinalFile =
         fileWriter.write(
             geoJson.getStringValue().getBytes(StandardCharsets.UTF_8),

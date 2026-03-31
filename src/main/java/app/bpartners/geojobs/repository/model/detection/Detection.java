@@ -58,7 +58,8 @@ public class Detection implements Serializable {
   private String imageFileKey;
   private String pdfFileKey;
   private String vggFileKey;
-
+  private Integer imageWidth;
+  private Integer imageHeight;
   private boolean integrationTest;
 
   @Column(name = "zdj_id")

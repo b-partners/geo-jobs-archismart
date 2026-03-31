@@ -98,4 +98,9 @@ class CityJSONGenerationTest {
   void roof15() {
     assertDoesNotThrow(() -> process("15.geojson", List.of("15.laz"), BASE_OUTPUT_FOLDER));
   }
+
+  @Test
+  void roof18() {
+    assertDoesNotThrow(() -> process("18.geojson", List.of("18.copc.laz"), BASE_OUTPUT_FOLDER));
+  }
 }

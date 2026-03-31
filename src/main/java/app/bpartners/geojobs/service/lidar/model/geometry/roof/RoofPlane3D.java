@@ -8,11 +8,7 @@ import org.locationtech.jts.geom.Polygon;
 public class RoofPlane3D extends Plane3D {
   private final Polygon roofPolygon;
 
-  public RoofPlane3D(
-      Polygon roofPolygon,
-      Plane3D plane,
-      double concaveRatio,
-      double delimitationSimplificationEpsilon) {
+  public RoofPlane3D(Polygon roofPolygon, Plane3D plane) {
     super(
         plane.getA(),
         plane.getB(),
@@ -20,8 +16,7 @@ public class RoofPlane3D extends Plane3D {
         plane.getD(),
         plane.getKernel(),
         plane.getPoints(),
-        concaveRatio,
-        delimitationSimplificationEpsilon,
+        plane.getDelimitationConf(),
         plane.getExporter());
     this.roofPolygon = roofPolygon;
     this.delimitation = plane.getDelimitation();

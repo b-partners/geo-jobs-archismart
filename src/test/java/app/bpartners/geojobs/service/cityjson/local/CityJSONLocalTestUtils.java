@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service.cityjson.local;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.model.lidar.planes.Plane3DExtractorConf.getDefault;
+import static app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf.getDefault;
 import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
 

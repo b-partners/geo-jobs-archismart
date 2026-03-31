@@ -1,13 +1,17 @@
 package app.bpartners.geojobs.service.lidar;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.service.lidar.model.LidarClass.BATIMENT;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
+import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
+import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
+import app.bpartners.geojobs.service.lidar.model.geometry.roof.LidarRoofData;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +24,41 @@ import org.locationtech.jts.geom.Geometry;
 class LidarRoofsAnalysisProcessorTest {
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();
+
+  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
+    var swissBoundaryChecker = mock(SwissBoundaryChecker.class);
+    when(swissBoundaryChecker.isGeometryInSwiss(any())).thenReturn(false);
+    return swissBoundaryChecker;
+  }
+
+  @Test
+  void should_failed_if_batiment_points_count_is_less_than_twenty() {
+    var apiMock = mock(LidarApiFacade.class);
+    var processor =
+        spy(
+            new LidarRoofsAnalysisProcessor(
+                apiMock, new GeometrySquareMeterArea(), swissBoundaryCheckerMock()));
+
+    var roofGeometry1 = roofGeometry1();
+    when(apiMock.getUniqueLidarFilesUrls(any()))
+        .thenReturn(Map.of("file.laz", Set.of(roofGeometry1())));
+    doAnswer(
+            invocation -> {
+              var data =
+                  LidarRoofData.empty(
+                      roofGeometry1, roofGeometry1, roofGeometry1, roofGeometry1, AVAILABLE);
+              data.roof().classifications().put(BATIMENT, 5);
+
+              return Set.of(data);
+            })
+        .when(processor)
+        .getRoofsDataFromFileUrl(anyString(), anySet());
+
+    var roofGeometries = Set.of(roofGeometry1);
+    var error = assertThrows(IllegalStateException.class, () -> processor.from(roofGeometries));
+
+    assertTrue(error.getMessage().contains("Roof found but no BATIMENT points"));
+  }
 
   @Test
   void compute_roof_slope_and_height_with_multiple_roof_geometries() {

@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.geojson;
 
+import static app.bpartners.geojobs.endpoint.rest.postprocessing.BoundaryMerger.invert;
 import static app.bpartners.geojobs.service.geojson.GeoJson.fromFeatures;
 
 import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
@@ -41,11 +42,11 @@ public class GeoJsonConverter implements Converter<List<DetectedTile>, GeoJson> 
             .map(f -> LatLonPolygon.latLon(f).tiledPolygon(TilingConf.getDefaultInstance()))
             .collect(Collectors.toSet());
 
-    var unified =
-        merger.apply(toUnify, ConversionFormatType.GEO_JSON).stream()
-            .map(LatLonPolygon::toGeoFeature)
-            .toList();
+    var unifiedLatLon = merger.apply(toUnify, ConversionFormatType.GEO_JSON);
+    var invertedUnifiedLatLon = invert(unifiedLatLon);
+    var unifiedGeoFeatures =
+        invertedUnifiedLatLon.stream().map(LatLonPolygon::toGeoFeature).toList();
 
-    return fromFeatures(unified);
+    return fromFeatures(unifiedGeoFeatures);
   }
 }

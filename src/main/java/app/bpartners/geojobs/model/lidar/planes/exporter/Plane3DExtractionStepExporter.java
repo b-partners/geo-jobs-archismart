@@ -114,7 +114,7 @@ public class Plane3DExtractionStepExporter {
       var point = objectMapper.createArrayNode();
       point.add(coordinate.getX());
       point.add(coordinate.getY());
-      point.add(coordinate.getZ());
+      point.add(1);
       linearRing.add(point);
     }
 

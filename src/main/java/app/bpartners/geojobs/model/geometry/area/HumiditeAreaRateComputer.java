@@ -15,7 +15,7 @@ import java.util.Collection;
 import org.locationtech.jts.geom.Polygon;
 
 public class HumiditeAreaRateComputer extends AreaRateComputer {
-  private static final double weight = 1.0;
+  static final double WEIGHT = 1.0;
   private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
   private final double roofArea;
   private final DetectedTile tile;
@@ -78,6 +78,6 @@ public class HumiditeAreaRateComputer extends AreaRateComputer {
 
   @Override
   public double getGlobalRate() {
-    return weight * getHumidityAreaRate();
+    return WEIGHT * getHumidityAreaRate();
   }
 }
