@@ -27,14 +27,27 @@ class DetectionRoofSlopeAndHeightRequestedServiceTest {
   void produces_feature_roof_slope_and_height_requested_event() {
     var detectionIdentifier = randomUUID().toString();
     var detectionMock = mock(Detection.class);
+    var detectionWithSavedRoofPropertiesComputationCreationDatetime = mock(Detection.class);
     var providedFeatureOneMock = mock(Feature.class);
     var providedFeatureTwoMock = mock(Feature.class);
 
+    var detectionBuilderMock = mock(Detection.DetectionBuilder.class);
+    when(detectionBuilderMock.roofPropertiesComputationCreationDatetime(any()))
+        .thenReturn(detectionBuilderMock);
+    when(detectionBuilderMock.build())
+        .thenReturn(detectionWithSavedRoofPropertiesComputationCreationDatetime);
+    when(detectionWithSavedRoofPropertiesComputationCreationDatetime.getFeatureWithDelimitations())
+        .thenReturn(mock());
+    when(detectionWithSavedRoofPropertiesComputationCreationDatetime.getProvidedGeoJsonZone())
+        .thenReturn(List.of(providedFeatureOneMock, providedFeatureTwoMock));
+    when(detectionMock.toBuilder()).thenReturn(detectionBuilderMock);
     when(detectionMock.getFeatureWithDelimitations()).thenReturn(mock());
     when(detectionMock.getProvidedGeoJsonZone())
         .thenReturn(List.of(providedFeatureOneMock, providedFeatureTwoMock));
     when(detectionRepositoryMock.findById(detectionIdentifier))
         .thenReturn(Optional.of(detectionMock));
+    when(detectionRepositoryMock.save(any()))
+        .thenReturn(detectionWithSavedRoofPropertiesComputationCreationDatetime);
 
     assertDoesNotThrow(
         () ->
@@ -50,10 +63,10 @@ class DetectionRoofSlopeAndHeightRequestedServiceTest {
     var featureTwoRoofPropertiesEvent =
         (FeatureRoofSlopeAndHeightRequested) eventListCaptor.getAllValues().getLast().getFirst();
     assertEquals(
-        new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, providedFeatureOneMock, 0),
+        new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, providedFeatureOneMock),
         featureOneRoofPropertiesEvent);
     assertEquals(
-        new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, providedFeatureTwoMock, 1),
+        new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, providedFeatureTwoMock),
         featureTwoRoofPropertiesEvent);
     assertEquals(EVENT_STACK_4, featureOneRoofPropertiesEvent.getEventStack());
     assertEquals(EVENT_STACK_4, featureTwoRoofPropertiesEvent.getEventStack());
@@ -76,8 +89,14 @@ class DetectionRoofSlopeAndHeightRequestedServiceTest {
     var requested = DetectionRoofSlopeAndHeightRequested.builder().detectionId(detectionId).build();
     var detectionMock = mock(Detection.class);
 
+    var detectionBuilderMock = mock(Detection.DetectionBuilder.class);
+    when(detectionBuilderMock.roofPropertiesComputationCreationDatetime(any()))
+        .thenReturn(detectionBuilderMock);
+    when(detectionBuilderMock.build()).thenReturn(detectionMock);
+    when(detectionMock.toBuilder()).thenReturn(detectionBuilderMock);
     when(detectionMock.getFeatureWithDelimitations()).thenReturn(null);
     when(detectionRepositoryMock.findById(detectionId)).thenReturn(Optional.of(detectionMock));
+    when(detectionRepositoryMock.save(any())).thenReturn(detectionMock);
 
     var error = assertThrows(RuntimeException.class, () -> subject.accept(requested));
     assertTrue(

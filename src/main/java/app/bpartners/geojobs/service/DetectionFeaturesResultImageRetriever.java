@@ -98,18 +98,40 @@ public class DetectionFeaturesResultImageRetriever implements Function<Detection
       var drawnFileKey = layer + "/extended_drawn_" + longitude + "_" + latitude + ".jpg";
       var vggFileKey = layer + "/vgg_" + longitude + "_" + latitude + ".json";
 
-      // old properties retrieving: do not delete for biocompatibility
+      // old properties retrieving: do not delete it for biocompatibility
       addPropertyFromRetriever(feature, originalFileKey, imageUrl, "original_image_url");
       addPropertyFromRetriever(feature, vggFileKey, vggUrl, "vgg_file_url");
       addPropertyIfFileKeyExist(drawnFileKey, feature, "drawn_image_url");
 
-      // new properties
+      // old properties retrieving: do not delete it for biocompatibility
       addPropertyIfFileKeyExist(
           "zone_images/" + detectionIdentifier + "/" + featureNb + "/" + zoneName + ".jpg",
           feature,
           "original_image_url");
       addPropertyIfFileKeyExist(
           "vgg/" + zoneDetectionJobId + "/" + featureNb + "/" + zoneName + ".json",
+          feature,
+          "vgg_file_url");
+
+      // actual properties
+      addPropertyIfFileKeyExist(
+          "zone_images/"
+              + detectionIdentifier
+              + "/"
+              + feature.getProperties().get("id")
+              + "/"
+              + zoneName
+              + ".jpg",
+          feature,
+          "original_image_url");
+      addPropertyIfFileKeyExist(
+          "vgg/"
+              + zoneDetectionJobId
+              + "/"
+              + feature.getProperties().get("id")
+              + "/"
+              + zoneName
+              + ".json",
           feature,
           "vgg_file_url");
 

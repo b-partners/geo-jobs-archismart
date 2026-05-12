@@ -30,6 +30,10 @@ public class LasPointGeometry extends Point {
     return new CoordinateArraySequence(new Coordinate[] {new Coordinate(x, y, z)});
   }
 
+  public LasPointGeometry(Coordinate coordinate) {
+    this(coordinate.getX(), coordinate.getY(), coordinate.getZ(), BATIMENT);
+  }
+
   public LasPointGeometry(double x, double y, double z) {
     this(x, y, z, BATIMENT);
   }
@@ -43,44 +47,8 @@ public class LasPointGeometry extends Point {
     return this.getCoordinate().getZ();
   }
 
-  public LasPointGeometry subtract(LasPointGeometry other) {
-    return new LasPointGeometry(
-        this.getX() - other.getX(),
-        this.getY() - other.getY(),
-        this.getZ() - other.getZ(),
-        this.classification);
-  }
-
-  public LasPointGeometry cross(LasPointGeometry other) {
-    double cx = this.getY() * other.getZ() - this.getZ() * other.getY();
-    double cy = this.getZ() * other.getX() - this.getX() * other.getZ();
-    double cz = this.getX() * other.getY() - this.getY() * other.getX();
-    return new LasPointGeometry(cx, cy, cz, this.classification);
-  }
-
-  public double dot(LasPointGeometry other) {
-    return this.getX() * other.getX() + this.getY() * other.getY() + this.getZ() * other.getZ();
-  }
-
-  public double normValue() {
-    double x = getX();
-    double y = getY();
-    double z = getCoordinate().getZ();
-    return Math.sqrt(x * x + y * y + z * z);
-  }
-
-  public LasPointGeometry normalized() {
-    double n = normValue();
-    return new LasPointGeometry(
-        getX() / n, getY() / n, getCoordinate().getZ() / n, this.classification);
-  }
-
   public double distance(LasPointGeometry other) {
     return Math.sqrt(squaredDistance(other));
-  }
-
-  public LasPointGeometry negate() {
-    return new LasPointGeometry(-this.getX(), -this.getY(), -this.getZ(), this.classification);
   }
 
   public double squaredDistance(LasPointGeometry other) {

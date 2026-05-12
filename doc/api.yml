@@ -742,6 +742,12 @@ paths:
             type: string
             format: date-time
           required: false
+        - in: query
+          name: zoneName
+          description: Filters detections by its zone name containing provided value ignoring case
+          schema:
+            type: string
+          required: false
       responses:
         200:
           description: List of detections
@@ -2207,6 +2213,8 @@ components:
           type: string
         layers:
           type: string
+        precisionLevelInCm:
+          type: integer
         styles:
           type: string
         format:
@@ -2523,8 +2531,16 @@ components:
           $ref: '#/components/schemas/DelimitationType'
     DelimitationObjectType:
       type: string
+      description: |
+        By default delimitationObjectType is BUILDING_ROOF.
+        BUILDING_ROOF represents a building-level delimitation using a global geometry (point/polygon/multi-polygon).
+        BUILDING_ROOF_SEGMENT_FACE represents segments of a roof divided into multiple parts, each corresponding to a distinct sloping roof surface. Only polygon/multipolygon are supported.
       enum:
         - BUILDING_ROOF
+        - BUILDING_ROOF_SEGMENT_FACE
+      x-enum-varnames:
+        - BUILDING_ROOF
+        - BUILDING_ROOF_SEGMENT_FACE
     CreateCityJSONRequest:
       deprecated: true
       allOf:

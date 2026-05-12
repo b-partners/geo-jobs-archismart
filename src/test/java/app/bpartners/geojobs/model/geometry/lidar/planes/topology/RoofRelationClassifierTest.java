@@ -16,8 +16,8 @@ class RoofRelationClassifierTest {
 
   @Test
   void should_detect_S_relation() {
-    var pan1 = readPointsFromResources("cityjson/topology/S/pan_1.geojson");
-    var pan2 = readPointsFromResources("cityjson/topology/S/pan_2.geojson");
+    var pan1 = readPointsFromResources("cityjson/roofs/roof_2/pan_1.geojson");
+    var pan2 = readPointsFromResources("cityjson/roofs/roof_2/pan_2.geojson");
 
     for (int i = 0; i < TEST_COUNT; i++) {
       var plane1 = PlaneFitter.fit(pan1);
@@ -29,10 +29,10 @@ class RoofRelationClassifierTest {
 
   @Test
   void should_detect_O_PLUS_relation() {
-    var pan1 = readPointsFromResources("cityjson/topology/O+/pan_1.geojson");
-    var pan2 = readPointsFromResources("cityjson/topology/O+/pan_2.geojson");
-    var pan3 = readPointsFromResources("cityjson/topology/O+/pan_3.geojson");
-    var pan4 = readPointsFromResources("cityjson/topology/O+/pan_4.geojson");
+    var pan1 = readPointsFromResources("cityjson/roofs/roof_9/pan_1.geojson");
+    var pan2 = readPointsFromResources("cityjson/roofs/roof_9/pan_2.geojson");
+    var pan3 = readPointsFromResources("cityjson/roofs/roof_9/pan_3.geojson");
+    var pan4 = readPointsFromResources("cityjson/roofs/roof_9/pan_4.geojson");
 
     for (int i = 0; i < TEST_COUNT; i++) {
       var plane1 = PlaneFitter.fit(pan1);
@@ -50,8 +50,8 @@ class RoofRelationClassifierTest {
 
   @Test
   void should_detect_O_MINUS_relation() {
-    var pan1 = readPointsFromResources("cityjson/topology/O-/pan_1.geojson");
-    var pan2 = readPointsFromResources("cityjson/topology/O-/pan_2.geojson");
+    var pan1 = readPointsFromResources("cityjson/roofs/roof_6/pan_1.geojson");
+    var pan2 = readPointsFromResources("cityjson/roofs/roof_6/pan_2.geojson");
 
     for (int i = 0; i < TEST_COUNT; i++) {
       var plane1 = PlaneFitter.fit(pan1);

@@ -126,6 +126,7 @@ class DetectionSavedServiceTest {
             .service("service_value_test")
             .request("request_value_test")
             .layers("layers_value_test")
+            .precisionLevelInCm(5)
             .styles("styles_value_test")
             .format("format_value_test")
             .transparent(true)
@@ -240,6 +241,10 @@ class DetectionSavedServiceTest {
                 <li>
                     <span class="indent">layers</span> :
                     <span class="indent">layers_value_test</span>
+                </li>
+                <li>
+                    <span class="indent">precisionLevelInCm</span> :
+                    <span class="indent">5</span>
                 </li>
                 <li>
                     <span class="indent">styles</span> :

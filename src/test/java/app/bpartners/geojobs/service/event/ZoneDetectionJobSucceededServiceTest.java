@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_4;
+import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_2;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 import static java.util.UUID.randomUUID;
@@ -8,7 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
-import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
+import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
+import app.bpartners.geojobs.endpoint.event.model.FeatureWithDetectionPropertiesRequested;
 import app.bpartners.geojobs.endpoint.event.model.annotation.AnnotationDeliveryJobRequested;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneDetectionJobSucceeded;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
@@ -254,14 +255,22 @@ class ZoneDetectionJobSucceededServiceTest {
         .getOrComputeGeoJsonConversionJob(zoneDetectionJobMock);
     verify(configurationRepositoryMock, never()).findLatestConfiguration();
     var listCaptor = ArgumentCaptor.forClass(List.class);
-    verify(eventProducerMock, times(1)).accept(listCaptor.capture());
-    var actualFeatureVggRequested =
-        (FeatureVggRequested) listCaptor.getAllValues().getLast().getFirst();
-    assertEquals(new FeatureVggRequested(detectionId, new Feature(), 0), actualFeatureVggRequested);
-    assertEquals(EVENT_STACK_4, actualFeatureVggRequested.getEventStack());
-    assertEquals(Duration.ofSeconds(30L), actualFeatureVggRequested.maxConsumerDuration());
+    verify(eventProducerMock, times(2)).accept(listCaptor.capture());
+    var detectionRoofPropertiesRequested =
+        (DetectionRoofPropertiesRequested) listCaptor.getAllValues().getFirst().getFirst();
+    var featureWithDetectionPropertiesRequested =
+        (FeatureWithDetectionPropertiesRequested) listCaptor.getAllValues().getLast().getFirst();
     assertEquals(
-        Duration.ofSeconds(30L), actualFeatureVggRequested.maxConsumerBackoffBetweenRetries());
+        new DetectionRoofPropertiesRequested(detectionId), detectionRoofPropertiesRequested);
+    assertEquals(
+        new FeatureWithDetectionPropertiesRequested(detectionId, new Feature()),
+        featureWithDetectionPropertiesRequested);
+    assertEquals(EVENT_STACK_2, featureWithDetectionPropertiesRequested.getEventStack());
+    assertEquals(
+        Duration.ofSeconds(60L), featureWithDetectionPropertiesRequested.maxConsumerDuration());
+    assertEquals(
+        Duration.ofSeconds(30L),
+        featureWithDetectionPropertiesRequested.maxConsumerBackoffBetweenRetries());
   }
 
   private String expectedEmailContainingDetectionWhenNoResultRetrieved(String detectionE2Id) {

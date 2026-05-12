@@ -15,12 +15,10 @@ import lombok.*;
 public class FeatureVggRequested extends PojaEvent {
   private String detectionIdentifier;
   private Feature feature;
-  private int featureNb = 0;
 
-  public FeatureVggRequested(String detectionIdentifier, Feature feature, int featureNb) {
+  public FeatureVggRequested(String detectionIdentifier, Feature feature) {
     this.detectionIdentifier = detectionIdentifier;
     this.feature = feature;
-    this.featureNb = featureNb;
   }
 
   @Override

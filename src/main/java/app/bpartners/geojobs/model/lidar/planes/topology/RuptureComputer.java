@@ -17,9 +17,10 @@ import org.locationtech.jts.linearref.LengthIndexedLine;
 
 @Slf4j
 public class RuptureComputer implements BiFunction<Plane3D, Plane3D, Optional<Rupture>> {
+  private static final double EXTENSION = 20;
   private static final double MAX_DISTANCE = 1;
   private static final double DENSIFIED_DISTANCE = 0.3;
-  private static final double MIN_INTERSECTION_DISTANCE = 1;
+  private static final double MIN_INTERSECTION_DISTANCE = 3;
 
   @Override
   public Optional<Rupture> apply(Plane3D a, Plane3D b) {
@@ -35,9 +36,23 @@ public class RuptureComputer implements BiFunction<Plane3D, Plane3D, Optional<Ru
     }
 
     var ruptureLine = optionalRuptureLine.get();
-    return Optional.of(Rupture.builder().line(ruptureLine).build());
+    if (ruptureLine.distance(a.getDelimitation()) > MAX_DISTANCE) {
+      return Optional.empty();
+    } else if (ruptureLine.distance(b.getDelimitation()) > MAX_DISTANCE) {
+      return Optional.empty();
+    }
+
+    var baseRupturePoints = List.of(ruptureLine.getCoordinates());
+    return Optional.of(
+        Rupture.builder()
+            .line(ruptureLine)
+            .points(baseRupturePoints)
+            .endIntersection(new HashSet<>())
+            .startIntersection(new HashSet<>())
+            .build());
   }
 
+  // TODO: find a better way
   private static final double LONG_LINE_LENGTH = 100_000_000;
 
   private static LineString getLongLine(Line3D line) {
@@ -71,12 +86,10 @@ public class RuptureComputer implements BiFunction<Plane3D, Plane3D, Optional<Ru
       return Optional.empty();
     }
 
-    var coordinatesWithZ = project(a, intersection.getCoordinates());
-
-    var splitter = geometryFactory.createLineString(coordinatesWithZ);
-    var extendedLine = extend(splitter, 0.5);
-    var maxLineProjectedByA = maxLineProjected(extendedLine, a);
-    var maxLineProjectedByB = maxLineProjected(extendedLine, b);
+    var splitter = geometryFactory.createLineString(intersection.getCoordinates());
+    var extendedSplitter = extend(splitter, EXTENSION);
+    var maxLineProjectedByA = maxLineProjected(extendedSplitter, a);
+    var maxLineProjectedByB = maxLineProjected(extendedSplitter, b);
     var expectedLine =
         maxLineProjectedByA.getLength() < maxLineProjectedByB.getLength()
             ? maxLineProjectedByA
@@ -86,6 +99,8 @@ public class RuptureComputer implements BiFunction<Plane3D, Plane3D, Optional<Ru
       splitter = expectedLine;
     }
 
+    var coordinatesWithZ = project(a, splitter.getCoordinates());
+    splitter = geometryFactory.createLineString(coordinatesWithZ);
     return Optional.of(splitter);
   }
 

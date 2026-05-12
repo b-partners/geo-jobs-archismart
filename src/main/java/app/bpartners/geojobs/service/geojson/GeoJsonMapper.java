@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GeoJsonMapper {
   private final GeoJsonMultiPolygonCorrector geoJsonMultiPolygonCorrector;
-  private final PolygonCoordinatesCloser polygonCoordinatesCloser = new PolygonCoordinatesCloser();
 
   public List<GeoJson.GeoFeature> toGeoFeatures(
       int xTile, int yTile, int zoom, int imageWidth, List<DetectedObject> detectedObjects) {
@@ -95,7 +94,7 @@ public class GeoJsonMapper {
       DetectedObject object,
       List<List<List<List<BigDecimal>>>> geometryCoordinates) {
     List<List<List<List<BigDecimal>>>> multipolygonCoordinates =
-        getMultipolygonCoordinates(xTile, yTile, zoom, imageWidth, geometryCoordinates);
+        convertPixelToGeographicalCoordinates(xTile, yTile, zoom, imageWidth, geometryCoordinates);
     var objectFeature = object.getFeature();
     var properties =
         objectFeature.getProperties() == null
@@ -116,7 +115,7 @@ public class GeoJsonMapper {
     return new GeoJson.GeoFeature(properties, multipolygon);
   }
 
-  private List<List<List<List<BigDecimal>>>> getMultipolygonCoordinates(
+  public static List<List<List<List<BigDecimal>>>> convertPixelToGeographicalCoordinates(
       int xTile,
       int yTile,
       int zoom,
@@ -152,7 +151,7 @@ public class GeoJsonMapper {
                           if (geoPolygon.isEmpty()) {
                             return geoPolygon;
                           }
-                          return polygonCoordinatesCloser.apply(geoPolygon);
+                          return new PolygonCoordinatesCloser().apply(geoPolygon);
                         })
                     .toList())
         .toList();

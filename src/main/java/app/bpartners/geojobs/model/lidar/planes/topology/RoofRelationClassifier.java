@@ -12,6 +12,7 @@ import org.locationtech.jts.math.Vector2D;
 @RequiredArgsConstructor
 public class RoofRelationClassifier implements BiFunction<Plane3D, Plane3D, RoofRelationType> {
   private final RoofRelationClassifierConf conf;
+  private static final double O_ANGLE_THRESHOLD = 40.0;
 
   @Override
   public RoofRelationType apply(Plane3D a, Plane3D b) {
@@ -38,7 +39,7 @@ public class RoofRelationClassifier implements BiFunction<Plane3D, Plane3D, Roof
       return lookAtTest < 0 ? S : NONE;
     }
 
-    if (Math.abs(angleDeg - 90.0) < conf.angleThresholdDeg()) {
+    if (Math.abs(angleDeg - 90.0) < O_ANGLE_THRESHOLD) {
       if (lookAtTest > 0) {
         return O_MINUS;
       }

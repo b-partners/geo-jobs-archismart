@@ -26,14 +26,13 @@ import app.bpartners.geojobs.repository.model.ParcelContent;
 import app.bpartners.geojobs.repository.model.detection.*;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
-import app.bpartners.geojobs.service.DetectionVGGUpdate;
-import app.bpartners.geojobs.service.PolygonCoordinatesCloser;
-import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
-import app.bpartners.geojobs.service.TileCoordinatesService;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.ign.IgnCadastreFeatureFetcher;
 import app.bpartners.geojobs.service.tiling.TileFinder;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,28 +52,31 @@ class FeatureVggRequestedServiceTest {
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
   TileFinder tileFinderMock = mock();
   IgnCadastreFeatureFetcher ignCadastreFeatureFetcherMock = mock();
-  TileCoordinatesService tileCoordinatesService = new TileCoordinatesService();
+  TiledPixelPolygonComputer tiledPixelPolygonComputerMock =
+      new TiledPixelPolygonComputer(
+          geometryConverterMock, tileCoordinatesPolygonIntersectionMock, polygonCoordinatesCloser);
+  TileCoordinatesService tileCoordinatesServiceMock =
+      new TileCoordinatesService(geometryConverterMock, tileFinderMock);
+  FeaturePolygonRetriever featurePolygonRetrieverMock =
+      new FeaturePolygonRetriever(geometryConverterMock, ignCadastreFeatureFetcherMock);
 
   FeatureVggRequestedService subject =
       new FeatureVggRequestedService(
+          mock(EntityManager.class),
           detectionRepositoryMock,
           detectedTileRepositoryMock,
           vggFactoryMock,
-          geometryConverterMock,
           detectionVGGUpdateMock,
-          polygonCoordinatesCloser,
-          tileCoordinatesPolygonIntersectionMock,
-          detectionRoofPropertiesRequestedServiceMock,
-          tileFinderMock,
-          mock(),
-          ignCadastreFeatureFetcherMock,
-          tileCoordinatesService);
+          tileCoordinatesServiceMock,
+          tiledPixelPolygonComputerMock,
+          featurePolygonRetrieverMock);
 
   @Test
   void compute_vgg_for_zone_and_update_detection_vgg() {
     var detectionIdentifier = randomUUID().toString();
     var zoneTilingJobIdentifier = randomUUID().toString();
     var zoneDetectionJobIdentifier = randomUUID().toString();
+    var featureId = randomUUID().toString();
     var detectionMock = mock(Detection.class);
     int z = 20;
     int x = 10;
@@ -86,8 +88,8 @@ class FeatureVggRequestedServiceTest {
                 new Feature.FeatureGeometry(
                     POLYGON,
                     "{\"type\":\"Polygon\",\"coordinates\":[[[0.0,5],[5,5],[5,0.0],[0.0,0.0]]]}"))
+            .properties(new HashMap<>(Map.of("id", featureId)))
             .build();
-    int featureNb = 0;
     var featureWithDelimitation = getFeatureWithDelimitation(polygonGeoJsonZoneFeature);
     var detectionBuilder = mock(Detection.DetectionBuilder.class);
     Map<app.bpartners.geojobs.endpoint.rest.model.Feature, VGG> vggMapMock = mock();
@@ -164,16 +166,16 @@ class FeatureVggRequestedServiceTest {
     when(geometryConverterMock.apply(any())).thenReturn(someMultiPolygon());
     when(vggFactoryMock.from(anyList(), anyList())).thenReturn(vggMapMock);
     when(detectionRepositoryMock.save(detectionMock)).thenReturn(detectionMock);
-    when(detectionVGGUpdateMock.apply(vggCollectionMock, detectionMock, featureNb))
+    when(detectionVGGUpdateMock.apply(vggCollectionMock, detectionMock, featureId))
         .thenReturn(detectionMock);
 
     assertDoesNotThrow(
         () ->
             subject.accept(
                 new FeatureVggRequested(
-                    detectionIdentifier, toRestFeature(polygonGeoJsonZoneFeature), featureNb)));
+                    detectionIdentifier, toRestFeature(polygonGeoJsonZoneFeature))));
 
-    verify(detectionVGGUpdateMock, times(1)).apply(vggCollectionMock, detectionMock, featureNb);
+    verify(detectionVGGUpdateMock, times(1)).apply(vggCollectionMock, detectionMock, featureId);
   }
 
   private static @NotNull FeatureWithDelimitation getFeatureWithDelimitation(

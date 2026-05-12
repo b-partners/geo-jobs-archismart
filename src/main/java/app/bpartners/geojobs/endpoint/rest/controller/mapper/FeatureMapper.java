@@ -62,8 +62,11 @@ public class FeatureMapper {
 
   public static app.bpartners.geojobs.repository.model.Feature toDomainFeature(
       Feature rest, Map<String, Object> properties) {
+    var featureId =
+        properties.get("feature_id") == null ? null : properties.get("feature_id").toString();
+    var id = properties.get("id") == null ? featureId : properties.get("id").toString();
     return app.bpartners.geojobs.repository.model.Feature.builder()
-        .id(properties.get("id") == null ? null : properties.get("id").toString())
+        .id(id)
         .zoom(properties.get("zoom") == null ? null : (Integer) properties.get("zoom"))
         .geometry(toDomainFeatureGeometry(rest.getGeometry()))
         .properties(new HashMap<>(properties))

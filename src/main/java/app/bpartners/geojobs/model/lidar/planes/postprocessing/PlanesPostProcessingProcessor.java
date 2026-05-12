@@ -4,6 +4,8 @@ import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
 import app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
+import app.bpartners.geojobs.model.lidar.planes.topology.RoofReconstructor;
+import app.bpartners.geojobs.model.lidar.planes.topology.RoofRelationClassifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -18,6 +20,7 @@ public class PlanesPostProcessingProcessor implements Function<Collection<Plane3
   private final DelimitationFiller delimitationFiller;
   private final InvalidPlane3DFilter invalidPlane3DFilter;
   private final RoofBoundaryClipper roofBoundaryClipper;
+  private final RoofReconstructor roofReconstructor;
 
   public PlanesPostProcessingProcessor(
       Polygon roofDelimitation,
@@ -40,6 +43,11 @@ public class PlanesPostProcessingProcessor implements Function<Collection<Plane3
     this.invalidPlane3DFilter =
         new InvalidPlane3DFilter(conf.planeConf().min2DArea(), conf.planeConf().compactness());
     this.roofBoundaryClipper = new RoofBoundaryClipper(roofDelimitation);
+    this.roofReconstructor =
+        new RoofReconstructor(
+            RoofRelationClassifier.RoofRelationClassifierConf.builder()
+                .angleThresholdDeg(5)
+                .build());
   }
 
   @Override
@@ -50,6 +58,7 @@ public class PlanesPostProcessingProcessor implements Function<Collection<Plane3
     postProcessed =
         this.delimitationFiller.apply(this.closedPlane3DMerger.apply(postProcessed), points);
     postProcessed = this.invalidPlane3DFilter.apply(postProcessed);
-    return this.roofBoundaryClipper.apply(postProcessed);
+    postProcessed = this.roofBoundaryClipper.apply(postProcessed);
+    return this.roofReconstructor.apply(postProcessed);
   }
 }

@@ -38,6 +38,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,6 +143,7 @@ class ZoneTilingJobStatusChangedServiceTest {
   void on_succeeded_trigger_zone_detection_job_created_and_zone_image_requested() {
     var zoneDetectionJobIdentifier = randomUUID().toString();
     var detectionIdentifier = randomUUID().toString();
+    var featureId = randomUUID().toString();
     var ztjStatusChanged = new ZoneTilingJobStatusChanged();
     var oldJob = aZTJ(PROCESSING, UNKNOWN);
     var newJob = aZTJ(FINISHED, SUCCEEDED);
@@ -153,7 +155,7 @@ class ZoneTilingJobStatusChangedServiceTest {
     var detection =
         Detection.builder()
             .id(detectionIdentifier)
-            .providedGeoJsonZone(List.of(toDomainFeature(getProvidedFeature())))
+            .providedGeoJsonZone(List.of(toDomainFeature(getProvidedFeature(featureId))))
             .detectableObjectConfigurations(List.of())
             .geoServerProperties(
                 new GeoServerProperties().geoServerParameter(new GeoServerParameter()))
@@ -180,7 +182,7 @@ class ZoneTilingJobStatusChangedServiceTest {
     assertEquals(
         new ZoneDetectionJobCreated(zoneDetectionJobFromZTJ), actualZoneDetectionJobCreated);
     assertEquals(
-        new FeatureImageRequested(detectionIdentifier, getProvidedFeature(), 0),
+        new FeatureImageRequested(detectionIdentifier, getProvidedFeature(featureId)),
         actualFeatureImageRequested);
     assertEquals(Duration.ofSeconds(30L), actualFeatureImageRequested.maxConsumerDuration());
     assertEquals(
@@ -188,9 +190,11 @@ class ZoneTilingJobStatusChangedServiceTest {
     assertEquals(EVENT_STACK_2, actualFeatureImageRequested.getEventStack());
   }
 
-  private static app.bpartners.geojobs.endpoint.rest.model.Feature getProvidedFeature() {
+  private static app.bpartners.geojobs.endpoint.rest.model.Feature getProvidedFeature(
+      String featureId) {
     return new app.bpartners.geojobs.endpoint.rest.model.Feature()
         .type(FEATURE)
+        .properties(Map.of("id", featureId))
         .geometry(
             new FeatureGeometry(
                 new Polygon()

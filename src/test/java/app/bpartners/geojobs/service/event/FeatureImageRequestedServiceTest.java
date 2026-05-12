@@ -24,6 +24,7 @@ import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
+import app.bpartners.geojobs.service.TileDuplicationRemover;
 import app.bpartners.geojobs.service.TileImageBlur;
 import app.bpartners.geojobs.service.TileImagesAssembler;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -31,9 +32,7 @@ import app.bpartners.geojobs.service.tiling.TileFinder;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +50,7 @@ class FeatureImageRequestedServiceTest {
   TileImageBlur tileImageBlurMock = mock();
   WhiteImageDetector whiteImageDetectorMock = mock();
   TileFinder tileFinderMock = mock();
+  TileDuplicationRemover tileDuplicationRemoverMock = mock();
   FeatureImageRequestedService subject =
       new FeatureImageRequestedService(
           detectionRepositoryMock,
@@ -62,7 +62,8 @@ class FeatureImageRequestedServiceTest {
           tileImageBlurMock,
           whiteImageDetectorMock,
           tileFinderMock,
-          mock());
+          mock(),
+          tileDuplicationRemoverMock);
 
   @BeforeEach
   void setUp() {
@@ -72,11 +73,14 @@ class FeatureImageRequestedServiceTest {
     List<TileCoordinates> tileCoordinatesMock = mock();
     when(tileCoordinatesMock.contains(any(TileCoordinates.class))).thenReturn(true);
     when(tileFinderMock.getFromGeoJsonPolygon(any(), anyInt())).thenReturn(tileCoordinatesMock);
+    when(tileDuplicationRemoverMock.apply(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
   }
 
   @Test
   void terminate_and_warn_when_zone_area_greater_than_one_kilometre_square() {
     var detectionIdentifier = randomUUID().toString();
+    var featureId = randomUUID().toString();
     var detectionMock = mock(Detection.class);
     when(detectionRepositoryMock.findById(detectionIdentifier))
         .thenReturn(Optional.of(detectionMock));
@@ -84,18 +88,20 @@ class FeatureImageRequestedServiceTest {
     when(geometryConverterMock.convertToPolygon(any())).thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA + 1);
     when(detectionMock.getProvidedGeoJsonZone())
-        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20))));
+        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20, "id", featureId))));
 
     assertDoesNotThrow(
-        () -> subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(), 0)));
+        () ->
+            subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(featureId))));
     verify(tilingTaskRepositoryMock, never()).findAllByJobId(any());
     verify(bucketComponentMock, never()).download(any());
     verify(tileImageAssemblerMock, never()).apply(any());
     verify(bucketComponentMock, never()).upload(any(), any());
   }
 
-  private static Feature getFeature() {
+  private static Feature getFeature(String id) {
     return new Feature()
+        .properties(Map.of("id", id))
         .geometry(
             new FeatureGeometry(
                 new Polygon()
@@ -118,6 +124,7 @@ class FeatureImageRequestedServiceTest {
     var assembleImageFileMock = mock(File.class);
     var randomBucketPath = randomUUID().toString();
     var randomZoneName = "random zone name " + currentTimeMillis();
+    var featureId = randomUUID().toString();
 
     MockedStatic<ImageIO> imageIOMockedStatic = mockStatic(ImageIO.class);
     imageIOMockedStatic.when(() -> read(any(File.class))).thenReturn(mock(BufferedImage.class));
@@ -131,15 +138,15 @@ class FeatureImageRequestedServiceTest {
         .thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA);
     when(detectionMock.getProvidedGeoJsonZone())
-        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20))));
+        .thenReturn(List.of(new Feature().properties(Map.of("zoom", 20, "id", featureId))));
 
-    var tilesWithImagesMock =
-        List.of(
-            Tile.builder()
-                .coordinates(new TileCoordinates())
-                .bucketPath(randomBucketPath)
-                .image(imageFileMock)
-                .build());
+    var tilesWithImagesMock = new ArrayList<Tile>();
+    tilesWithImagesMock.add(
+        Tile.builder()
+            .coordinates(new TileCoordinates())
+            .bucketPath(randomBucketPath)
+            .image(imageFileMock)
+            .build());
     when(tilingTaskRepositoryMock.findAllByJobId(tilingJobIdentifier))
         .thenReturn(
             List.of(
@@ -158,11 +165,12 @@ class FeatureImageRequestedServiceTest {
         .thenReturn(mock(FileHash.class));
     when(bucketComponentMock.upload(
             assembleImageFileMock,
-            "zone_images/" + detectionIdentifier + "/" + 0 + "/" + randomZoneName + ".jpg"))
+            "zone_images/" + detectionIdentifier + "/" + featureId + "/" + randomZoneName + ".jpg"))
         .thenReturn(mock(FileHash.class));
 
     assertDoesNotThrow(
-        () -> subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(), 0)));
+        () ->
+            subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(featureId))));
 
     verify(tilingTaskRepositoryMock).findAllByJobId(tilingJobIdentifier);
     verify(bucketComponentMock).download(randomBucketPath);
@@ -172,7 +180,7 @@ class FeatureImageRequestedServiceTest {
     verify(bucketComponentMock)
         .upload(
             assembleImageFileMock,
-            "zone_images/" + detectionIdentifier + "/" + 0 + "/" + randomZoneName + ".jpg");
+            "zone_images/" + detectionIdentifier + "/" + featureId + "/" + randomZoneName + ".jpg");
     imageIOMockedStatic.close();
   }
 }

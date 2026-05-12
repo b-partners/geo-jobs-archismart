@@ -101,7 +101,7 @@ public class ZoneTilingJobStatusChangedService implements Consumer<ZoneTilingJob
           for (int i = 0; i < providedGeoJsonZone.size(); i++) {
             eventProducer.accept(
                 List.of(
-                    new FeatureImageRequested(detectionIdentifier, providedGeoJsonZone.get(i), i)));
+                    new FeatureImageRequested(detectionIdentifier, providedGeoJsonZone.get(i))));
           }
         }
       }

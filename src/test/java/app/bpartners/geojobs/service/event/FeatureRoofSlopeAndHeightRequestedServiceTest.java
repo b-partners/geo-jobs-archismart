@@ -13,16 +13,15 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.never;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.FeatureRoofSlopeAndHeightRequested;
+import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
-import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
 import app.bpartners.geojobs.model.lidar.planes.Plane3DSlopeInDegrees;
 import app.bpartners.geojobs.repository.DetectionRepository;
-import app.bpartners.geojobs.repository.FeatureDelimitationComputingRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
-import app.bpartners.geojobs.repository.model.feature.FeatureDelimitationComputing;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.BuildingHeightInMeters;
@@ -43,20 +42,18 @@ class FeatureRoofSlopeAndHeightRequestedServiceTest {
   LidarRoofsAnalysisProcessor lidarRoofsAnalysisProcessorMock = mock();
   FeatureMapper featureMapperMock = mock();
   EntityManager entityManagerMock = mock();
-  FeatureVggRequestedService zoneVggRequestedServiceMock = mock();
-  FeatureDelimitationComputingRepository featureDelimitationComputingRepositoryMock = mock();
+  EventProducer eventProducerMock = mock();
   FeatureRoofSlopeAndHeightRequestedService subject =
       new FeatureRoofSlopeAndHeightRequestedService(
           detectionRepositoryMock,
           lidarRoofsAnalysisProcessorMock,
           featureMapperMock,
-          zoneVggRequestedServiceMock,
-          featureDelimitationComputingRepositoryMock);
+          eventProducerMock,
+          entityManagerMock);
 
   @BeforeEach
   void setUp() {
     doNothing().when(entityManagerMock).clear();
-    doNothing().when(zoneVggRequestedServiceMock).accept(any());
   }
 
   @Test
@@ -72,7 +69,11 @@ class FeatureRoofSlopeAndHeightRequestedServiceTest {
         new HashMap<String, Object>(Map.of("feature_id", featureIdentifier));
 
     var domainFeature =
-        Feature.builder().properties(domainFeatureProperties).geometry(somePolygon()).build();
+        Feature.builder()
+            .id(featureIdentifier)
+            .properties(domainFeatureProperties)
+            .geometry(somePolygon())
+            .build();
     var domainFeatureDelimitation =
         Feature.builder().properties(delimitationFeatureProperties).geometry(somePolygon()).build();
 
@@ -111,7 +112,6 @@ class FeatureRoofSlopeAndHeightRequestedServiceTest {
         FeatureRoofSlopeAndHeightRequested.builder()
             .detectionIdentifier(detection.getId())
             .feature(toRestFeature(domainFeature))
-            .featureNb(0)
             .build());
 
     var firstDelimitation =
@@ -127,31 +127,30 @@ class FeatureRoofSlopeAndHeightRequestedServiceTest {
     expectedUpdatedProperties.put("roof_height_in_meters", expectedRoofHeight);
     expectedUpdatedProperties.put("lidar_data_status", AVAILABLE);
 
-    var featureDelimitationComputingCaptor =
-        ArgumentCaptor.forClass(FeatureDelimitationComputing.class);
-    verify(featureDelimitationComputingRepositoryMock, times(1))
-        .save(featureDelimitationComputingCaptor.capture());
-    var savedFeatureDelimitationComputing = featureDelimitationComputingCaptor.getValue();
     assertEquals(expectedRoofSlope, actualRoofSlope);
     assertEquals(expectedRoofHeight, actualRoofHeight);
     assertEquals(AVAILABLE, actualRoofDataStatus);
+
+    var eventCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock).accept(eventCaptor.capture());
+    var featureVggRequested = (FeatureVggRequested) eventCaptor.getValue().getFirst();
     assertEquals(
-        new FeatureWithDelimitation(
-            domainFeature,
-            List.of(
-                domainFeatureDelimitation.toBuilder()
-                    .properties(expectedUpdatedProperties)
-                    .build())),
-        savedFeatureDelimitationComputing.getFeatureWithDelimitation());
+        new FeatureVggRequested(detectionIdentifier, toRestFeature(domainFeature)),
+        featureVggRequested);
   }
 
   @Test
   void already_processed_detection_should_not_be_processed() {
     var detectionIdentifier = randomUUID().toString();
     var featureIdentifier = randomUUID().toString();
-    var restFeature = mock(app.bpartners.geojobs.endpoint.rest.model.Feature.class);
-    var domainFeature = mock(Feature.class);
     var featureProperties = new HashMap<String, Object>(Map.of("feature_id", featureIdentifier));
+    var domainFeature =
+        Feature.builder()
+            .id(featureIdentifier)
+            .properties(featureProperties)
+            .geometry(somePolygon())
+            .build();
+    var restFeature = toRestFeature(domainFeature);
     var detectionAlreadyProcessed =
         Detection.builder()
             .id(randomUUID().toString())
@@ -161,28 +160,23 @@ class FeatureRoofSlopeAndHeightRequestedServiceTest {
                         domainFeature,
                         List.of(
                             Feature.builder()
+                                .geometry(somePolygon())
                                 .properties(
                                     new HashMap<>(
                                         Map.of(LIDAR_DATA_STATUS_PROPERTY_NAME, AVAILABLE)))
                                 .build()))))
             .build();
-    when(domainFeature.getProperties()).thenReturn(featureProperties);
-    when(domainFeature.getGeometry()).thenReturn(somePolygon());
-    when(restFeature.getProperties()).thenReturn(featureProperties);
-    when(restFeature.getGeometry())
-        .thenReturn(new FeatureGeometry(new app.bpartners.geojobs.endpoint.rest.model.Polygon()));
     when(detectionRepositoryMock.findById(any()))
         .thenReturn(Optional.of(detectionAlreadyProcessed));
 
     assertDoesNotThrow(
         () ->
             subject.accept(
-                new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, restFeature, 0)));
+                new FeatureRoofSlopeAndHeightRequested(detectionIdentifier, restFeature)));
 
     verify(lidarRoofsAnalysisProcessorMock, never()).from(anySet());
-    verify(entityManagerMock, never()).clear();
     verify(detectionRepositoryMock, never()).save(any());
-    verify(zoneVggRequestedServiceMock, never()).accept(any());
+    verify(eventProducerMock, never()).accept(any());
   }
 
   @SneakyThrows

@@ -16,7 +16,6 @@ import lombok.*;
 public class FeatureRoofSlopeAndHeightRequested extends PojaEvent {
   private String detectionIdentifier;
   private Feature feature;
-  private int featureNb = 0;
 
   @Override
   public Duration maxConsumerDuration() {

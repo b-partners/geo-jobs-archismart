@@ -1,7 +1,5 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_HEIGHT_PROPERTY_NAME;
-import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_SLOPE_PROPERTY_NAME;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,9 +13,9 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -73,21 +71,14 @@ class DetectionServiceTest {
     var detectionE2Id = randomUUID().toString();
     var detectionMock = mock(Detection.class);
     var featureWithDelimitationMock = mock(FeatureWithDelimitation.class);
-    var featureMock = mock(Feature.class);
     var restDetectionMock = mock(app.bpartners.geojobs.endpoint.rest.model.Detection.class);
 
-    when(featureMock.getProperties())
-        .thenReturn(
-            new HashMap<>(
-                Map.of(
-                    ROOF_SLOPE_PROPERTY_NAME, 1.0,
-                    ROOF_HEIGHT_PROPERTY_NAME, 1.0)));
-    when(featureWithDelimitationMock.delimitations()).thenReturn(List.of(featureMock));
-    when(detectionRepositoryMock.findByEndToEndId(detectionE2Id))
-        .thenReturn(Optional.of(detectionMock));
+    when(detectionMock.getRoofPropertiesComputationCreationDatetime()).thenReturn(Instant.now());
     when(detectionMock.getEndToEndId()).thenReturn(detectionE2Id);
     when(detectionMock.getFeatureWithDelimitations())
         .thenReturn(List.of(featureWithDelimitationMock));
+    when(detectionRepositoryMock.findByEndToEndId(detectionE2Id))
+        .thenReturn(Optional.of(detectionMock));
     doNothing().when(detectionRoofSlopeValidatorMock).accept(detectionMock);
     when(zoneServiceMock.getProcessedDetection(detectionE2Id)).thenReturn(restDetectionMock);
 

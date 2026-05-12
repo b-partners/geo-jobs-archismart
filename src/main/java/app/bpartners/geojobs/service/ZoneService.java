@@ -7,6 +7,7 @@ import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PENDING;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PROCESSING;
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.CLIENT_EXCEPTION;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFeatureType.PROVIDED_FEATURE;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.HUMAN;
 import static app.bpartners.geojobs.service.detection.DetectionCreationMapper.getOrSetFeatureIdentifier;
 import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.GEO_JSON_BUCKET_FOLDER;
@@ -69,7 +70,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 public class ZoneService {
   private static final int DEFAULT_ZOOM = 20;
-  private static final Instant BEGINNING_OF_2024 = parse("2024-01-01T00:00:00Z");
+  private static final Instant BEGINNING_OF_2026 = parse("2026-01-01T00:00:00Z");
   private final ZoneDetectionJobService zoneDetectionJobService;
   private final ZoneTilingJobService zoneTilingJobService;
   private final EventProducer eventProducer;
@@ -86,7 +87,7 @@ public class ZoneService {
   private final DetectionTilingStatisticsComputer detectionTilingStatisticsComputer;
   private final DetectionMachineDetectionStatisticsComputer
       detectionMachineDetectionStatisticsComputer;
-  private final DetectionMachineDetectionCreation detectionMachineDetectionCreation;
+  private final MachineDetectionCreation machineDetectionCreation;
   private final GeoJsonConversionJobRepository geoJsonConversionJobRepository;
   private final DetectionAddressConsumer detectionAddressConsumer;
   private final SynchronousDetectionService synchronousDetectionService;
@@ -124,7 +125,10 @@ public class ZoneService {
     var features =
         readFromFile(featuresFromShape).stream().map(FeatureMapper::toDomainFeature).toList();
     detection.setProvidedGeoJsonZone(features);
+    detection.addFeatures(features, PROVIDED_FEATURE);
+
     var savedDetection = detectionRepository.save(detection);
+
     eventProducer.accept(
         List.of(DetectionSaved.builder().detectionIdentifier(savedDetection.getId()).build()));
     return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
@@ -322,18 +326,14 @@ public class ZoneService {
         optionalDetection.orElseGet(
             () ->
                 createDetectionJob(detectionId, validatedCreateDetection, communityOwnerId, true));
-    var savedDetectionToBeProcessed =
-        detectionRepository.save(
-            detectionToBeProcessed.toBuilder()
-                .providedGeoJsonZone(
-                    validatedCreateDetection.getGeoJsonZone().stream()
-                        .peek(
-                            getOrSetFeatureIdentifier(
-                                app.bpartners.geojobs.endpoint.rest.model.Feature::getProperties,
-                                app.bpartners.geojobs.endpoint.rest.model.Feature::setProperties))
-                        .map(FeatureMapper::toDomainFeature)
-                        .toList())
-                .build());
+    var features =
+        validatedCreateDetection.getGeoJsonZone().stream()
+            .peek(getOrSetFeatureIdentifier(Feature::getProperties, Feature::setProperties))
+            .map(FeatureMapper::toDomainFeature)
+            .toList();
+    var detectionToSave = detectionToBeProcessed.toBuilder().providedGeoJsonZone(features).build();
+    detectionToSave.addFeatures(features, PROVIDED_FEATURE);
+    var savedDetectionToBeProcessed = detectionRepository.save(detectionToSave);
 
     return synchronousDetectionService.apply(savedDetectionToBeProcessed);
   }
@@ -342,6 +342,17 @@ public class ZoneService {
       String detectionId, CreateDetection createDetection, String communityOwnerId) {
     if (createDetection.getGeoJsonZone() == null) {
       createDetection.setGeoJsonZone(new ArrayList<>());
+    }
+    if (createDetection.getGeoJsonZone() != null) {
+      createDetection
+          .getGeoJsonZone()
+          .forEach(
+              feature -> {
+                var properties = feature.getProperties();
+                if (properties != null) {
+                  properties.remove("id");
+                }
+              });
     }
     if (createDetection.getZoneName() != null && createDetection.getZoneName().contains(".")) {
       createDetection.setZoneName(createDetection.getZoneName().replaceAll("\\.", "_"));
@@ -381,7 +392,7 @@ public class ZoneService {
     var machineZoneDetectionJob = zoneDetectionJobService.findById(detectionJobId);
 
     if (machineZoneDetectionJob.isPending() && zoneTilingJob.isFinished()) {
-      detectionMachineDetectionCreation.apply(detection, zoneTilingJob);
+      machineDetectionCreation.apply(detection, zoneTilingJob);
     }
     if (machineZoneDetectionJob.isFinished()) {
       if (zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(detectionJobId) == 0L) {
@@ -441,21 +452,39 @@ public class ZoneService {
       PageFromOne page,
       BoundedPageSize pageSize,
       Instant fromParameter,
-      Instant toParameter) {
-    final Instant from = fromParameter == null ? BEGINNING_OF_2024 : fromParameter;
+      Instant toParameter,
+      Optional<String> optionalZoneName) {
+    final Instant from = fromParameter == null ? BEGINNING_OF_2026 : fromParameter;
     final Instant to = toParameter == null ? now() : toParameter;
     var pageable = PageRequest.of(page.getValue() - 1, pageSize.getValue());
     var detections =
         communityId
             .map(
                 ownerId ->
-                    detectionRepository
-                        .findByCommunityOwnerIdAndCreationDatetimeBetweenOrderByCreationDatetimeDesc(
-                            ownerId, from, to, pageable))
+                    optionalZoneName
+                        .map(
+                            zoneName ->
+                                detectionRepository
+                                    .findByCommunityOwnerIdAndCreationDatetimeBetweenAndZoneNameIsContainingIgnoreCaseOrderByCreationDatetimeDesc(
+                                        ownerId, from, to, zoneName, pageable))
+                        .orElseGet(
+                            () ->
+                                detectionRepository
+                                    .findByCommunityOwnerIdAndCreationDatetimeBetweenOrderByCreationDatetimeDesc(
+                                        ownerId, from, to, pageable)))
             .orElseGet(
                 () ->
-                    detectionRepository.findAllByCreationDatetimeBetweenOrderByCreationDatetimeDesc(
-                        from, to, pageable));
+                    optionalZoneName
+                        .map(
+                            zoneName ->
+                                detectionRepository
+                                    .findAllByCreationDatetimeBetweenAndZoneNameIsContainingIgnoreCaseOrderByCreationDatetimeDesc(
+                                        from, to, zoneName, pageable))
+                        .orElseGet(
+                            () ->
+                                detectionRepository
+                                    .findAllByCreationDatetimeBetweenOrderByCreationDatetimeDesc(
+                                        from, to, pageable)));
 
     return detections.stream()
         .map(

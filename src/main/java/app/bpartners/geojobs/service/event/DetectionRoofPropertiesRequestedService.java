@@ -36,22 +36,28 @@ public class DetectionRoofPropertiesRequestedService
   @Override
   public void accept(DetectionRoofPropertiesRequested event) {
     var detectionIdentifier = event.getDetectionIdentifier();
+    apply(detectionIdentifier);
+  }
+
+  public Detection apply(String detectionIdentifier) {
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
     var machineDetectedTiles =
         machineDetectedTileRepository.findAllByZdjJobId(detection.getZdjId());
-    var detectionWithRoofProperties = apply(detection, machineDetectedTiles);
-    detectionRepository.save(detectionWithRoofProperties);
+    var featureWithDelimitationsHavingRoofProperties = apply(detection, machineDetectedTiles);
+
+    featureWithDelimitationsHavingRoofProperties.forEach(
+        f -> detection.addFeatureDelimitations(f.feature(), f.delimitations()));
+
+    return detectionRepository.save(detection);
   }
 
-  public Detection apply(Detection detection, List<MachineDetectedTile> machineDetectedTiles) {
-    var featureWithDelimitationsCovering =
-        detection.getFeatureWithDelimitations().stream()
-            .map(
-                featureWithDelimitation ->
-                    applyRoofPropertiesOnDelimitation(
-                        machineDetectedTiles, featureWithDelimitation))
-            .toList();
-    return detection.toBuilder().featureWithDelimitations(featureWithDelimitationsCovering).build();
+  private List<FeatureWithDelimitation> apply(
+      Detection detection, List<MachineDetectedTile> machineDetectedTiles) {
+    return detection.getFeatureWithDelimitations().stream()
+        .map(
+            featureWithDelimitation ->
+                applyRoofPropertiesOnDelimitation(machineDetectedTiles, featureWithDelimitation))
+        .toList();
   }
 
   public FeatureWithDelimitation applyRoofPropertiesOnDelimitation(

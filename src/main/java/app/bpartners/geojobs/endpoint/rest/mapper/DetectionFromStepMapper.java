@@ -18,7 +18,6 @@ import app.bpartners.geojobs.service.DetectionFeaturesResultImageRetriever;
 import app.bpartners.geojobs.service.DetectionImageAttributeRetriever;
 import app.bpartners.geojobs.service.DetectionImageTileInfoOriginRetriever;
 import app.bpartners.geojobs.service.DetectionVggAttributeRetriever;
-import java.awt.*;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -111,7 +110,17 @@ public class DetectionFromStepMapper
                 return feature;
               }
               var properties = new HashMap<>(feature.getProperties());
-              properties.remove("vgg_file_key");
+              properties
+                  .keySet()
+                  .removeIf(
+                      key ->
+                          key.equals("usure_rate")
+                              || key.equals("addresses")
+                              || key.equals("global_rate_value")
+                              || key.equals("global_rate_type")
+                              || key.equals("roof_area_in_m2")
+                              || key.equals("moisissure_rate")
+                              || key.equals("humidite_rate"));
               return feature.properties(properties);
             })
         .toList();

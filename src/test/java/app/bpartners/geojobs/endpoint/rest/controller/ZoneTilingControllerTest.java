@@ -17,9 +17,7 @@ import app.bpartners.geojobs.endpoint.rest.validator.ZoneTilingJobValidator;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.repository.TilingTaskRepository;
 import app.bpartners.geojobs.repository.model.FilteredTilingJob;
-import app.bpartners.geojobs.service.DetectionZoneToProcessProvider;
 import app.bpartners.geojobs.service.ParcelService;
-import app.bpartners.geojobs.service.TilePolygonRetriever;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import java.util.List;
@@ -38,17 +36,8 @@ class ZoneTilingControllerTest {
   ZoneTilingJobValidator zoneTilingJobValidator = new ZoneTilingJobValidator();
   EventProducer eventProducerMock = mock();
   TilingTaskRepository tilingTaskRepository = mock();
-  DetectionZoneToProcessProvider providedZoneUnifierMock = mock();
-  GeometryConverter geometryConverterMock = mock();
-  TilePolygonRetriever tilePolygonRetrieverMock = mock();
   ZoneTilingJobMapper tilingJobMapper =
-      new ZoneTilingJobMapper(
-          parcelServiceMock,
-          statusMapper,
-          zoomMapper,
-          geometryConverterMock,
-          providedZoneUnifierMock,
-          tilePolygonRetrieverMock);
+      new ZoneTilingJobMapper(parcelServiceMock, statusMapper, zoomMapper);
 
   ZoneTilingController subject =
       new ZoneTilingController(

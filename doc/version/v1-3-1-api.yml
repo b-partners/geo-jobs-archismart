@@ -765,6 +765,8 @@ components:
           type: string
         layers:
           type: string
+        precisonLevelInCm:
+          type: string
         styles:
           type: string
         format:

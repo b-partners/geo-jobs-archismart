@@ -17,8 +17,16 @@ public interface DetectionRepository extends JpaRepository<Detection, String> {
   List<Detection> findByCommunityOwnerIdAndCreationDatetimeBetweenOrderByCreationDatetimeDesc(
       String communityOwnerId, Instant from, Instant to, Pageable pageable);
 
+  List<Detection>
+      findByCommunityOwnerIdAndCreationDatetimeBetweenAndZoneNameIsContainingIgnoreCaseOrderByCreationDatetimeDesc(
+          String communityOwnerId, Instant from, Instant to, String zoneName, Pageable pageable);
+
   List<Detection> findAllByCreationDatetimeBetweenOrderByCreationDatetimeDesc(
       Instant from, Instant to, Pageable pageable);
+
+  List<Detection>
+      findAllByCreationDatetimeBetweenAndZoneNameIsContainingIgnoreCaseOrderByCreationDatetimeDesc(
+          Instant from, Instant to, String zoneName, Pageable pageable);
 
   Optional<Detection> findByEndToEndIdAndCommunityOwnerId(
       String endToEndId, String communityOwnerId);

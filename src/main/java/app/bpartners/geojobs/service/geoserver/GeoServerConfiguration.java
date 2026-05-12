@@ -13,7 +13,7 @@ public class GeoServerConfiguration {
     this.url = url;
   }
 
-  public GeoServerProperties defaultGeoServerProperties(String layer) {
+  public GeoServerProperties defaultGeoServerProperties(String layer, Integer precisionLevelInCm) {
     var overrideLayer =
         layer == null
             ? layer
@@ -25,6 +25,7 @@ public class GeoServerConfiguration {
                 .service("WMS")
                 .request("GetMap")
                 .layers(overrideLayer)
+                .precisionLevelInCm(precisionLevelInCm != null ? precisionLevelInCm : 5)
                 .styles("")
                 .format("image/jpeg")
                 .transparent(true)

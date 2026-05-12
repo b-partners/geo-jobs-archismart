@@ -48,7 +48,7 @@ public class RoofBoundaryClipper implements Function<Collection<Plane3D>, List<P
   }
 
   private Polygon clip(Polygon polygon) {
-    if (!polygon.isValid()) polygon = (Polygon) polygon.buffer(0);
+    if (!polygon.isValid()) polygon = getLargestPolygon(polygon.buffer(0));
     var intersection = polygon.intersection(roofDelimitation);
 
     if (intersection.isEmpty()) {

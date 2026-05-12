@@ -1,8 +1,5 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_HEIGHT_PROPERTY_NAME;
-import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_SLOPE_PROPERTY_NAME;
-
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofSlopeAndHeightRequested;
 import app.bpartners.geojobs.model.exception.NotFoundException;
@@ -55,23 +52,14 @@ public class DetectionService {
 
     detectionRoofSlopeValidator.accept(detection);
 
-    if (!detection.getFeatureWithDelimitations().stream()
-        .allMatch(
-            featureWithDelimitation ->
-                featureWithDelimitation.delimitations().stream()
-                    .allMatch(
-                        delimitation ->
-                            delimitation.getProperties() != null
-                                && delimitation.getProperties().get(ROOF_SLOPE_PROPERTY_NAME)
-                                    != null
-                                && delimitation.getProperties().get(ROOF_HEIGHT_PROPERTY_NAME)
-                                    != null))) {
+    if (detection.getRoofPropertiesComputationCreationDatetime() == null) {
       eventProducer.accept(
           List.of(
               DetectionRoofSlopeAndHeightRequested.builder()
                   .detectionId(detection.getId())
                   .build()));
     }
+
     return zoneService.getProcessedDetection(detection.getEndToEndId());
   }
 }

@@ -85,9 +85,11 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
   @SneakyThrows
   @Test
   void fire_tasks_and_convert_all_address_to_detection_multi_polygon() {
+    var featureOne = randomUUID().toString();
+    var featureTwo = randomUUID().toString();
     when(areaPictureDetailsMapperMock.toFeature(any(), any()))
-        .thenReturn(someFeature()) // First invocation for dummy address 1
-        .thenReturn(someFeature()); // Second invocation for dummy address 2
+        .thenReturn(someFeature(featureOne)) // First invocation for dummy address 1
+        .thenReturn(someFeature(featureTwo)); // Second invocation for dummy address 2
     var detection = someDetection(detectionId);
 
     subject.accept(DetectionExcelFileAddressConverted.builder().detection(detection).build());
@@ -106,8 +108,9 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
                         && feature.getProperties().containsKey("feature_id")));
     assertEquals(
         List.of(
-            someRestFeature(),
-            someRestFeature()), // restFeature as getMultiPolygonGeoJsonZone returns rest Feature
+            someRestFeature(featureOne),
+            someRestFeature(
+                featureTwo)), // restFeature as getMultiPolygonGeoJsonZone returns rest Feature
         // not domain
         actualDetection.getMultiPolygonGeoJsonZone().stream()
             .map(
@@ -123,7 +126,7 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
         "http://dummy-geoserver.com", // Set from EnvConf
         actualDetection.getGeoServerProperties().getGeoServerUrl());
     assertEquals(
-        geoServerConfiguration.defaultGeoServerProperties(null),
+        geoServerConfiguration.defaultGeoServerProperties(null, 5),
         actualDetection.getGeoServerProperties());
   }
 
@@ -141,8 +144,9 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
             .build());
   }
 
-  private Feature someFeature() {
+  private Feature someFeature(String featureId) {
     return Feature.builder()
+        .id(featureId)
         .zoom(20)
         .properties(new HashMap<>())
         .geometry(
@@ -160,8 +164,8 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
         .build();
   }
 
-  private app.bpartners.geojobs.endpoint.rest.model.Feature someRestFeature() {
-    return toRestFeature(someFeature());
+  private app.bpartners.geojobs.endpoint.rest.model.Feature someRestFeature(String featureId) {
+    return toRestFeature(someFeature(featureId));
   }
 
   private CommunityAuthorization someCommunityAuthorization(String communityAuthorizationId) {

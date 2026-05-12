@@ -22,6 +22,7 @@ import java.util.*;
 import lombok.SneakyThrows;
 import org.locationtech.jts.geom.Geometry;
 
+@Deprecated
 public class LidarRoofsAnalysisProcessorCreator {
   private static final GeometrySquareMeterArea projector = new GeometrySquareMeterArea();
   private static final FileWriter fileWriter =

@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service;
 
+import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -35,17 +36,18 @@ class DetectionVGGUpdateTest {
     Detection detection = mock();
     byte[] vggAsBytes = new byte[0];
     File vggAsFile = mock();
-    int featureNb = 2;
+    var featureId = randomUUID().toString();
 
     when(vggFactoryMock.unifyVggSet(vggSet)).thenReturn(vggSet);
     when(detection.getZoneName()).thenReturn("dummy zoneName");
     when(detection.getZdjId()).thenReturn("dummy zdjId");
+    when(detection.getProvidedGeoJsonZone()).thenReturn(List.of(mock(), mock()));
     when(fileWriterMock.write(eq(vggAsBytes), any(), any())).thenReturn(vggAsFile);
     when(bucketComponentMock.upload(any(), any())).thenReturn(mock(FileHash.class));
 
     var subject = new DetectionVGGUpdate(fileWriterMock, bucketComponentMock, vggFactoryMock);
 
-    var actual = subject.apply(vggSet, detection, featureNb);
+    var actual = subject.apply(vggSet, detection, featureId);
 
     assertEquals(detection, actual);
   }

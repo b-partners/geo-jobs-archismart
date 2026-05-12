@@ -29,22 +29,25 @@ public class DetectionVGGUpdate {
     this.vggFactory = vggFactory;
   }
 
-  private Detection apply(Detection detection, byte[] vggAsByte, int featureNb) {
+  private Detection apply(Detection detection, byte[] vggAsByte, String uniqueProperty) {
     var zoneName = detection.getZoneName();
     var zoneDetectionJobId = detection.getZdjId();
     var fileKey =
-        VGG_BUCKET_FOLDER + zoneDetectionJobId + "/" + featureNb + "/" + zoneName + ".json";
+        VGG_BUCKET_FOLDER + zoneDetectionJobId + "/" + uniqueProperty + "/" + zoneName + ".json";
     var vggAsFile =
         fileWriter.write(vggAsByte, createTempDirectory(), zoneName + GEO_JSON_EXTENSION);
 
     bucketComponent.upload(vggAsFile, fileKey);
 
-    return featureNb == 0 ? detection.toBuilder().vggFileKey(fileKey).build() : detection;
+    return detection.getProvidedGeoJsonZone() != null
+            && detection.getProvidedGeoJsonZone().size() == 1
+        ? detection.toBuilder().vggFileKey(fileKey).build()
+        : detection;
   }
 
-  public Detection apply(Collection<VGG> vggSet, Detection detection, int featureNb) {
+  public Detection apply(Collection<VGG> vggSet, Detection detection, String uniqueProperty) {
     var unifiedVggSet = vggFactory.unifyVggSet(vggSet);
-    return apply(detection, getVggCollection(unifiedVggSet), featureNb);
+    return apply(detection, getVggCollection(unifiedVggSet), uniqueProperty);
   }
 
   private byte[] getVggCollection(Collection<VGG> vggSet) {

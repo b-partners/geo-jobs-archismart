@@ -319,25 +319,6 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
         .collect(toList());
   }
 
-  @SneakyThrows
-  public static List<ParcelTilingTask> getTilingTasksFromJob(
-      CreateZoneTilingJob job, String jobId) {
-    var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
-    return Objects.requireNonNull(job.getFeatures()).stream()
-        .map(
-            feature -> {
-              feature
-                  .getProperties()
-                  .put(
-                      "zoom",
-                      zoomMapper
-                          .toDomain(Objects.requireNonNull(job.getZoomLevel()))
-                          .getZoomLevel());
-              return tilingTaskMapper.from(feature, serverUrl, job.getGeoServerParameter(), jobId);
-            })
-        .collect(toList());
-  }
-
   @NotNull
   private static List<Feature> splitFeaturesByTiles(
       List<Feature> providedFeatures,

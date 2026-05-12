@@ -36,6 +36,7 @@ jobs:
           http_code=$(curl -s -w "%{http_code}" -X POST "$API_URL/detections/$detection_sync_e2_id/sync" \
           -H "Content-Type: application/json" \
           -H "x-api-key: $API_KEY" \
+          -H "x-test-request: true" \
           --data "@.github/workflows/detection-request-sync.json" \
           -o "$response_file")
           

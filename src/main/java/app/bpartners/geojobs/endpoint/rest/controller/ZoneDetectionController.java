@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -309,10 +310,13 @@ public class ZoneDetectionController {
       @RequestParam(name = "pageSize", defaultValue = "10", required = false)
           BoundedPageSize pageSize,
       @RequestParam(name = "from", required = false, defaultValue = "") Instant from,
-      @RequestParam(name = "to", required = false) Instant to) {
+      @RequestParam(name = "to", required = false) Instant to,
+      @RequestParam(name = "zoneName", required = false) String zoneName) {
     var communityAuthorization =
         communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword());
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId);
-    return zoneService.getDetectionsByCriteria(communityOwnerId, page, pageSize, from, to);
+    Optional<String> optionalZoneName = zoneName == null ? Optional.empty() : Optional.of(zoneName);
+    return zoneService.getDetectionsByCriteria(
+        communityOwnerId, page, pageSize, from, to, optionalZoneName);
   }
 }

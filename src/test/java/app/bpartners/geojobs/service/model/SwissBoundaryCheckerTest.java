@@ -42,6 +42,18 @@ public class SwissBoundaryCheckerTest {
     return geometryFactory.createPolygon(swissCoordinates);
   }
 
+  public static Geometry auvergneRhoneAlpes() {
+    var auvergneRhoneAlpes =
+        new Coordinate[] {
+          new Coordinate(6.500935356786217, 46.369037972308412),
+          new Coordinate(6.500872521077425, 46.368983287377596),
+          new Coordinate(6.500642689565980, 46.369066486572031),
+          new Coordinate(6.500697033962775, 46.369133670805581),
+          new Coordinate(6.500935356786217, 46.369037972308412)
+        };
+    return geometryFactory.createPolygon(auvergneRhoneAlpes);
+  }
+
   @Test
   void coordinates_in_switzerland_ok() {
     var actual = subject.isGeometryInSwiss(switzerland_coords());
@@ -52,6 +64,13 @@ public class SwissBoundaryCheckerTest {
   @Test
   void coordinates_not_in_switzerland_ok() {
     var actual = subject.isGeometryInSwiss(random_coords_outside_switzerland());
+
+    assertFalse(actual);
+  }
+
+  @Test
+  void coordinates_outside_switzerland_ok() {
+    var actual = subject.isGeometryInSwiss(auvergneRhoneAlpes());
 
     assertFalse(actual);
   }

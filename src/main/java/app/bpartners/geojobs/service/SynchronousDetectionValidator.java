@@ -22,6 +22,17 @@ public class SynchronousDetectionValidator implements Function<CreateDetection, 
           "Only unique feature can be processed synchronously for now, meanwhile given are "
               + createDetection.getGeoJsonZone().size());
     }
+    if (createDetection.getGeoJsonZone() != null) {
+      createDetection
+          .getGeoJsonZone()
+          .forEach(
+              feature -> {
+                var properties = feature.getProperties();
+                if (properties != null) {
+                  properties.remove("id");
+                }
+              });
+    }
     var fixFeatures = new ArrayList<Feature>();
     if (createDetection.getGeoJsonZone() != null && createDetection.getGeoJsonZone().size() == 1) {
       var uniqueFeature = createDetection.getGeoJsonZone().getFirst();

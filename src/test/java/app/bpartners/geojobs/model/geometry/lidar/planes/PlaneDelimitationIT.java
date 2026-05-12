@@ -29,7 +29,8 @@ class PlaneDelimitationIT {
               RangedConf.from(
                   new IntegerRangedConf<>(Integer.MIN_VALUE, 200, 0.2),
                   new IntegerRangedConf<>(201, Integer.MAX_VALUE, 0.08)))
-          .simplificationEpsilon(0.3)
+          .dpsEpsilon(0.3)
+          .lrDegEpsilon(5)
           .build();
 
   @BeforeAll

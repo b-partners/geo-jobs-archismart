@@ -1,16 +1,29 @@
 package app.bpartners.geojobs.service;
 
+import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
+
+import app.bpartners.geojobs.endpoint.rest.model.Detection;
+import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import app.bpartners.geojobs.service.geojson.GeometryConverter;
+import app.bpartners.geojobs.service.tiling.TileFinder;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class TileCoordinatesService {
+  private final GeometryConverter geometryConverter;
+  private final TileFinder tileFinder;
 
-  public List<TileCoordinates> completeQuadrilateral(List<TileCoordinates> tiles) {
+  public List<TileCoordinates> computeFeatureTileCoordinatesWithCompleteQuadrilateral(
+      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+    var tileCoordinates = retrieveFeatureTileCoordinates(feature, delimitationTypeEnum);
+    return completeQuadrilateral(tileCoordinates);
+  }
+
+  private List<TileCoordinates> completeQuadrilateral(List<TileCoordinates> tiles) {
     if (tiles == null || tiles.size() <= 2) {
       return tiles;
     }
@@ -52,5 +65,17 @@ public class TileCoordinatesService {
     int minY = tiles.stream().mapToInt(TileCoordinates::getY).min().orElseThrow();
     int maxY = tiles.stream().mapToInt(TileCoordinates::getY).max().orElseThrow();
     return maxY - minY + 1;
+  }
+
+  private List<TileCoordinates> retrieveFeatureTileCoordinates(
+      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+    var polygonGeometry =
+        geometryConverter.retrieveZonePolygonGeometryProcessed(feature, delimitationTypeEnum);
+    return tileFinder.getFromGeoJsonPolygon(polygonGeometry, HOUSES_0.getZoomLevel()).stream()
+        .sorted(
+            Comparator.comparing(TileCoordinates::getZ)
+                .thenComparing(TileCoordinates::getY)
+                .thenComparing(TileCoordinates::getX))
+        .toList();
   }
 }

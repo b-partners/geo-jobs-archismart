@@ -8,13 +8,17 @@ import app.bpartners.geojobs.model.lidar.planes.topology.RoofRelationClassifier.
 import app.bpartners.geojobs.model.lidar.planes.topology.model.RoofRelationType;
 import app.bpartners.geojobs.model.lidar.planes.topology.model.RoofTopology;
 import app.bpartners.geojobs.model.lidar.planes.topology.model.Rupture;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RoofTopologyBuilder implements Function<List<Plane3D>, RoofTopology> {
-  private static final double MIN_AREA = 10;
+  private static final double MIN_AREA = 8;
+  private static final double MIN_SLOPE = 6;
+  private static final double CONTAINS_RATIO_THRESHOLD = 1.0 / 3.0;
+
   private final RuptureComputer ruptureComputer;
   private final RoofRelationClassifier classifier;
 
@@ -42,6 +46,17 @@ public class RoofTopologyBuilder implements Function<List<Plane3D>, RoofTopology
           continue;
         }
 
+        if (a.getSlopeInDegrees().getValue() < MIN_SLOPE
+            || b.getSlopeInDegrees().getValue() < MIN_SLOPE) {
+          empty(i, j, adjacency, relations);
+          continue;
+        }
+
+        if (isOverlappingTooMuch(a, b)) {
+          empty(i, j, adjacency, relations);
+          continue;
+        }
+
         var relation = this.classifier.apply(a, b);
         if (NONE.equals(relation)) {
           empty(i, j, adjacency, relations);
@@ -58,8 +73,16 @@ public class RoofTopologyBuilder implements Function<List<Plane3D>, RoofTopology
         adjacency[j][i] = true;
         relations[i][j] = relation;
         relations[j][i] = relation;
-        ruptures[i][j] = optionalRupture.get();
-        ruptures[j][i] = optionalRupture.get();
+
+        var rupture = optionalRupture.get();
+        ruptures[i][j] = rupture.toBuilder().planeAIndex(i).planeBIndex(j).build();
+        ruptures[j][i] =
+            rupture.toBuilder()
+                .planeAIndex(j)
+                .planeBIndex(i)
+                .endIntersection(new HashSet<>())
+                .startIntersection(new HashSet<>())
+                .build();
       }
     }
 
@@ -68,6 +91,23 @@ public class RoofTopologyBuilder implements Function<List<Plane3D>, RoofTopology
         .adjacency(adjacency)
         .relations(relations)
         .build();
+  }
+
+  private boolean isOverlappingTooMuch(Plane3D a, Plane3D b) {
+    var polyA = a.getDelimitation();
+    var polyB = b.getDelimitation();
+
+    var intersection = polyA.intersection(polyB);
+    if (intersection.isEmpty() || intersection.getArea() <= 0) {
+      return false;
+    }
+
+    if (!intersection.isValid()) intersection = intersection.buffer(0);
+    double intersectionArea = intersection.getArea();
+    double ratioA = intersectionArea / polyA.getArea();
+    double ratioB = intersectionArea / polyB.getArea();
+
+    return ratioA > CONTAINS_RATIO_THRESHOLD || ratioB > CONTAINS_RATIO_THRESHOLD;
   }
 
   private static void empty(int i, int j, boolean[][] adjacency, RoofRelationType[][] relations) {

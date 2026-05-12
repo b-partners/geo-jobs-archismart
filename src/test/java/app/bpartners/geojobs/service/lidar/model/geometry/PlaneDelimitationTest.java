@@ -17,12 +17,14 @@ class PlaneDelimitationTest {
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();
   private static final double CONCAVE_RATIO = 0.2;
-  private static final double POLYLINE_SIMPLIFICATION_EPSILON = 0.6;
+  private static final double DPS_SIMPLIFICATION = 0.6;
+  private static final double LR_SIMPLIFICATION = 0;
   private static final PlaneDelimitationConf CONF =
       new PlaneDelimitationConf(
           RangedConf.from(
               new IntegerRangedConf<>(Integer.MIN_VALUE, Integer.MAX_VALUE, CONCAVE_RATIO)),
-          POLYLINE_SIMPLIFICATION_EPSILON);
+          DPS_SIMPLIFICATION,
+          LR_SIMPLIFICATION);
 
   @Test
   void guess_delimitation_ok() {

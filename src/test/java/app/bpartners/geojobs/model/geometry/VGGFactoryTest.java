@@ -26,12 +26,7 @@ class VGGFactoryTest {
   DetectionBoundaryMerger merger = new DetectionBoundaryMerger();
 
   private final VGGFactory subject =
-      new VGGFactory(
-          tileCoordinatesPolygonIntersection,
-          geometryConverter,
-          geometrySquareMeterArea,
-          objectMapper,
-          merger);
+      new VGGFactory(tileCoordinatesPolygonIntersection, geometryConverter, merger);
 
   @SneakyThrows
   @Test

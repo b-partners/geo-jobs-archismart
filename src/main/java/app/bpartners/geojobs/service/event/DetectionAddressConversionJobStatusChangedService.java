@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFeatureType.PROVIDED_FEATURE;
 import static app.bpartners.geojobs.service.detection.DetectionCreationMapper.getOrSetFeatureIdentifier;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
@@ -127,19 +128,19 @@ public class DetectionAddressConversionJobStatusChangedService
     var convertedFeatures = tasks.stream().map(DetectionAddressConversionTask::getFeature).toList();
     var detection = detectionRepository.findById(detectionId).orElseThrow();
 
-    var savedDetection =
-        detectionRepository.save(
-            detection.toBuilder()
-                .needsImageOutput(true) // By default, addresses needs image output
-                .providedGeoJsonZone(
-                    convertedFeatures.stream()
-                        .peek(
-                            getOrSetFeatureIdentifier(
-                                Feature::getProperties, Feature::setProperties))
-                        .toList())
-                .multiPolygonGeoJsonZone(convertedFeatures)
-                .geoServerProperties(geoServerConfiguration.defaultGeoServerProperties(null))
-                .build());
+    var features =
+        convertedFeatures.stream()
+            .peek(getOrSetFeatureIdentifier(Feature::getProperties, Feature::setProperties))
+            .toList();
+    var detectionToSave =
+        detection.toBuilder()
+            .needsImageOutput(true) // By default, addresses needs image output
+            .providedGeoJsonZone(features)
+            .multiPolygonGeoJsonZone(convertedFeatures)
+            .geoServerProperties(geoServerConfiguration.defaultGeoServerProperties(null, null))
+            .build();
+    detectionToSave.addFeatures(features, PROVIDED_FEATURE);
+    var savedDetection = detectionRepository.save(detectionToSave);
 
     eventProducer.accept(
         List.of(DetectionSaved.builder().detectionIdentifier(savedDetection.getId()).build()));

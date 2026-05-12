@@ -1,10 +1,10 @@
 package app.bpartners.geojobs.model.lidar.planes.postprocessing;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.model.lidar.planes.PlaneDelimitation.simplify;
 import static app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities.intersection;
 import static app.bpartners.geojobs.model.lidar.planes.postprocessing.ChimneyFixer.getMaxZ;
 
-import app.bpartners.geojobs.model.geometry.PolylineSimplifier;
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
 import app.bpartners.geojobs.model.lidar.planes.postprocessing.model.ChimneyPlane3D;
@@ -82,9 +82,8 @@ public class DelimitationFiller
       return plane;
     }
 
-    var newDelimitation =
-        new PolylineSimplifier(plane.getDelimitationConf().simplificationEpsilon())
-            .simplifyPolygon(plane.getConvexDelimitation());
+    var conf = plane.getDelimitationConf();
+    var newDelimitation = simplify(plane.getConvexDelimitation(), conf, null);
     return plane.toBuilder().area(null).delimitation(newDelimitation).build();
   }
 

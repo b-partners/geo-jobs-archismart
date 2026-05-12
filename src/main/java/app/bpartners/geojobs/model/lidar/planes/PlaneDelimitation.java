@@ -1,10 +1,10 @@
 package app.bpartners.geojobs.model.lidar.planes;
 
 import static app.bpartners.geojobs.model.lidar.planes.algorithm.PointsDelimitationComputer.getConcave;
-import static app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStep.DELIMITATION_SIMPLIFICATION;
-import static app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStep.RAW_DELIMITATION_EXTRACTION;
+import static app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStep.*;
 
 import app.bpartners.geojobs.model.geometry.PolylineSimplifier;
+import app.bpartners.geojobs.model.geometry.lr.LrSimplifier;
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.conf.RangedConf;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
@@ -17,7 +17,6 @@ import org.locationtech.jts.geom.Polygon;
 public class PlaneDelimitation {
   private Polygon polygon;
   private final PlaneDelimitationConf conf;
-  private final PolylineSimplifier polylineSimplifier;
   private final Collection<LasPointGeometry> points;
   private final Plane3DExtractionStepExporter exporter;
 
@@ -28,7 +27,6 @@ public class PlaneDelimitation {
     this.conf = conf;
     this.points = points;
     this.exporter = exporter;
-    this.polylineSimplifier = new PolylineSimplifier(conf.simplificationEpsilon());
   }
 
   public PlaneDelimitation(PlaneDelimitationConf conf, Collection<LasPointGeometry> points) {
@@ -42,18 +40,29 @@ public class PlaneDelimitation {
   public Polygon getPolygon() {
     if (polygon == null) {
       var rawDelimitation = getConcave(points, getConcaveRatioValue());
-      polygon = polylineSimplifier.simplifyPolygon(rawDelimitation);
-
-      if (exporter != null) {
-        exporter.export(RAW_DELIMITATION_EXTRACTION, rawDelimitation);
-        exporter.export(DELIMITATION_SIMPLIFICATION, polygon);
-      }
+      polygon = simplify(rawDelimitation, conf, exporter);
     }
 
     return polygon;
   }
 
+  public static Polygon simplify(
+      Polygon delimitation, PlaneDelimitationConf conf, Plane3DExtractionStepExporter exporter) {
+    var dpsSimplifier = new PolylineSimplifier(conf.dpsEpsilon());
+    var lrSimplifier = new LrSimplifier(conf.lrDegEpsilon());
+    var dpsPolygon = dpsSimplifier.simplifyPolygon(delimitation);
+
+    if (exporter != null) {
+      var lrPolygon = lrSimplifier.apply(dpsPolygon);
+      exporter.export(RAW_DELIMITATION_EXTRACTION, delimitation);
+      exporter.export(DPS_SIMPLIFICATION, dpsPolygon);
+      exporter.export(LR_SIMPLIFICATION, lrPolygon);
+    }
+
+    return dpsPolygon;
+  }
+
   @Builder(toBuilder = true)
   public record PlaneDelimitationConf(
-      RangedConf<Integer, Double> concaveRatio, double simplificationEpsilon) {}
+      RangedConf<Integer, Double> concaveRatio, double dpsEpsilon, double lrDegEpsilon) {}
 }

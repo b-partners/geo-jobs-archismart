@@ -50,13 +50,17 @@ public class RequestLoggerConfigurer implements WebMvcConfigurer {
           request.getParameterMap().entrySet().stream()
               .map(entry -> entry.getKey() + "=" + String.join(",", entry.getValue()))
               .collect(joining(";"));
+      String isTestRequest = request.getHeader("x-test-request");
+
       log.info(
-          "preHandle: " + "method={}, uri={}, parameters=[{}], " + "handler={}, oldThreadName={}",
+          "{ \"type\": \"preHandle\", \"method\": \"{}\", \"uri\": \"{}\", \"parameters\": \"{}\","
+              + " \"handler\": \"{}\", \"oldThreadName\": \"{}\", \"isTestRequest\": \"{}\" }",
           request.getMethod(),
           request.getRequestURI(),
           parameters,
           handler,
-          oldThreadName);
+          oldThreadName,
+          isTestRequest != null ? isTestRequest : "false");
       return true;
     }
 

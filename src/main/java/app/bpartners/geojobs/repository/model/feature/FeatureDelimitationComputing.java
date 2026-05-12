@@ -2,11 +2,9 @@ package app.bpartners.geojobs.repository.model.feature;
 
 import static org.hibernate.type.SqlTypes.JSON;
 
+import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
+import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -25,8 +23,9 @@ public class FeatureDelimitationComputing {
 
   private String featurePropertiesIdentifier;
 
-  @JoinColumn(referencedColumnName = "id")
-  private String detectionIdentifier;
+  @ManyToOne
+  @JoinColumn(name = "detection_identifier")
+  private Detection detection;
 
   @JdbcTypeCode(JSON)
   private FeatureWithDelimitation featureWithDelimitation;

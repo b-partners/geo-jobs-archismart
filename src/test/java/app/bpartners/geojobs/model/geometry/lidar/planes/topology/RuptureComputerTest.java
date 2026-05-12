@@ -1,36 +1,28 @@
 package app.bpartners.geojobs.model.geometry.lidar.planes.topology;
 
 import static app.bpartners.geojobs.utils.lidar.LasPointGeometryLoaderUtils.readPointsFromResources;
+import static app.bpartners.geojobs.utils.lidar.Plane3DExtractorConfCreator.planeDelimitationConf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
 import app.bpartners.geojobs.model.lidar.planes.PlaneDelimitation.PlaneDelimitationConf;
 import app.bpartners.geojobs.model.lidar.planes.algorithm.PlaneFitter;
-import app.bpartners.geojobs.model.lidar.planes.conf.RangedConf;
 import app.bpartners.geojobs.model.lidar.planes.topology.RuptureComputer;
 import java.util.Collection;
 import org.junit.jupiter.api.Test;
 
 class RuptureComputerTest {
   private static final RuptureComputer subject = new RuptureComputer();
-  private static final PlaneDelimitationConf delimitationConf =
-      PlaneDelimitationConf.builder()
-          .concaveRatio(
-              RangedConf.from(
-                  new RangedConf.IntegerRangedConf<>(Integer.MIN_VALUE, 200, 0.2),
-                  new RangedConf.IntegerRangedConf<>(201, Integer.MAX_VALUE, 0.2)))
-          .simplificationEpsilon(0.5)
-          .build();
-
+  private static final PlaneDelimitationConf delimitationConf = planeDelimitationConf();
   private static final int TEST_COUNT = 10;
 
   @Test
   void case_1() {
-    var points1 = readPointsFromResources("cityjson/topology/rupture_line/case_1/pan_1.geojson");
-    var points2 = readPointsFromResources("cityjson/topology/rupture_line/case_1/pan_2.geojson");
-    var points3 = readPointsFromResources("cityjson/topology/rupture_line/case_1/pan_3.geojson");
-    var points4 = readPointsFromResources("cityjson/topology/rupture_line/case_1/pan_4.geojson");
+    var points1 = readPointsFromResources("cityjson/roofs/roof_6/pan_3.geojson");
+    var points2 = readPointsFromResources("cityjson/roofs/roof_6/pan_4.geojson");
+    var points3 = readPointsFromResources("cityjson/roofs/roof_6/pan_5.geojson");
+    var points4 = readPointsFromResources("cityjson/roofs/roof_6/pan_6.geojson");
 
     for (int i = 0; i < TEST_COUNT; i++) {
       var plane1 = createPlane(points1);
@@ -62,9 +54,9 @@ class RuptureComputerTest {
 
   @Test
   void case_2() {
-    var points1 = readPointsFromResources("cityjson/topology/rupture_line/case_2/pan_1.geojson");
-    var points2 = readPointsFromResources("cityjson/topology/rupture_line/case_2/pan_2.geojson");
-    var points3 = readPointsFromResources("cityjson/topology/rupture_line/case_2/pan_3.geojson");
+    var points1 = readPointsFromResources("cityjson/roofs/roof_7/pan_1.geojson");
+    var points2 = readPointsFromResources("cityjson/roofs/roof_7/pan_2.geojson");
+    var points3 = readPointsFromResources("cityjson/roofs/roof_7/pan_3.geojson");
 
     for (int i = 0; i < TEST_COUNT; i++) {
       var plane1 = createPlane(points1);
