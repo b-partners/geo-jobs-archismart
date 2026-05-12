@@ -3,7 +3,9 @@ package app.bpartners.geojobs.endpoint.rest.controller.mapper;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
+import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static java.time.Instant.now;
+import static java.util.Objects.requireNonNull;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
@@ -32,7 +34,7 @@ public class FeatureMapper {
   public Parcel toDomainPolygon(
       String parcelId, Feature rest, URL geoServerUrl, GeoServerParameter GeoServerParameter) {
     var id =
-        Objects.requireNonNull(rest.getProperties()).get("id") == null
+        requireNonNull(rest.getProperties()).get("id") == null
             ? null
             : rest.getProperties().get("id").toString();
     return Parcel.builder()
@@ -154,6 +156,25 @@ public class FeatureMapper {
     };
   }
 
+  // TODO: handle directly in toDomainGeometry
+  public org.locationtech.jts.geom.Geometry toDomainGeometryWithMultipolygonHandler(
+      Feature feature) {
+    var geometryType = requireNonNull(feature.getGeometry()).getActualInstance();
+    return switch (geometryType) {
+      case MultiPolygon multiPolygon -> {
+        var multiPolygonCoordinates = multiPolygon.getCoordinates();
+        var polygons =
+            new org.locationtech.jts.geom.Polygon[requireNonNull(multiPolygonCoordinates).size()];
+        for (int i = 0; i < polygons.length; i++) {
+          var data = multiPolygonCoordinates.get(i);
+          polygons[i] = geometryConverter.toPolygon(List.of(data));
+        }
+        yield geometryFactory.createMultiPolygon(polygons);
+      }
+      default -> toDomainGeometry(feature);
+    };
+  }
+
   public org.locationtech.jts.geom.Geometry toDomainGeometry(Feature feature) {
     var geometryType = feature.getGeometry().getActualInstance();
     switch (geometryType) {
@@ -258,5 +279,12 @@ public class FeatureMapper {
       app.bpartners.geojobs.repository.model.Feature domainFeature) {
     var rest = toRestFeature(domainFeature);
     return toDomainGeometry(rest);
+  }
+
+  // TODO: handle directly in domainToGeometry
+  public org.locationtech.jts.geom.Geometry domainToGeometryWithMultipolygonHandler(
+      app.bpartners.geojobs.repository.model.Feature domainFeature) {
+    var rest = toRestFeature(domainFeature);
+    return toDomainGeometryWithMultipolygonHandler(rest);
   }
 }

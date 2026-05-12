@@ -182,6 +182,8 @@ public class SecurityConf {
                         ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
                     .requestMatchers(POST, "/api/keys")
                     .hasAnyAuthority(ROLE_ADMIN.name())
+                    .requestMatchers(DELETE, "/api/keys")
+                    .authenticated()
                     .requestMatchers(DELETE, "/keys")
                     .hasAnyAuthority(ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
                     .requestMatchers(GET, "/city-jsons/*")

@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFacto
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import lombok.Builder;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Polygon;
 
 @Builder
@@ -38,5 +39,9 @@ public record OBB2D(
 
     coordinates[4] = coordinates[0];
     return geometryFactory.createPolygon(coordinates);
+  }
+
+  public Envelope toEnvelope() {
+    return toPolygon().getEnvelopeInternal();
   }
 }

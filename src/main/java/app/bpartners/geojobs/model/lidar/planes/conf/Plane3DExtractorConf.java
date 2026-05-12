@@ -5,10 +5,13 @@ import app.bpartners.geojobs.model.lidar.planes.Kernel.KernelConf;
 import app.bpartners.geojobs.model.lidar.planes.PlaneDelimitation.PlaneDelimitationConf;
 import app.bpartners.geojobs.model.lidar.planes.conf.RangedConf.IntegerRangedConf;
 import app.bpartners.geojobs.model.lidar.planes.postprocessing.PolygonSkinnyArmRemover.PolygonSkinnyArmRemoverConf;
+import app.bpartners.geojobs.model.lidar.planes.postprocessing.RoofFaceToLidarAlignmentFixer.RoofFaceToLidarAlignmentFixerConf;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
 public record Plane3DExtractorConf(
+    boolean doXYZClustering,
+    boolean doSkinnyArmRemover,
     BoxConf boxConf,
     PlaneConf planeConf,
     KernelConf kernelConf,
@@ -18,6 +21,7 @@ public record Plane3DExtractorConf(
     RoofPointsCleanerConf roofPointsCleanerConf,
     PlaneDelimitationConf planeDelimitationConf,
     DelimitationFillerConf delimitationFillerConf,
+    RoofFaceToLidarAlignmentFixerConf roofFaceToLidarAlignmentFixerConf,
     PolygonSkinnyArmRemoverConf polygonSkinnyArmRemoverConf) {
 
   @Builder(toBuilder = true)
@@ -79,6 +83,8 @@ public record Plane3DExtractorConf(
                 .build())
         .planeExtractionConf(
             PlaneExtractionConf.builder().iteration(100).pointContinuationThreshold(0.5).build())
+        .doXYZClustering(true)
+        .doSkinnyArmRemover(true)
         .polygonSkinnyArmRemoverConf(
             PolygonSkinnyArmRemoverConf.builder()
                 .gridSize(1)
@@ -88,6 +94,14 @@ public record Plane3DExtractorConf(
                 .cellMinNeighborsCount(1)
                 .maxWidth(2)
                 .minHeight(3)
+                .build())
+        .roofFaceToLidarAlignmentFixerConf(
+            RoofFaceToLidarAlignmentFixerConf.builder()
+                .minScore(1)
+                .stepAngle(2)
+                .maxStepCount(7)
+                .stepLength(0.4)
+                .addedPointsFactor(2)
                 .build())
         .build();
   }

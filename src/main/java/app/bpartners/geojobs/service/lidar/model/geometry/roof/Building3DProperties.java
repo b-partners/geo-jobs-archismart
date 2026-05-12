@@ -1,12 +1,14 @@
 package app.bpartners.geojobs.service.lidar.model.geometry.roof;
 
 import static app.bpartners.geojobs.model.lidar.planes.algorithm.GeometryUtilities.getLargestPolygon;
-import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
+import app.bpartners.geojobs.model.lidar.planes.Plane3D;
+import app.bpartners.geojobs.model.lidar.planes.Plane3DGeneratorWithoutSegmentations;
 import app.bpartners.geojobs.model.lidar.planes.Planes3DExtractor;
 import app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
+import app.bpartners.geojobs.model.lidar.planes.model.DelimitedRoofPoints;
 import app.bpartners.geojobs.service.lidar.preprocessing.ground.GroundPointsCleaner;
 import app.bpartners.geojobs.service.lidar.preprocessing.roof.RoofPointsCleaner;
 import java.util.*;
@@ -18,12 +20,18 @@ import org.locationtech.jts.geom.Polygon;
 @Slf4j
 @RequiredArgsConstructor
 public class Building3DProperties {
-  @Getter private final LidarRoofData data;
   @Getter private final Plane3DExtractorConf conf;
+  @Deprecated @Getter private final LidarRoofData data;
+  @Getter private final DelimitedRoofPoints delimitedPoints;
   @Getter private final Plane3DExtractionStepExporter exporter;
 
+  @Deprecated
   public Building3DProperties(LidarRoofData data) {
-    this(data, Plane3DExtractorConf.getDefault(), null);
+    this(Plane3DExtractorConf.getDefault(), data, data.toDelimitedRoofPoints(), null);
+  }
+
+  public Building3DProperties(DelimitedRoofPoints delimitedPoints) {
+    this(Plane3DExtractorConf.getDefault(), null, delimitedPoints, null);
   }
 
   // properties
@@ -35,10 +43,6 @@ public class Building3DProperties {
   private Set<LasPointGeometry> cleanedGroundPoints;
 
   public BuildingHeightInMeters getHeightInMeters() {
-    if (hasInvalidData()) {
-      return new BuildingHeightInMeters(List.of(), List.of());
-    }
-
     if (buildingHeightInMeters == null) {
       buildingHeightInMeters =
           new BuildingHeightInMeters(getCleanedRoofPoints(), getCleanedGroundPoints());
@@ -48,37 +52,20 @@ public class Building3DProperties {
   }
 
   public List<RoofPlane3D> getRoofPlanes() {
-    if (hasInvalidData()) {
-      return List.of();
-    }
-
     if (roofPlanes != null) {
       return roofPlanes;
     }
 
-    var extractor = new Planes3DExtractor(getRoofDelimitation(), conf, exporter);
-    var rawPlanes = extractor.apply(getCleanedRoofPoints());
+    var rawPlanes = getRawPlanes();
     roofPlanes =
         rawPlanes.stream().map(plane -> new RoofPlane3D(getRoofDelimitation(), plane)).toList();
     return roofPlanes;
   }
 
-  public boolean hasInvalidData() {
-    if (!AVAILABLE.equals(data.status())) {
-      return true;
-    }
-
-    if (data.roof().points().size() < conf.planeConf().minPointsCount()) {
-      return true;
-    }
-
-    return data.ground().points().size() < conf.planeConf().minPointsCount();
-  }
-
   public Set<LasPointGeometry> getCleanedRoofPoints() {
     if (cleanedRoofPoints == null) {
       var cleaner = new RoofPointsCleaner(conf.roofPointsCleanerConf().duplicateXYTolerance());
-      cleanedRoofPoints = cleaner.apply(data.roof().points());
+      cleanedRoofPoints = cleaner.apply(delimitedPoints.getPoints());
     }
     return cleanedRoofPoints;
   }
@@ -86,12 +73,26 @@ public class Building3DProperties {
   public Set<LasPointGeometry> getCleanedGroundPoints() {
     if (cleanedGroundPoints == null) {
       var cleaner = new GroundPointsCleaner();
-      cleanedGroundPoints = cleaner.apply(data.ground().points());
+      cleanedGroundPoints = cleaner.apply(delimitedPoints.getGroundPoints());
     }
     return cleanedGroundPoints;
   }
 
+  @Deprecated
   private Polygon getRoofDelimitation() {
-    return getLargestPolygon(data.roof().boundaryLambert93());
+    return getLargestPolygon(delimitedPoints);
+  }
+
+  private List<Plane3D> getRawPlanes() {
+    return switch (delimitedPoints.getType()) {
+      case ENTIRE_ROOF_DELIMITATION -> {
+        var extractor = new Planes3DExtractor(getRoofDelimitation(), conf, exporter);
+        yield extractor.apply(delimitedPoints.getPoints());
+      }
+      case ROOF_SEGMENT_FACE_DELIMITATION -> {
+        var extractor = new Plane3DGeneratorWithoutSegmentations(conf);
+        yield extractor.apply(delimitedPoints);
+      }
+    };
   }
 }

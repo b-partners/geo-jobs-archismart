@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.POINT;
 import static app.bpartners.geojobs.endpoint.rest.model.Polygon.TypeEnum.POLYGON;
+import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
@@ -61,6 +62,15 @@ public class GeometryConverter {
                 .build())
         .properties(new HashMap<>(properties))
         .build();
+  }
+
+  @SneakyThrows
+  public app.bpartners.geojobs.endpoint.rest.model.MultiPolygon restMultiPolygonFromJts(
+      MultiPolygon jtsMultiPolygon) {
+    var multiPolygonString = writeGeometryAsString(jtsMultiPolygon);
+    return objectMapper()
+        .readValue(
+            multiPolygonString, app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.class);
   }
 
   public Feature toFeature(

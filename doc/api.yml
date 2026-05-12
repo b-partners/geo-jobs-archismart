@@ -1196,8 +1196,35 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ApiKey'
+    delete:
+      tags:
+        - Security
+      operationId: revokeSpecificApiKey
+      summary: Revoke an API key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeApiKey'
+      responses:
+        200:
+          description: Revoked api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokedApiKey'
+        400:
+          description: Invalid request (API key already revoked or keyValue is missing)
+          $ref: "#/components/responses/400"
+        403:
+          description: Operation Forbidden (Bad credentials or Users can only revoke their own API keys)
+          $ref: "#/components/responses/403"
+        404:
+          description: Requested api key not found
+          $ref: "#/components/responses/404"
   '/keys':
     delete:
+      deprecated: true
       tags:
         - Security
       operationId: revokeApiKey
@@ -1206,7 +1233,7 @@ paths:
         - ApiKeyAuth: [ ]
       responses:
         200:
-          description: Statistics of detection usage
+          description: ApiKey revoked successfully message
           content:
             application/json:
               schema:
@@ -1264,6 +1291,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CityJSONRequest'
+
   '/3d/{id}':
     get:
       tags:
@@ -1659,6 +1687,22 @@ components:
         - "C"
         - "D"
         - "E"
+
+    RevokedApiKey:
+      allOf:
+        - $ref: "#/components/schemas/RevokeApiKey"
+      properties:
+        revokedAt:
+          type: string
+          format: date-time
+
+    RevokeApiKey:
+      type: object
+      properties:
+        keyValue:
+          type: string
+          format: uuid
+          example: "32507271-5ebf-467d-beb2-1a243efdb0e5"
 
     CreateApiKey:
       type: object
@@ -2438,7 +2482,7 @@ components:
         imageUrl:
           type: string
         imageProperties:
-         $ref: '#/components/schemas/ImageProperties'
+          $ref: '#/components/schemas/ImageProperties'
         imageTileInfoOrigin:
           $ref: '#/components/schemas/TileInfo'
         pdfUrl:
@@ -2517,8 +2561,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Point2D'
+
     ThreeDRequest:
       type: object
+      required:
+        - delimitations
+        - delimitationObjectType
+        - delimitationType
       properties:
         delimitations:
           description: Refers to a list of features, such as point corresponding to a textual address or a polygon/multiPolygon corresponding to a roof delimitation, to be previewed in 3D models.
@@ -2529,6 +2578,39 @@ components:
           $ref: '#/components/schemas/DelimitationObjectType'
         delimitationType:
           $ref: '#/components/schemas/DelimitationType'
+        complexityFactor:
+          type: number
+          description: |
+            Number between 0 and 1. Actual default value is `0.66` when none provided. 
+            Permits consumer to define complexity factor in lidar processing.
+            More the given value approaches 1, more details will be provided in obtained preview 3D.
+            Therefore, more the complexity approaches, more hallucination can be created.
+
+    ThreeDTextureInfo:
+      type: object
+      required:
+        - topLeftLon
+        - topLeftLat
+        - pixelHeight
+        - pixelWidth
+      properties:
+        imageDataUri:
+          type: string
+        topLeftLon:
+          type: number
+          format: float
+        topLeftLat:
+          type: number
+          format: float
+        pixelWidth:
+          type: number
+          format: float
+          description: Width of a pixel in meters
+        pixelHeight:
+          type: number
+          format: float
+          description: Height of a pixel in meters
+
     DelimitationObjectType:
       type: string
       description: |
@@ -2548,6 +2630,8 @@ components:
       properties:
         id:
           type: string
+        threeDTextureInfo:
+          $ref: "#/components/schemas/ThreeDTextureInfo"
     CityJSONRequestStatus:
       deprecated: true
       type: string
@@ -2561,9 +2645,16 @@ components:
         - FAILED
         - PROCESSING
         - UNAVAILABLE
+    LidarProcessorType:
+      type: string
+      enum:
+        - DEFAULT
+        - THREE_D_BAG_ROOFER
     ThreeDAddressesRequest:
       type: object
       properties:
+        lidarProcessorType:
+          $ref: '#/components/schemas/LidarProcessorType'
         delimitationType:
           $ref: '#/components/schemas/DelimitationType'
         delimitationObjectType:

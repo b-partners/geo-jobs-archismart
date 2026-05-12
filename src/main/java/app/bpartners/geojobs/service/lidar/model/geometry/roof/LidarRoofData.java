@@ -1,7 +1,11 @@
 package app.bpartners.geojobs.service.lidar.model.geometry.roof;
 
+import static app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType.ENTIRE_ROOF_DELIMITATION;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.*;
 
+import app.bpartners.geojobs.model.lidar.planes.model.DelimitedRoofPoints;
+import app.bpartners.geojobs.model.lidar.planes.model.DelimitedRoofPointsItem;
+import app.bpartners.geojobs.model.lidar.planes.model.RoofPointsDelimitationTransformer;
 import app.bpartners.geojobs.service.lidar.model.LidarDataStatus;
 import app.bpartners.geojobs.service.lidar.model.geometry.DelimitedPoints;
 import java.util.HashMap;
@@ -66,5 +70,20 @@ public record LidarRoofData(
     }
 
     return UNAVAILABLE;
+  }
+
+  public DelimitedRoofPoints toDelimitedRoofPoints() {
+    var delimitedRoofPoints =
+        new DelimitedRoofPoints(
+            ENTIRE_ROOF_DELIMITATION,
+            roof.boundaryEPSG4326(),
+            roof.boundaryLambert93(),
+            RoofPointsDelimitationTransformer.none());
+    var item = delimitedRoofPoints.getItems()[0].toBuilder().points(roof.points()).build();
+
+    return delimitedRoofPoints.toBuilder()
+        .groundPoints(ground.points())
+        .items(new DelimitedRoofPointsItem[] {item})
+        .build();
   }
 }

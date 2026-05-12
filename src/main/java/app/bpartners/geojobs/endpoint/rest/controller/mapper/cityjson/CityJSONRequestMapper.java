@@ -1,13 +1,13 @@
 package app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson;
 
-import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF;
-import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CityJSONRequestMapper {
   private final BucketComponent bucketComponent;
+  private final CityJSONTextureMapper textureMapper;
 
   public CityJSONRequest toRest(
       app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest cityJSONRequest) {
@@ -36,7 +37,12 @@ public class CityJSONRequestMapper {
     return new CityJSONRequest()
         .id(cityJSONRequest.getId())
         .delimitations(restDelimitations)
+        .delimitationObjectType(
+            CityJSONDelimitationObjectTypeMapper.toRestDelimitationObjectType(
+                cityJSONRequest.getDelimitationObjectType()))
         .status(CityJSONRequestStatusMapper.toRest(cityJSONRequest.getStatus()))
+        .delimitationType(cityJSONRequest.getDelimitationType())
+        .threeDTextureInfo(null)
         .cityJsons(restCityJsons);
   }
 
@@ -67,8 +73,14 @@ public class CityJSONRequestMapper {
         .delimitations(restDelimitations)
         .step(step)
         .status(CityJSONRequestStatusMapper.toGenericStatusRest(cityJSONRequest.getStatus()))
-        .delimitationObjectType(BUILDING_ROOF)
-        .delimitationType(PARCEL_FREE_DELIMITATION)
+        .delimitationObjectType(
+            CityJSONDelimitationObjectTypeMapper.toRestDelimitationObjectType(
+                cityJSONRequest.getDelimitationObjectType()))
+        .delimitationType(cityJSONRequest.getDelimitationType())
+        .complexityFactor(
+            cityJSONRequest.getComplexityFactor() == null
+                ? null
+                : BigDecimal.valueOf(cityJSONRequest.getComplexityFactor()))
         .cityJsonFileUrls(restCityJsons);
   }
 
@@ -105,12 +117,22 @@ public class CityJSONRequestMapper {
             ? List.of()
             : createCityJSONRequest.getDelimitations();
     var domainDelimitations = delimitations.stream().map(FeatureMapper::toDomainFeature).toList();
+    var texture = createCityJSONRequest.getThreeDTextureInfo();
 
-    return app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
-        .id(requestIdentifier)
-        .creationDatetime(now())
-        .communityOwnerId(communityOwnerId)
-        .delimitations(domainDelimitations)
+    var domain =
+        app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
+            .id(requestIdentifier)
+            .creationDatetime(now())
+            .communityOwnerId(communityOwnerId)
+            .delimitations(domainDelimitations)
+            .delimitationObjectType(
+                CityJSONDelimitationObjectTypeMapper.fromRestDelimitationObjectType(
+                    createCityJSONRequest.getDelimitationObjectType()))
+            .delimitationType(USER_DEFINED_DELIMITATION)
+            .build();
+
+    return domain.toBuilder()
+        .textures(texture == null ? List.of() : List.of(textureMapper.toDomain(texture, domain)))
         .build();
   }
 
@@ -128,9 +150,13 @@ public class CityJSONRequestMapper {
         .communityOwnerId(communityOwnerId)
         .delimitations(domainDelimitations)
         .delimitationObjectType(
-            createCityJSONRequest.getDelimitationObjectType() == null
-                ? BUILDING_ROOF
-                : createCityJSONRequest.getDelimitationObjectType())
+            CityJSONDelimitationObjectTypeMapper.fromRestDelimitationObjectType(
+                createCityJSONRequest.getDelimitationObjectType()))
+        .delimitationType(createCityJSONRequest.getDelimitationType())
+        .complexityFactor(
+            createCityJSONRequest.getComplexityFactor() == null
+                ? null
+                : createCityJSONRequest.getComplexityFactor().floatValue())
         .build();
   }
 }

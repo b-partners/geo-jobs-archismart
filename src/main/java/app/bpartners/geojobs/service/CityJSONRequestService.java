@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONDelimitationObjectType.BUILDING_ROOF;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.PROCESSING;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.POINTS_CLOUD_PRE_PROCESSING;
@@ -14,6 +14,7 @@ import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
@@ -31,7 +32,10 @@ public class CityJSONRequestService {
   private final FeatureAddressConverter featureAddressConverter;
 
   public CityJSONRequest processAddressRequest(
-      String requestIdentifier, List<String> addresses, String communityOwnerId) {
+      String requestIdentifier,
+      List<String> addresses,
+      String communityOwnerId,
+      LidarProcessorType lidarProcessorType) {
     var optionalRequest =
         cityJSONRequestRepository.findByIdAndCommunityOwnerId(requestIdentifier, communityOwnerId);
     if (optionalRequest.isPresent()) {
@@ -50,7 +54,7 @@ public class CityJSONRequestService {
     eventProducer.accept(
         List.of(
             new ThreeDMultipleAddressRequested(
-                savedRequest.getId(), communityOwnerId, addresses, null)));
+                savedRequest.getId(), communityOwnerId, addresses, null, lidarProcessorType)));
     return savedRequest;
   }
 
@@ -113,7 +117,8 @@ public class CityJSONRequestService {
                   requestIdentifier,
                   cityJSONRequest.getCommunityOwnerId(),
                   null,
-                  pointCorrespondingToAddresses)));
+                  pointCorrespondingToAddresses,
+                  cityJSONRequest.getLidarProcessorType())));
     } else {
       cityJSONRequestBuilder.step(POINTS_CLOUD_PRE_PROCESSING);
       eventProducer.accept(
@@ -121,6 +126,7 @@ public class CityJSONRequestService {
               CityJSONRequestCreated.builder()
                   .requestId(requestIdentifier)
                   .communityOwnerId(cityJSONRequest.getCommunityOwnerId())
+                  .lidarProcessorType(cityJSONRequest.getLidarProcessorType())
                   .build()));
     }
 
@@ -183,7 +189,8 @@ public class CityJSONRequestService {
                   requestIdentifier,
                   cityJSONRequest.getCommunityOwnerId(),
                   null,
-                  pointCorrespondingToAddresses)));
+                  pointCorrespondingToAddresses,
+                  null)));
     } else {
       eventProducer.accept(
           List.of(

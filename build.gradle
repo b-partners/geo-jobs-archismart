@@ -30,6 +30,7 @@ maven {
   url 'https://repo.osgeo.org/repository/geotools-releases'
 }
     mavenCentral()
+    maven { url 'https://repo.osgeo.org/repository/release/' }
 }
 
 java {
@@ -230,8 +231,13 @@ implementation 'org.geotools:gt-geojson:31.2'
 implementation 'org.geotools:gt-main:31.2'
 implementation 'org.geotools:gt-referencing:31.2'
 implementation 'org.geotools:gt-epsg-hsql:31.2'
+    implementation "org.geotools:gt-coverage:31.2"
+    implementation "org.geotools:gt-referencing:31.2"
+    implementation "org.geotools:gt-metadata:31.2"
+    implementation "org.geotools:gt-geotiff:31.2"
     implementation 'com.github.mreutegg:laszip4j:0.20'
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
     implementation 'org.citygml4j:citygml4j-cityjson:3.2.6'
+    implementation 'org.gdal:gdal:3.8.0'
 
 }

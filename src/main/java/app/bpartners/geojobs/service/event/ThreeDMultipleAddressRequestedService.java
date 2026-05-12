@@ -12,6 +12,7 @@ import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
 import app.bpartners.geojobs.endpoint.event.model.ThreeDMultipleAddressRequested;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.model.exception.ApiException;
+import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
@@ -39,6 +40,7 @@ public class ThreeDMultipleAddressRequestedService
   public void accept(ThreeDMultipleAddressRequested requestEvent) {
     var requestIdentifier = requestEvent.getRequestIdentifier();
     var communityOwnerId = requestEvent.getCommunityOwnerId();
+    var lidarProcessorType = requestEvent.getLidarProcessorType();
     var persistedRequest =
         cityJSONRequestRepository
             .findByIdAndCommunityOwnerId(requestIdentifier, communityOwnerId)
@@ -46,11 +48,14 @@ public class ThreeDMultipleAddressRequestedService
     var addresses = requestEvent.getAddresses();
     var points = requestEvent.getPoints();
 
-    handleAddresses(addresses, persistedRequest);
-    handlePoints(points, persistedRequest);
+    handleAddresses(addresses, persistedRequest, lidarProcessorType);
+    handlePoints(points, persistedRequest, lidarProcessorType);
   }
 
-  private void handleAddresses(List<String> addresses, CityJSONRequest persistedRequest) {
+  private void handleAddresses(
+      List<String> addresses,
+      CityJSONRequest persistedRequest,
+      LidarProcessorType lidarProcessorType) {
     if (addresses == null) {
       return;
     }
@@ -81,10 +86,12 @@ public class ThreeDMultipleAddressRequestedService
             CityJSONRequestCreated.builder()
                 .requestId(saved.getId())
                 .communityOwnerId(persistedRequest.getCommunityOwnerId())
+                .lidarProcessorType(lidarProcessorType)
                 .build()));
   }
 
-  private void handlePoints(List<Point> points, CityJSONRequest persistedRequest) {
+  private void handlePoints(
+      List<Point> points, CityJSONRequest persistedRequest, LidarProcessorType lidarProcessorType) {
     if (points == null) {
       return;
     }
@@ -133,6 +140,7 @@ public class ThreeDMultipleAddressRequestedService
             CityJSONRequestCreated.builder()
                 .requestId(saved.getId())
                 .communityOwnerId(persistedRequest.getCommunityOwnerId())
+                .lidarProcessorType(lidarProcessorType)
                 .build()));
   }
 }

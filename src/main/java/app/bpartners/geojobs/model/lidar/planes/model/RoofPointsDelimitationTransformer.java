@@ -18,4 +18,8 @@ public class RoofPointsDelimitationTransformer
       default -> polygon;
     };
   }
+
+  public static RoofPointsDelimitationTransformer none() {
+    return new RoofPointsDelimitationTransformer(0);
+  }
 }

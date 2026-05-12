@@ -1,21 +1,22 @@
 package app.bpartners.geojobs.service.cityjson;
 
-import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
+import static app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType.ROOF_SEGMENT_FACE_DELIMITATION;
 import static app.bpartners.geojobs.service.lidar.utils.MathUtilities.round2;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.model.lidar.LasPointGeometry;
 import app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf;
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
+import app.bpartners.geojobs.model.lidar.planes.model.DelimitedRoofPoints;
 import app.bpartners.geojobs.service.cityjson.exception.CityJsonException;
 import app.bpartners.geojobs.service.cityjson.factory.BuildingGroundPolygonFactory;
 import app.bpartners.geojobs.service.cityjson.factory.BuildingWallPolygonFactory;
 import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
 import app.bpartners.geojobs.service.cityjson.model.BuildingData;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
+import app.bpartners.geojobs.service.lidar.PointsExtractionResult;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
-import app.bpartners.geojobs.service.lidar.model.geometry.roof.LidarRoofData;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.RoofPlane3D;
 import java.io.File;
 import java.util.HashMap;
@@ -31,11 +32,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class LidarDataToCityJsonProcessor
-    implements BiFunction<String, LidarRoofsAnalysisProcessor.RoofsAnalysisResult, File> {
+    implements BiFunction<String, PointsExtractionResult, File> {
   private final CityJsonFactory cityJsonFactory;
   private final Plane3DExtractionStepExporter exporter;
 
-  private static final String ID_KEY = "id";
   private static final String AREA_KEY = "area_in_square_meters";
   private static final String PLANE_SLOPE_KEY = "slope_in_degrees";
   private static final String DISTANCE_2D_SCALE = "distance_2d_scale";
@@ -46,21 +46,21 @@ public class LidarDataToCityJsonProcessor
     this.cityJsonFactory = cityJsonFactory;
   }
 
-  @Override
+  @Deprecated
   public File apply(
       String id, LidarRoofsAnalysisProcessor.RoofsAnalysisResult roofsAnalysisResults) {
-    return apply(id, roofsAnalysisResults, Plane3DExtractorConf.getDefault());
+    return apply(
+        id, roofsAnalysisResults.toPointsExtractionResult(), Plane3DExtractorConf.getDefault());
   }
 
-  public File apply(
-      String id,
-      LidarRoofsAnalysisProcessor.RoofsAnalysisResult roofsAnalysisResults,
-      Plane3DExtractorConf conf) {
+  @Override
+  public File apply(String id, PointsExtractionResult result) {
+    return apply(id, result, Plane3DExtractorConf.getDefault());
+  }
+
+  public File apply(String id, PointsExtractionResult result, Plane3DExtractorConf conf) {
     var buildingsData =
-        roofsAnalysisResults.roofsData().values().stream()
-            .filter(data -> AVAILABLE.equals(data.status()))
-            .map(plane -> toBuildingData(plane, conf))
-            .toList();
+        result.data().values().stream().map(roof -> toBuildingData(roof, conf)).toList();
 
     try {
       var cityJsonFile = cityJsonFactory.make(id, id, buildingsData);
@@ -71,10 +71,10 @@ public class LidarDataToCityJsonProcessor
     }
   }
 
-  private BuildingData toBuildingData(LidarRoofData lidarRoofData, Plane3DExtractorConf conf) {
-    var roofProperty = new Building3DProperties(lidarRoofData, conf, exporter);
+  private BuildingData toBuildingData(DelimitedRoofPoints roof, Plane3DExtractorConf conf) {
+    var roofProperty = new Building3DProperties(conf, null, roof, exporter);
     var planes = roofProperty.getRoofPlanes();
-    var area2DScale = getArea2DScale(lidarRoofData, planes);
+    var area2DScale = getArea2DScale(roof, planes);
     var distance2DScale = Math.sqrt(area2DScale);
 
     var groundZ =
@@ -95,20 +95,13 @@ public class LidarDataToCityJsonProcessor
 
     var grounds = planes.stream().map(plane -> createGround(plane, groundZ)).toList();
 
-    var properties = getProperties(lidarRoofData);
-    var id = properties.getOrDefault(ID_KEY, randomUUID().toString());
-
     return BuildingData.builder()
-        .id(String.valueOf(id))
+        .id(randomUUID().toString())
         .walls(walls)
         .roofs(roofs)
         .grounds(grounds)
-        .properties(properties)
+        .properties(new HashMap<>())
         .build();
-  }
-
-  private static Map<String, Object> getProperties(LidarRoofData data) {
-    return data.properties() == null ? new HashMap<>() : data.properties();
   }
 
   private static GeometryWithProperties toPolygonWithProperties(
@@ -138,8 +131,12 @@ public class LidarDataToCityJsonProcessor
     return new GeometryWithProperties(groundPolygon, Map.of());
   }
 
-  private static double getArea2DScale(LidarRoofData lidarRoofData, List<RoofPlane3D> planes) {
-    var delimitation2DArea = lidarRoofData.roof().boundaryLambert93().getArea();
+  private static double getArea2DScale(DelimitedRoofPoints roof, List<RoofPlane3D> planes) {
+    if (ROOF_SEGMENT_FACE_DELIMITATION.equals(roof.getType())) {
+      return 1;
+    }
+
+    var delimitation2DArea = roof.getArea();
     var planes2DArea = planes.stream().mapToDouble(RoofPlane3D::get2DArea).sum();
     return delimitation2DArea / planes2DArea;
   }

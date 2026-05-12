@@ -57,7 +57,9 @@ Globals:
         GOOGLE_CAPTCHA_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/captcha/url}}'
         OPEN_SOURCE_LIDAR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/open-source/lidar/api/url}}'
         GOOGLE_GEOCODE_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/geocode/api-key}}'
-
+        ROOFER_3D_BAG_BASE_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/base-url}}'
+        ROOFER_3D_BAG_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/api-key}}'
+        ROOFER_3D_BAG_COMPLEXITY_FACTOR: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/complexity-factor}}'
 Parameters:
   Env:
     Type: String
@@ -75,7 +77,7 @@ Resources:
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: BUFFERED
-        
+
 
   WorkerFunction1:
     Type: AWS::Serverless::Function
@@ -130,7 +132,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.bpartners.geojobs.handler.MailboxEventHandler::handleRequest
-      MemorySize: 7077
+      MemorySize: 2048
       Timeout: 900 #note(sqs-visibility)
       Role: !Sub '{{resolve:ssm:/geo-jobs-archismart/${Env}/execution/role-arn}}'
       SnapStart:
@@ -151,7 +153,7 @@ Resources:
       Name: !Join [ '', [ /geo-jobs-archismart/, !Ref Env, /api/url ] ]
       Type: String
       Value: !GetAtt FrontalFunctionUrl.FunctionUrl
-  
+
 Outputs:
   ApiUrl:
     Description: Url to access the frontal function

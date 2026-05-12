@@ -13,21 +13,27 @@ public class Box {
   @Getter private final Kernel kernel;
   @Getter private boolean didInfiniteGrow;
   @Getter private final List<LasPointGeometry> points;
+  @Getter private final boolean doInfiniteGrow;
 
   private final OBB obb;
   private Set<ExpansionDirection> expansionDirections;
 
-  public Box(BoxConf conf, Kernel kernel) {
+  public Box(BoxConf conf, Kernel kernel, boolean doInfiniteGrow) {
     this.conf = conf;
     this.kernel = kernel;
 
     this.obb = new OBB();
     this.didInfiniteGrow = false;
+    this.doInfiniteGrow = doInfiniteGrow;
     this.plane = PlaneFitter.fit(kernel);
     this.points = new ArrayList<>(plane.getPoints());
     this.expansionDirections = EnumSet.allOf(ExpansionDirection.class);
 
     updateOBB(this.points);
+  }
+
+  public Box(BoxConf conf, Kernel kernel) {
+    this(conf, kernel, false);
   }
 
   public void doInfiniteGrow(Collection<LasPointGeometry> candidates) {
@@ -39,6 +45,7 @@ public class Box {
   }
 
   public boolean shouldDoInfiniteGrow(Collection<LasPointGeometry> candidates) {
+    if (doInfiniteGrow) return true;
     return this.points.size() > conf.maxRefitPoints() && candidates.size() > conf.maxRefitPoints();
   }
 

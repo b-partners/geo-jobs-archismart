@@ -23,7 +23,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 public class UserAccountsApiTest extends FacadeIT {
-  @MockBean RestTemplate mockRestTemplate;
+  @MockBean(name = "restTemplate")
+  RestTemplate mockRestTemplate;
+
   @MockBean ApiConfiguration mockApiConfiguration;
   @MockBean SecurityApi mockSecurityApi;
   @Autowired UserAccountsApi subject;

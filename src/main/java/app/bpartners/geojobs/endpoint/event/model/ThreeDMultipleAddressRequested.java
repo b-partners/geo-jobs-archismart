@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.endpoint.event.model;
 
 import app.bpartners.geojobs.endpoint.rest.model.Point;
+import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import java.time.Duration;
 import java.util.List;
 import lombok.*;
@@ -16,6 +17,7 @@ public class ThreeDMultipleAddressRequested extends PojaEvent {
   private String communityOwnerId;
   private List<String> addresses;
   private List<Point> points;
+  private LidarProcessorType lidarProcessorType;
 
   @Override
   public Duration maxConsumerDuration() {

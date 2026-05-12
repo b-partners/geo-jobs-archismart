@@ -92,4 +92,20 @@ public class FileWriter implements BiFunction<byte[], File, File> {
     dirFile.deleteOnExit();
     return dirFile;
   }
+
+  public static File createTempFile(String prefix, String suffix) {
+    try {
+      File tempDir = createTempDirectory();
+
+      Path tempFile = Files.createTempFile(tempDir.toPath(), prefix, suffix);
+
+      File file = tempFile.toFile();
+      file.deleteOnExit();
+
+      return file;
+
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to create temp file", e);
+    }
+  }
 }

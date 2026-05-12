@@ -9,6 +9,7 @@ import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.CityJSONRequestValidator;
 import app.bpartners.geojobs.endpoint.rest.validator.CreateCityJSONRequestValidator;
 import app.bpartners.geojobs.endpoint.rest.validator.ThreeDAddressesRequestValidator;
+import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CityJSONRequestService;
@@ -58,6 +59,9 @@ public class CityJSONController {
     threeDAddressesRequestValidator.accept(threeDRequest);
     var communityOwnerId = getCommunityAuthorizationId();
     cityJSONRequestValidator.accept(requestIdentifier, communityOwnerId);
+    var lidarProcessorType = threeDRequest.getLidarProcessorType();
+    var domainLidarProcessorType =
+        lidarProcessorType == null ? null : LidarProcessorType.valueOf(lidarProcessorType.name());
     if (threeDRequest.getAddresses().size() == 1) {
       var convertedAddressesToDelimitations =
           threeDRequest.getAddresses().stream()
@@ -69,7 +73,7 @@ public class CityJSONController {
       var request = new ThreeDRequest().delimitations(convertedAddressesToDelimitations);
       var toProcess =
           cityJSONRequestMapper.createToDomain(requestIdentifier, request, communityOwnerId);
-
+      toProcess.setLidarProcessorType(domainLidarProcessorType);
       return cityJSONRequestMapper.toRestThreeDResponseStatus(
           cityJSONRequestService.process(toProcess));
     }
@@ -77,7 +81,8 @@ public class CityJSONController {
         cityJSONRequestService.processAddressRequest(
             requestIdentifier,
             threeDRequest.getAddresses().stream().map(AddressFullText::getFullText).toList(),
-            communityOwnerId);
+            communityOwnerId,
+            domainLidarProcessorType);
 
     return cityJSONRequestMapper.toRestThreeDResponseStatus(savedRequest);
   }

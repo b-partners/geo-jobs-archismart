@@ -45,5 +45,8 @@ public class EnvConf {
     registry.add("google.captcha.secret", () -> "dummy");
     registry.add("google.captcha.url", () -> "https://google.com");
     registry.add("google.geocode.api.key", () -> "https://google.com");
+    registry.add("roofer.3d.bag.complexity.factor", () -> 0.88f);
+    registry.add("roofer.3d.bag.base.url", () -> "http://dummy.com");
+    registry.add("roofer.3d.bag.api.key", () -> "dummy");
   }
 }

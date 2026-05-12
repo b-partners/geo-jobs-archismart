@@ -2,13 +2,15 @@ package app.bpartners.geojobs.service.cityjson.local;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.model.lidar.planes.conf.Plane3DExtractorConf.getDefault;
+import static app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType.ENTIRE_ROOF_DELIMITATION;
 import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepExporter;
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
 import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
-import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
+import app.bpartners.geojobs.utils.lidar.LasRoofsPointsExtractorCreator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -27,17 +29,16 @@ class CityJSONLocalTestUtils {
   static void process(String filename, List<String> files, File directoryOutput) {
     var filenameWithoutSuffix = filename.substring(0, filename.indexOf('.'));
     var geojson = GEO_JSON_FILE_PREFIX + filename;
-    var lasFiles = files.stream().map(file -> LAS_FILE_PREFIX + file).toList();
+    var lasFiles = files.stream().map(file -> LAS_FILE_PREFIX + file).collect(toSet());
     var outputFolder = createOutputFolder(directoryOutput, filenameWithoutSuffix);
 
     var delimitation = readCoordinate(geojson);
     var exporter = new Plane3DExtractionStepExporter(OBJECT_MAPPER, outputFolder, "EPSG:2143", "1");
-    var dataProcessorCreator = new LidarRoofsAnalysisProcessorCreator();
     var cityJsonProcessor =
         new LidarDataToCityJsonProcessor(new CityJsonFactory(directoryOutput), exporter);
-    var dataProcessor = dataProcessorCreator.create(delimitation, lasFiles);
+    var dataProcessor = LasRoofsPointsExtractorCreator.create(lasFiles, Set.of(delimitation));
 
-    var data = dataProcessor.from(Set.of(delimitation));
+    var data = dataProcessor.apply(ENTIRE_ROOF_DELIMITATION, Set.of(delimitation));
     cityJsonProcessor.apply(filename.substring(0, filename.indexOf(".")), data, getDefault());
   }
 

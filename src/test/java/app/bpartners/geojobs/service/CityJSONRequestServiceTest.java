@@ -214,7 +214,9 @@ class CityJSONRequestServiceTest {
     var actual =
         assertThrows(
             BadRequestException.class,
-            () -> subject.processAddressRequest(requestIdentifier, List.of(), communityOwnerId));
+            () ->
+                subject.processAddressRequest(
+                    requestIdentifier, List.of(), communityOwnerId, null));
 
     assertEquals(
         "Process request with id "
@@ -234,7 +236,8 @@ class CityJSONRequestServiceTest {
     when(cityJSONRequestRepositoryMock.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
-    var actual = subject.processAddressRequest(requestIdentifier, someAddress, communityOwnerId);
+    var actual =
+        subject.processAddressRequest(requestIdentifier, someAddress, communityOwnerId, null);
 
     assertEquals(
         CityJSONRequest.builder()
@@ -251,7 +254,8 @@ class CityJSONRequestServiceTest {
     ThreeDMultipleAddressRequested multipleAddressRequested =
         (ThreeDMultipleAddressRequested) listCaptor.getValue().getFirst();
     assertEquals(
-        new ThreeDMultipleAddressRequested(requestIdentifier, communityOwnerId, someAddress, null),
+        new ThreeDMultipleAddressRequested(
+            requestIdentifier, communityOwnerId, someAddress, null, null),
         multipleAddressRequested);
   }
 }

@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
+import static app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType.ROOF_SEGMENT_FACE_DELIMITATION;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.*;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.*;
 import static java.util.stream.Collectors.toSet;
@@ -9,26 +10,22 @@ import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
 import app.bpartners.geojobs.endpoint.event.model.ThreeDRequestMonitoringTriggered;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.Feature;
-import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
-import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
-import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus;
-import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep;
-import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
+import app.bpartners.geojobs.repository.model.cityjson.*;
+import app.bpartners.geojobs.service.CityJSON3DBagRooferProcessor;
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
-import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
-import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor.RoofsAnalysisResult;
-import app.bpartners.geojobs.service.lidar.model.LidarDataStatus;
-import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
+import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
+import app.bpartners.geojobs.service.lidar.LasRoofsPointsExtractor;
+import app.bpartners.geojobs.service.lidar.PointsExtractionResult;
 import jakarta.persistence.EntityManager;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Service;
@@ -38,14 +35,17 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCreated> {
   private final CityJSONRequestRepository cityJSONRequestRepository;
-  private final LidarRoofsAnalysisProcessor lidarProcessor;
+  private final LasRoofsPointsExtractor lasRoofsPointsExtractor;
   private final LidarDataToCityJsonProcessor cityJsonProcessor;
   private final FeatureMapper featureMapper;
   private final EntityManager entityManager;
   private final BucketComponent bucketComponent;
   private final EventProducer eventProducer;
   private final CommunityAuthorizationRepository communityAuthorizationRepository;
+  private final CityJSON3DBagRooferProcessor cityJson3DBagRooferProcessor;
+  private final CityJsonTextureComputer textureComputer;
 
+  @SneakyThrows
   @Override
   public void accept(CityJSONRequestCreated created) {
     var communityAuthorization =
@@ -62,83 +62,42 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
             .findByIdAndCommunityOwnerId(created.getRequestId(), created.getCommunityOwnerId())
             .orElseThrow();
 
-    try {
-      var requestDelimitations = getRequestDelimitations(request);
-      var lidarAnalysisResult =
-          lidarProcessor.apply(toGeometryWithProperties(requestDelimitations));
+    processCityJSONFacade(request);
+  }
 
-      if (isError(lidarAnalysisResult)) {
-        log.error("All data from lidar analysis was failed");
-        updateStatus(request, FAILED, POINTS_CLOUD_PRE_PROCESSING);
-        throw new LidarAllDataFailedException("All data from lidar analysis was failed");
-      }
+  private void succeedCityJsonRequest(CityJSONRequest request, List<CityJSON> cityJsonList) {
+    var updated =
+        request.toBuilder()
+            .status(FINISHED)
+            .step(GEOMETRY_CONSTRUCTION)
+            .cityJsons(cityJsonList)
+            .build();
+    entityManager.clear();
+    cityJSONRequestRepository.save(updated);
+  }
 
-      if (isUnavailable(lidarAnalysisResult)) {
-        updateStatus(request, UNAVAILABLE, POINTS_CLOUD_PRE_PROCESSING);
-        return;
-      }
-
-      var cityJson = toCityJSON(request, lidarAnalysisResult);
-
-      var updated =
-          request.toBuilder()
-              .status(FINISHED)
-              .step(GEOMETRY_CONSTRUCTION)
-              .cityJsons(List.of(cityJson))
-              .build();
-      entityManager.clear();
-      cityJSONRequestRepository.save(updated);
-    } catch (LidarAllDataFailedException e) {
-      throw e;
-    } catch (Exception e) {
-      log.error(e.getMessage());
-      updateStatus(request, FAILED, GEOMETRY_CONSTRUCTION);
-      throw e;
+  private static boolean isUnavailable(PointsExtractionResult result) {
+    if (result.data().isEmpty()) {
+      return true;
     }
+    return result.data().values().stream().anyMatch(data -> data.getPoints().isEmpty());
   }
 
-  private List<Feature> getRequestDelimitations(CityJSONRequest request) {
-    if (request.getFeaturesWithDelimitation() != null
-        && !request.getFeaturesWithDelimitation().isEmpty()) {
-      return request.getFeaturesWithDelimitation().stream()
-          .map(FeatureWithDelimitation::delimitations)
-          .flatMap(List::stream)
-          .toList();
-    }
-    return request.getDelimitations();
-  }
-
-  private static boolean isUnavailable(RoofsAnalysisResult roofsAnalysisResult) {
-    return roofsAnalysisResult.roofsData().values().stream()
-        .allMatch(data -> LidarDataStatus.UNAVAILABLE.equals(data.status()));
-  }
-
-  private static boolean isError(RoofsAnalysisResult roofsAnalysisResult) {
-    return roofsAnalysisResult.roofsData().values().stream()
-        .allMatch(data -> LidarDataStatus.EXTRACTION_ERROR.equals(data.status()));
-  }
-
-  private CityJSON toCityJSON(CityJSONRequest request, RoofsAnalysisResult lidarAnalysisResult) {
+  private CityJSON toCityJSON(CityJSONRequest request, PointsExtractionResult result) {
     var filename = String.format("%s.json", request.getId());
     var fileKey = String.format("city_jsons/%s", filename);
-    var file = cityJsonProcessor.apply(filename, lidarAnalysisResult);
+    var file = cityJsonProcessor.apply(filename, result);
 
-    bucketComponent.upload(file, fileKey);
+    var texturedFile = textureComputer.applyTexture(request, file);
+
+    bucketComponent.upload(texturedFile, fileKey);
 
     return CityJSON.builder().id(filename).request(request).s3FileKey(fileKey).build();
   }
 
-  private Set<GeometryWithProperties> toGeometryWithProperties(List<Feature> delimitations) {
+  private Set<Geometry> toGeometries(List<Feature> delimitations) {
     return delimitations.stream()
-        .map(
-            delimitation -> {
-              Geometry geometry = featureMapper.domainToGeometry(delimitation);
-              Map<String, Object> properties =
-                  delimitation.getProperties() == null
-                      ? new HashMap<>()
-                      : delimitation.getProperties();
-              return new GeometryWithProperties(geometry, properties);
-            })
+        .map(featureMapper::domainToGeometryWithMultipolygonHandler)
         .collect(toSet());
   }
 
@@ -149,9 +108,58 @@ public class CityJSONRequestCreatedService implements Consumer<CityJSONRequestCr
     cityJSONRequestRepository.save(updatedStatus);
   }
 
-  public static class LidarAllDataFailedException extends RuntimeException {
-    public LidarAllDataFailedException(String message) {
-      super(message);
+  private LasRoofDelimitationType getType(CityJSONRequest request) {
+    return switch (request.getDelimitationObjectType()) {
+      case BUILDING_ROOF_SEGMENT_FACE -> ROOF_SEGMENT_FACE_DELIMITATION;
+      case null, default -> LasRoofDelimitationType.ENTIRE_ROOF_DELIMITATION;
+    };
+  }
+
+  private void processCityJSONFacade(CityJSONRequest request) {
+    var generationType = getType(request);
+    if (ROOF_SEGMENT_FACE_DELIMITATION.equals(generationType)) {
+      processByInternalMethod(request);
+      return;
+    }
+    processFullAutomaticFacade(request);
+  }
+
+  private void processByInternalMethod(CityJSONRequest request) {
+    try {
+      var requestDelimitations = request.getRequestDelimitations();
+      var pointsExtractionResult =
+          lasRoofsPointsExtractor.apply(getType(request), toGeometries(requestDelimitations));
+
+      if (isUnavailable(pointsExtractionResult)) {
+        updateStatus(request, UNAVAILABLE, POINTS_CLOUD_PRE_PROCESSING);
+        return;
+      }
+
+      var cityJson = toCityJSON(request, pointsExtractionResult);
+      succeedCityJsonRequest(request, List.of(cityJson));
+    } catch (Exception e) {
+      log.error(e.getMessage());
+      updateStatus(request, FAILED, GEOMETRY_CONSTRUCTION);
+      throw e;
+    }
+  }
+
+  private void processFullAutomaticFacade(CityJSONRequest request) {
+    switch (request.getLidarProcessorType()) {
+      case null -> processFullAutomaticBy3DBag(request);
+      case THREE_D_BAG_ROOFER -> processFullAutomaticBy3DBag(request);
+      default -> processByInternalMethod(request);
+    }
+  }
+
+  private void processFullAutomaticBy3DBag(CityJSONRequest request) {
+    try {
+      var cityJsonFrom3dBag = cityJson3DBagRooferProcessor.apply(request);
+      succeedCityJsonRequest(request, cityJsonFrom3dBag);
+    } catch (Exception e) {
+      log.error(
+          "Unable to process Lidar for request {}, error {}", request.getId(), e.getMessage());
+      updateStatus(request, FAILED, GEOMETRY_CONSTRUCTION);
     }
   }
 }

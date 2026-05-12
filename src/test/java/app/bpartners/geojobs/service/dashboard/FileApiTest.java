@@ -21,7 +21,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 class FileApiTest extends FacadeIT {
-  @MockBean RestTemplate mockRestTemplate;
+  @MockBean(name = "restTemplate")
+  RestTemplate mockRestTemplate;
+
   @MockBean ApiConfiguration mockApiConfiguration;
   @MockBean UserAccountsApi mockUserAccountsApi;
   @Autowired FileApi subject;
