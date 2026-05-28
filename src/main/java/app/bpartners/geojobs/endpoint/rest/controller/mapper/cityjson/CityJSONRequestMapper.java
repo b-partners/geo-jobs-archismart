@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson;
 
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
+import static java.math.RoundingMode.HALF_UP;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
@@ -80,7 +81,8 @@ public class CityJSONRequestMapper {
         .complexityFactor(
             cityJSONRequest.getComplexityFactor() == null
                 ? null
-                : BigDecimal.valueOf(cityJSONRequest.getComplexityFactor()))
+                : BigDecimal.valueOf(cityJSONRequest.getComplexityFactor()).setScale(2, HALF_UP))
+        .knn(cityJSONRequest.getKnn())
         .cityJsonFileUrls(restCityJsons);
   }
 
@@ -157,6 +159,7 @@ public class CityJSONRequestMapper {
             createCityJSONRequest.getComplexityFactor() == null
                 ? null
                 : createCityJSONRequest.getComplexityFactor().floatValue())
+        .knn(createCityJSONRequest.getKnn())
         .build();
   }
 }

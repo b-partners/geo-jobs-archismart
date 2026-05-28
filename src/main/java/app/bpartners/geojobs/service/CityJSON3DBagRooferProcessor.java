@@ -66,12 +66,15 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
                 entry -> {
                   var geoJsonBuildingPresignedUrl = entry.getKey();
 
+                  var complexityFactor = request.getComplexityFactor();
+                  var knn = request.getKnn();
                   return roofer3DBagApiClient.generateCityJson(
                       CityJsonGenerationRequest.builder()
                           .geoJsonBuildingPresignedUrl(geoJsonBuildingPresignedUrl)
                           .lidarPresignedUrls(entry.getValue().stream().toList())
                           .build(),
-                      request.getComplexityFactor());
+                      complexityFactor,
+                      knn);
                 })
             .toList();
 

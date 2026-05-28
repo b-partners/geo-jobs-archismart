@@ -1,6 +1,8 @@
 package app.bpartners.geojobs.endpoint.rest.controller;
 
 import static app.bpartners.geojobs.endpoint.rest.model.CityJSONRequestStatus.PROCESSING;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,13 +13,12 @@ import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
-import app.bpartners.geojobs.endpoint.rest.model.CityJSONRequest;
-import app.bpartners.geojobs.endpoint.rest.model.CreateCityJSONRequest;
-import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class CityJSONControllerIT extends FacadeIT {
   @MockBean BucketComponent bucketComponentMock;
   @MockBean EventProducer<CityJSONRequestCreated> eventProducerMock;
   @MockBean EventBridgeClient eventBridgeClient;
+  private static final String ADMIN_KEY = randomUUID().toString();
 
   @BeforeEach
   void setUp() {
@@ -44,10 +46,31 @@ class CityJSONControllerIT extends FacadeIT {
 
     var principal = mock(Principal.class);
     when(principal.isAdmin()).thenReturn(true);
-    when(principal.getPassword()).thenReturn(randomUUID().toString());
+    when(principal.getPassword()).thenReturn(ADMIN_KEY);
     when(authProviderMock.getPrincipal()).thenReturn(principal);
     when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
         .thenReturn(PutEventsResponse.builder().failedEntryCount(0).build());
+  }
+
+  @Test
+  void should_persist_and_get_custom_knn_and_complexity_factor() {
+    var requestIdentifier = randomUUID().toString();
+    var payload =
+        new ThreeDRequest()
+            .delimitations(List.of(feature()))
+            .delimitationObjectType(BUILDING_ROOF)
+            .delimitationType(PARCEL_FREE_DELIMITATION)
+            .knn(8)
+            .complexityFactor(BigDecimal.valueOf(0.88));
+
+    var actual = subject.request3DFileOnDelimitations(payload, requestIdentifier);
+
+    var actualFromDb = subject.getRequested3DFileById(requestIdentifier);
+
+    assertEquals(8, actual.getKnn());
+    assertEquals(BigDecimal.valueOf(0.88), actual.getComplexityFactor());
+    assertEquals(8, actualFromDb.getKnn());
+    assertEquals(BigDecimal.valueOf(0.88), actualFromDb.getComplexityFactor());
   }
 
   @Test

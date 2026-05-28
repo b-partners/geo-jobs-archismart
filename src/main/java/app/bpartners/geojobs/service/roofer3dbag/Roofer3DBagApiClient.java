@@ -44,6 +44,7 @@ public class Roofer3DBagApiClient {
   private final RooferApiProperties properties;
   private final ObjectMapper objectMapper;
   private final Float complexityFactor;
+  private final Integer knn = 10;
 
   public Roofer3DBagApiClient(
       @Qualifier("rooferRestTemplate") RestTemplate restTemplate,
@@ -66,8 +67,8 @@ public class Roofer3DBagApiClient {
    * @throws RooferApiException en cas d'erreur HTTP ou réseau
    */
   private CityJsonGenerationResponse generate(
-      CityJsonGenerationRequest request, Float complexityFactor) {
-    URI uri = buildGenerateUri(complexityFactor);
+      CityJsonGenerationRequest request, Float complexityFactor, Integer knn) {
+    URI uri = buildGenerateUri(complexityFactor, knn);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -75,7 +76,7 @@ public class Roofer3DBagApiClient {
 
     HttpEntity<CityJsonGenerationRequest> entity = new HttpEntity<>(request, headers);
 
-    log.debug("POST {} (complexityFactor={})", uri, complexityFactor);
+    log.debug("POST {} (complexityFactor={}, knn={})", uri, complexityFactor, knn);
 
     try {
       ResponseEntity<CityJsonGenerationResponse> response =
@@ -89,18 +90,21 @@ public class Roofer3DBagApiClient {
   }
 
   public CityJsonGenerationResponse generateCityJson(
-      CityJsonGenerationRequest request, Float customComplexityFactor) {
-    return generate(
-        request, customComplexityFactor == null ? complexityFactor : customComplexityFactor);
+      CityJsonGenerationRequest request, Float customComplexityFactor, Integer customKnn) {
+    var actualComplexityFactor =
+        customComplexityFactor == null ? complexityFactor : customComplexityFactor;
+    var actualKnn = customKnn == null ? knn : customKnn;
+    return generate(request, actualComplexityFactor, actualKnn);
   }
 
   @SneakyThrows
-  private URI buildGenerateUri(Float complexityFactor) {
+  private URI buildGenerateUri(Float complexityFactor, Integer knn) {
     UriComponentsBuilder builder =
         UriComponentsBuilder.fromUri(new URI(properties.getBaseUrl())).path(GENERATE_PATH);
 
     if (complexityFactor != null) {
       builder.queryParam("complexityFactor", complexityFactor);
+      builder.queryParam("knn", knn);
     }
     return builder.build().toUri();
   }

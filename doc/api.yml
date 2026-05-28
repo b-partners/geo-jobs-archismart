@@ -2585,6 +2585,8 @@ components:
             Permits consumer to define complexity factor in lidar processing.
             More the given value approaches 1, more details will be provided in obtained preview 3D.
             Therefore, more the complexity approaches, more hallucination can be created.
+        knn:
+          type: integer
 
     ThreeDTextureInfo:
       type: object

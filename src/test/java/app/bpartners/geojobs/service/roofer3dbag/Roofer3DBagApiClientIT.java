@@ -41,7 +41,8 @@ class Roofer3DBagApiClientIT {
                 .geoJsonBuildingPresignedUrl(geoJsonBuildingPresignedUrl)
                 .lidarPresignedUrls(lidarPresignedUrls)
                 .build(),
-            null);
+            null,
+            10);
 
     assertNotNull(actual);
     assertNotNull(actual.getCityJsonUrl());
