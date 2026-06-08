@@ -23,7 +23,7 @@ import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
 import app.bpartners.geojobs.repository.model.detection.ParcelDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
-import app.bpartners.geojobs.service.detection.DetectionResponse;
+import app.bpartners.geojobs.service.detection.DetectionResponseV2;
 import app.bpartners.geojobs.service.detection.TileObjectDetector;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import java.io.File;
@@ -66,20 +66,18 @@ class ParcelDetectionTaskCreatedServiceIT extends FacadeIT {
     parcels = parcelRepository.saveAll(parcels());
   }
 
-  DetectionResponse detectionResponse() {
-    return DetectionResponse.builder()
-        .rstImageUrl("mock-rst-s3-url")
-        .srcImageUrl("mock-src-s3-url")
-        .rstRaw(
+  DetectionResponseV2 detectionResponse() {
+    return DetectionResponseV2.builder()
+        .images(
             Map.of(
                 "filename",
-                DetectionResponse.ImageData.builder()
+                DetectionResponseV2.ImageData.builder()
                     .regions(
                         Map.of(
                             "0",
-                            DetectionResponse.ImageData.Region.builder()
+                            DetectionResponseV2.ImageData.Region.builder()
                                 .shapeAttributes(
-                                    DetectionResponse.ImageData.ShapeAttributes.builder()
+                                    DetectionResponseV2.ImageData.ShapeAttributes.builder()
                                         .allPointsX(
                                             List.of(
                                                 new BigDecimal("210.6243386243386"),
@@ -94,9 +92,9 @@ class ParcelDetectionTaskCreatedServiceIT extends FacadeIT {
                                 .regionAttributes(Map.of("label", "roof", "confidence", "0.8436"))
                                 .build(),
                             "1",
-                            DetectionResponse.ImageData.Region.builder()
+                            DetectionResponseV2.ImageData.Region.builder()
                                 .shapeAttributes(
-                                    DetectionResponse.ImageData.ShapeAttributes.builder()
+                                    DetectionResponseV2.ImageData.ShapeAttributes.builder()
                                         .allPointsX(
                                             List.of(
                                                 new BigDecimal("210.6243386243386"),

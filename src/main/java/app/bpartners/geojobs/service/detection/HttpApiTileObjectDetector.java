@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableOb
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +33,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class HttpApiTileObjectDetector implements TileObjectDetector {
   private final ObjectMapper om;
-  private final CustomBucketComponent bucketComponent;
+  private final CustomBucketComponent customBucketComponent;
   private final String defaultDetectionApiUrl;
   private final TileObjectDetectorConf tileObjectDetectorConf;
   private final DetectionResponseAggregator detectionResponseAggregator;
+  private final BucketComponent bucketComponent;
 
   @SneakyThrows
   public HttpApiTileObjectDetector(
@@ -42,17 +45,19 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       CustomBucketComponent bucketComponent,
       @Value("${tile.detection.api.url}") String defaultApiUrl,
       TileObjectDetectorConf tileObjectDetectorConf,
-      DetectionResponseAggregator detectionResponseAggregator) {
+      DetectionResponseAggregator detectionResponseAggregator,
+      BucketComponent bucketComponent1) {
     this.om = om;
-    this.bucketComponent = bucketComponent;
+    this.customBucketComponent = bucketComponent;
     this.defaultDetectionApiUrl = defaultApiUrl;
     this.tileObjectDetectorConf = tileObjectDetectorConf;
     this.detectionResponseAggregator = detectionResponseAggregator;
+    this.bucketComponent = bucketComponent1;
   }
 
   @SneakyThrows
   @Override
-  public DetectionResponse apply(
+  public DetectionResponseV2 apply(
       TileDetectionTask tileDetectionTask,
       File mask,
       List<DetectableObjectConfiguration> detectableObjectConfigurations) {
@@ -64,17 +69,40 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(APPLICATION_JSON);
 
-    File file =
-        bucketComponent.download(
-            bucketComponent.getBucketConf().getBucketName(), tile.getBucketPath());
-    String base64ImgData = Base64.getEncoder().encodeToString(readFileToByteArray(file));
+    var tileImageBucketPath = tile.getBucketPath();
+    var maskBucketKey = "mask_" + tileImageBucketPath;
+    if (mask != null) {
+      bucketComponent.upload(mask, maskBucketKey);
+    }
+    var tileImageFile =
+        customBucketComponent.download(
+            customBucketComponent.getBucketConf().getBucketName(), tileImageBucketPath);
+    var tileCoordinates = tile.getCoordinates();
+    var coordinatesDescription =
+        tileCoordinates.getZ() + "_" + tileCoordinates.getX() + "_" + tileCoordinates.getY();
+    log.info(
+        "{} coordinates original image : {} ",
+        coordinatesDescription,
+        customBucketComponent.presign(
+            tileImageBucketPath,
+            Duration.ofHours(1L),
+            Optional.of(coordinatesDescription + ".jpeg")));
+    if (mask != null) {
+      log.info(
+          "{} coordinates mask : {} ",
+          coordinatesDescription,
+          customBucketComponent.presign(
+              maskBucketKey,
+              Duration.ofHours(1L),
+              Optional.of("mask_" + coordinatesDescription + ".png")));
+    }
+    String base64ImgData = Base64.getEncoder().encodeToString(readFileToByteArray(tileImageFile));
     String base64MaskData =
         mask == null ? null : Base64.getEncoder().encodeToString(readFileToByteArray(mask));
 
     var detectionPayloadBuilder =
-        DetectionPayload.builder()
-            .projectName(tileDetectionTask.getJobId())
-            .fileName(file.getName())
+        DetectionPayloadV2.builder()
+            .fileName(tileImageFile.getName())
             .base64ImgData(base64ImgData)
             .base64MaskData(base64MaskData);
 
@@ -105,11 +133,11 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
                     throw new RuntimeException(e);
                   }
                   log.info("Attempting to call API for detection {} ", apiUrl);
-                  ResponseEntity<DetectionResponse> responseEntity;
+                  ResponseEntity<DetectionResponseV2> responseEntity;
                   try {
                     responseEntity =
                         restTemplate.postForEntity(
-                            uriBuilder.toUriString(), request, DetectionResponse.class);
+                            uriBuilder.toUriString(), request, DetectionResponseV2.class);
                   } catch (HttpStatusCodeException e) {
                     log.error(
                         "Error while calling API for detection {} with exception {}",

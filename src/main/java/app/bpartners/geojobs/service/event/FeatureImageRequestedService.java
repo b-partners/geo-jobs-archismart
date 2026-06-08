@@ -10,10 +10,7 @@ import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.TilingTaskRepository;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
-import app.bpartners.geojobs.service.GeometrySquareMeterArea;
-import app.bpartners.geojobs.service.TileDuplicationRemover;
-import app.bpartners.geojobs.service.TileImageBlur;
-import app.bpartners.geojobs.service.TileImagesAssembler;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.TileFinder;
 import jakarta.persistence.EntityManager;
@@ -40,6 +37,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
   private final TileFinder tileFinder;
   private final EntityManager entityManager;
   private final TileDuplicationRemover tileDuplicationRemover;
+  private final DetectionPolygonProcessedRetriever polygonProcessedRetriever;
 
   @SneakyThrows
   @Override
@@ -55,8 +53,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
             : (Integer) providedGeoJsonZone.getFirst().getProperties().get("zoom");
 
     var zonePolygonGeometryProcessed =
-        geometryConverter.retrieveZonePolygonGeometryProcessed(
-            feature, detection.getGeoJsonDelimitationType());
+        polygonProcessedRetriever.apply(feature, detection.getGeoJsonDelimitationType());
     if (zonePolygonGeometryProcessed == null) return;
     var actualArea = geometrySquareMeterArea.apply(zonePolygonGeometryProcessed);
     if (actualArea > ONE_KILOMETRE_SQUARE_AREA) {

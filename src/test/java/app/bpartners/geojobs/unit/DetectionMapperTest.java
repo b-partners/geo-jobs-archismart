@@ -19,7 +19,7 @@ import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.DetectionMapper;
-import app.bpartners.geojobs.service.detection.DetectionResponse;
+import app.bpartners.geojobs.service.detection.DetectionResponseV2;
 import app.bpartners.geojobs.service.tiling.TileValidator;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -32,26 +32,26 @@ class DetectionMapperTest {
   TileValidator tileValidator = new TileValidator();
   DetectionMapper subject = new DetectionMapper(tileValidator);
 
-  DetectionResponse detectionResponse() {
-    return DetectionResponse.builder().rstRaw(Map.of("filename", imageData())).build();
+  DetectionResponseV2 detectionResponse() {
+    return DetectionResponseV2.builder().images(Map.of("filename", imageData())).build();
   }
 
-  DetectionResponse.ImageData imageData() {
-    return DetectionResponse.ImageData.builder()
+  DetectionResponseV2.ImageData imageData() {
+    return DetectionResponseV2.ImageData.builder()
         .base64ImgData("image_base_64")
         .regions(Map.of("regions", region()))
         .build();
   }
 
-  DetectionResponse.ImageData.Region region() {
-    return DetectionResponse.ImageData.Region.builder()
+  DetectionResponseV2.ImageData.Region region() {
+    return DetectionResponseV2.ImageData.Region.builder()
         .regionAttributes(Map.of("label", "PISCINE", "confidence", "0.95"))
         .shapeAttributes(shapes())
         .build();
   }
 
-  DetectionResponse.ImageData.ShapeAttributes shapes() {
-    return DetectionResponse.ImageData.ShapeAttributes.builder()
+  DetectionResponseV2.ImageData.ShapeAttributes shapes() {
+    return DetectionResponseV2.ImageData.ShapeAttributes.builder()
         .allPointsX(
             List.of(BigDecimal.valueOf(6.958009303660302), BigDecimal.valueOf(43.543013820437459)))
         .allPointsY(

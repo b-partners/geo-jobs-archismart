@@ -28,6 +28,7 @@ public class DetectionDelimitationRetriever implements Consumer<Detection> {
   private final DetectionRepository detectionRepository;
   private final ObjectMapper objectMapper;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
+  private final BuildingFinder buildingFinder;
 
   @Override
   public void accept(Detection detection) {
@@ -101,7 +102,7 @@ public class DetectionDelimitationRetriever implements Consumer<Detection> {
   @SneakyThrows
   private void updateAddressesFeaturePropertyFromRNB(
       List<List<List<BigDecimal>>> polygonCoordinates, Map<String, Object> properties) {
-    var roofDetailsList = geometryConverter.retrieveRoofPolygonsFrom(polygonCoordinates.getFirst());
+    var roofDetailsList = buildingFinder.retrieveRoofPolygonsFrom(polygonCoordinates.getFirst());
     if (roofDetailsList.isEmpty()) {
       return;
     }
@@ -155,10 +156,7 @@ public class DetectionDelimitationRetriever implements Consumer<Detection> {
                 case Point point -> {
                   var multiPolygonFromPointDomain =
                       geometryConverter.toFeature(
-                          null,
-                          zoom,
-                          properties,
-                          geometryConverter.retrieveNearestRoofMultiPolygon(point));
+                          null, zoom, properties, buildingFinder.getBuildingMultiPolygon(point));
                   return List.of(
                       new FeatureWithDelimitation(
                           toDomainFeature(providedFeature), List.of(multiPolygonFromPointDomain)));
@@ -189,7 +187,7 @@ public class DetectionDelimitationRetriever implements Consumer<Detection> {
       Feature providedFeature, int zoom, List<List<List<BigDecimal>>> polygonList) {
     var polygonCoordinates = polygonList.getFirst();
     var roofMultiPolygonsInsideProvidedPolygon =
-        geometryConverter.retrieveRoofPolygonsFrom(polygonCoordinates).stream()
+        buildingFinder.retrieveRoofPolygonsFrom(polygonCoordinates).stream()
             .map(
                 roofDetails -> {
                   HashMap<String, Object> properties = new HashMap<>();

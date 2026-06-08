@@ -7,31 +7,34 @@ import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
+import app.bpartners.geojobs.model.geometry.MultiPolygonObjectType;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.DetectedObject;
+import app.bpartners.geojobs.service.PolygonObjectTypeConverter;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.util.Collection;
+import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Polygon;
 
 public class HumiditeAreaRateComputer extends AreaRateComputer {
   static final double WEIGHT = 1.0;
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
+  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(), null);
   private final double roofArea;
   private final DetectedTile tile;
-  private final Collection<PolygonObjectType> polygonObjectTypes;
+  private final Collection<MultiPolygonObjectType> multiPolygonObjectTypes;
 
   public HumiditeAreaRateComputer(double roofArea, DetectedTile tile) {
     this.roofArea = roofArea;
     this.tile = tile;
-    this.polygonObjectTypes = null;
+    this.multiPolygonObjectTypes = null;
   }
 
   public HumiditeAreaRateComputer(
       double roofArea, Collection<PolygonObjectType> polygonObjectTypes) {
     this.tile = null;
     this.roofArea = roofArea;
-    this.polygonObjectTypes = polygonObjectTypes;
+    this.multiPolygonObjectTypes = new PolygonObjectTypeConverter().convertFrom(polygonObjectTypes);
   }
 
   @Override
@@ -40,12 +43,12 @@ public class HumiditeAreaRateComputer extends AreaRateComputer {
       throw new BadRequestException(
           "Roof area cannot be zero or negative, current value" + roofArea);
     }
-    if (tile == null && polygonObjectTypes != null) {
+    if (tile == null && multiPolygonObjectTypes != null) {
       double computedArea =
-          polygonObjectTypes.stream()
+          multiPolygonObjectTypes.stream()
               .filter(o -> detectableType.equals(o.objectType()))
-              .map(PolygonObjectType::polygon)
-              .mapToDouble(Polygon::getArea)
+              .map(MultiPolygonObjectType::multiPolygon)
+              .mapToDouble(MultiPolygon::getArea)
               .sum();
       return (getMalus(detectableType) * computedArea) / roofArea;
     } else if (tile != null) {
@@ -73,7 +76,8 @@ public class HumiditeAreaRateComputer extends AreaRateComputer {
   }
 
   public double getHumidityAreaRate() {
-    return (compute(HUMIDITE_CLAIR) + compute(HUMIDITE_INTENSE)) * 100;
+    var computedAreaRate = (compute(HUMIDITE_CLAIR) + compute(HUMIDITE_INTENSE)) * 100;
+    return Math.min(computedAreaRate, 100.0);
   }
 
   @Override

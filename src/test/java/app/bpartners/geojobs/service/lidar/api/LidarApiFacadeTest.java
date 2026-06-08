@@ -38,8 +38,8 @@ class LidarApiFacadeTest {
           new FallbackLidarApi(),
           new SwissBoundaryChecker(),
           new SwissLidarApi(restTemplateMock),
-          restTemplateMock,
-          new GeometrySquareMeterArea());
+          new GeometrySquareMeterArea(),
+          restTemplateMock);
 
   private static final String UPDATED_FILE_URL = "https://data.geopf.fr/dummy.laz";
   private static final String DEPRECATED_FILE_URL = "https://storage.sbg.cloud.ovh.net/dummy.laz";

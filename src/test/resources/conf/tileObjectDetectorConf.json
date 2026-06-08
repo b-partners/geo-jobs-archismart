@@ -33,62 +33,62 @@
   },
   {
     "objectType": "TOITURE_REVETEMENT",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "PANNEAU_PHOTOVOLTAIQUE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "MOISISSURE_NOIRCIE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "MOISISSURE_CLAIR",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "MOISISSURE_COULEUR",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "MOISISSURE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "USURE_IMPORTANTE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "USURE_LEGER",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "USURE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "OBSTACLE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "CHEMINEE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "HUMIDITE_INTENSE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "HUMIDITE_CLAIR",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "HUMIDITE",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   },
   {
     "objectType": "VELUX",
-    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
   }
 ]

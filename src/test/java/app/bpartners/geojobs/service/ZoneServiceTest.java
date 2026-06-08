@@ -187,6 +187,7 @@ class ZoneServiceTest {
   FileWriter fileWriterMock = mock();
   Mailer mailerMock = mock();
   HTMLTemplateParser htmlTemplateParserMock = mock();
+  BuildingFinder buildingFinderMock = mock();
 
   ZoneService subject =
       new ZoneService(
@@ -220,7 +221,8 @@ class ZoneServiceTest {
               areaPictureApiMock,
               geoServerConfiguration,
               geoJsonDelimitationTypeMapper,
-              geometryConverterMock),
+              geometryConverterMock,
+              buildingFinderMock),
           fileWriterMock,
           mailerMock,
           htmlTemplateParserMock);

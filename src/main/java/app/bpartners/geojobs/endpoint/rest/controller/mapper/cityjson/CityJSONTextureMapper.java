@@ -11,17 +11,17 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class CityJSONTextureMapper {
-  public CityJSONTexture toDomain(ThreeDTextureInfo texture, CityJSONRequest cityJSONRequest) {
+  public CityJSONTexture toDomain(ThreeDTextureInfo texture, CityJSONRequest request) {
     return CityJSONTexture.builder()
         .id(randomUUID().toString())
-        .imageUri(texture.getImageDataUri())
-        .pixelWidth(texture.getPixelWidth() / 100)
-        .pixelHeight(texture.getPixelHeight() / 100)
-        .shearY(0.0)
-        .shearX(0.0)
-        .topLeftLongitude(texture.getTopLeftLon())
-        .topLeftLatitude(texture.getTopLeftLat())
-        .cityJsonRequest(cityJSONRequest)
+        .imageUri(texture.getImageUri())
+        .imageWidth(texture.getImageWidth())
+        .imageHeight(texture.getImageHeight())
+        .cityJsonRequest(request)
+        .zoom(texture.getZoom())
+        .tileX(texture.getTileX())
+        .tileY(texture.getTileY())
+        .tileImageSizePx(texture.getTileImageSizePx())
         .build();
   }
 }

@@ -27,4 +27,16 @@ public class CoordinateTransformer implements Function<Geometry, Geometry> {
 
     return JTS.transform(geomWGS84, transform);
   }
+
+  @SneakyThrows
+  public Geometry convertToSwissCoordinates(Geometry geomWGS84)
+      throws MismatchedDimensionException {
+
+    CoordinateReferenceSystem sourceCRS = CRS.decode("EPSG:4326", true);
+    CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:2056");
+
+    MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+
+    return JTS.transform(geomWGS84, transform);
+  }
 }

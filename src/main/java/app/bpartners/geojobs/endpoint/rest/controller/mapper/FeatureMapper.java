@@ -12,6 +12,7 @@ import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.model.Parcel;
 import app.bpartners.geojobs.repository.model.ParcelContent;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component;
 public class FeatureMapper {
   private static final Logger log = LoggerFactory.getLogger(FeatureMapper.class);
   private final GeometryConverter geometryConverter;
+  private final BuildingFinder buildingFinder;
 
   public Parcel toDomainPolygon(
       String parcelId, Feature rest, URL geoServerUrl, GeoServerParameter GeoServerParameter) {
@@ -179,7 +181,7 @@ public class FeatureMapper {
     var geometryType = feature.getGeometry().getActualInstance();
     switch (geometryType) {
       case Point point -> {
-        return geometryConverter.retrieveNearestRoofMultiPolygon(point);
+        return buildingFinder.getBuildingMultiPolygon(point);
       }
       case Polygon polygon -> {
         var polygons =

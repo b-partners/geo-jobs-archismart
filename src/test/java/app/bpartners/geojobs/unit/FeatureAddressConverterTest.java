@@ -11,6 +11,7 @@ import static software.amazon.awssdk.http.HttpStatusCode.*;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.model.Feature;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureDetails;
@@ -30,9 +31,14 @@ class FeatureAddressConverterTest {
   AreaPictureDetailsMapper areaPictureDetailsMapperMock = mock();
   String adminApiKey = randomUUID().toString();
   GeometryConverter geometryConverterMock = mock();
+  BuildingFinder buildingFinderMock = mock();
   FeatureAddressConverter subject =
       new FeatureAddressConverter(
-          areaPictureApiMock, areaPictureDetailsMapperMock, adminApiKey, geometryConverterMock);
+          areaPictureApiMock,
+          areaPictureDetailsMapperMock,
+          adminApiKey,
+          geometryConverterMock,
+          buildingFinderMock);
 
   @Test
   void throws_exception_when_delimitation_object_type_not_building() {
@@ -112,7 +118,7 @@ class FeatureAddressConverterTest {
         .thenReturn(areaPictureDetailsMock);
     when(areaPictureDetailsMapperMock.toCrupdateAreaPictureDetails(randomAddress))
         .thenReturn(crupdateAreaPictureDetailsMock);
-    when(geometryConverterMock.retrieveNearestRoofMultiPolygon(
+    when(buildingFinderMock.getBuildingMultiPolygon(
             List.of(
                 BigDecimal.valueOf(longitudeDoubleValue), BigDecimal.valueOf(latitudeDoubleValue))))
         .thenReturn(nearestRoofMultiPolygonMock);

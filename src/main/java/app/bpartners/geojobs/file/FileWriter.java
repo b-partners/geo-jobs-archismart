@@ -76,6 +76,12 @@ public class FileWriter implements BiFunction<byte[], File, File> {
   }
 
   @SneakyThrows
+  public static File write(Path path, byte[] bytes) {
+    Files.write(path, bytes);
+    return path.toFile();
+  }
+
+  @SneakyThrows
   public static File createTempDirectory() {
     Path tempDir;
 

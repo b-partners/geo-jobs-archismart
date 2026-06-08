@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CommunityZoneAuthorizerTest {
-  FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
+  FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(), null);
   CommunityZoneAuthorizer subject = new CommunityZoneAuthorizer(featureMapper);
   Principal principalMock = mock(Principal.class);
 

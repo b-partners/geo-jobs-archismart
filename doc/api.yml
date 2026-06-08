@@ -2585,33 +2585,36 @@ components:
             Permits consumer to define complexity factor in lidar processing.
             More the given value approaches 1, more details will be provided in obtained preview 3D.
             Therefore, more the complexity approaches, more hallucination can be created.
+        lidarProcessorType:
+          $ref: '#/components/schemas/LidarProcessorType'
         knn:
           type: integer
 
     ThreeDTextureInfo:
       type: object
       required:
-        - topLeftLon
-        - topLeftLat
-        - pixelHeight
-        - pixelWidth
+        - zoom
+        - imageUri
+        - imageWidth
+        - imageHeight
+        - tileX
+        - tileY
+        - tileImageSizePx
       properties:
-        imageDataUri:
+        tileX:
+          type: integer
+        tileY:
+          type: integer
+        tileImageSizePx:
+          type: integer
+        imageWidth:
+          type: integer
+        imageHeight:
+          type: integer
+        zoom:
+          type: integer
+        imageUri:
           type: string
-        topLeftLon:
-          type: number
-          format: float
-        topLeftLat:
-          type: number
-          format: float
-        pixelWidth:
-          type: number
-          format: float
-          description: Width of a pixel in meters
-        pixelHeight:
-          type: number
-          format: float
-          description: Height of a pixel in meters
 
     DelimitationObjectType:
       type: string

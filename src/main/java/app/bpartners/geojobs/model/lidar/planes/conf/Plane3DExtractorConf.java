@@ -28,7 +28,8 @@ public record Plane3DExtractorConf(
   public record DelimitationFillerConf(int maxEmptyCell, int minCellPointsSize, double gridSize) {}
 
   @Builder(toBuilder = true)
-  public record PlaneConf(double min2DArea, double compactness, int minPointsCount) {}
+  public record PlaneConf(
+      double min2DArea, double maxSlope, double compactness, int minPointsCount) {}
 
   @Builder(toBuilder = true)
   public record PlaneExtractionConf(int iteration, double pointContinuationThreshold) {}
@@ -59,7 +60,13 @@ public record Plane3DExtractorConf(
         .roofPointsCleanerConf(RoofPointsCleanerConf.builder().duplicateXYTolerance(0.3).build())
         .chimneyFixerConf(ChimneyFixerConf.builder().maxChimneyArea(2).build())
         .boxConf(BoxConf.builder().height(0.12).expansionSize(0.25).maxRefitPoints(100).build())
-        .planeConf(PlaneConf.builder().min2DArea(0.25).compactness(0.1).minPointsCount(10).build())
+        .planeConf(
+            PlaneConf.builder()
+                .min2DArea(0.25)
+                .compactness(0.1)
+                .minPointsCount(10)
+                .maxSlope(70)
+                .build())
         .delimitationFillerConf(
             DelimitationFillerConf.builder()
                 .gridSize(1)
@@ -97,6 +104,7 @@ public record Plane3DExtractorConf(
                 .build())
         .roofFaceToLidarAlignmentFixerConf(
             RoofFaceToLidarAlignmentFixerConf.builder()
+                .active(false)
                 .minScore(1)
                 .stepAngle(2)
                 .maxStepCount(7)

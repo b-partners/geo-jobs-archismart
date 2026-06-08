@@ -3,39 +3,31 @@ package app.bpartners.geojobs.utils.lidar;
 import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
-import static java.nio.file.Files.readAllBytes;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-import app.bpartners.geojobs.file.ExtensionGuesser;
-import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
+import app.bpartners.geojobs.service.lidar.LasFileCleaner;
+import app.bpartners.geojobs.service.lidar.LasRoofPointsExtractorFromOneUrl;
 import app.bpartners.geojobs.service.lidar.LasRoofsPointsExtractor;
+import app.bpartners.geojobs.service.lidar.api.LasIndexApi;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
-import lombok.SneakyThrows;
 import org.locationtech.jts.geom.Geometry;
 
 public class LasRoofsPointsExtractorCreator {
   private static final GeometrySquareMeterArea projector = new GeometrySquareMeterArea();
-  private static final FileWriter fileWriter =
-      new FileWriter(new ObjectMapper(), new ExtensionGuesser());
-
-  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
-    var checker = mock(SwissBoundaryChecker.class);
-    when(checker.isGeometryInSwiss(any())).thenReturn(false);
-
-    return checker;
-  }
 
   public static LasRoofsPointsExtractor create(LidarApiFacade lidarApi) {
-    return new LasRoofsPointsExtractor(lidarApi, projector, swissBoundaryCheckerMock());
+    return new LasRoofsPointsExtractor(
+        lasIndexApiMock(), lidarApi, projector, swissBoundaryCheckerMock());
   }
 
   public static LasRoofsPointsExtractor create(String url, Set<Geometry> geometries) {
@@ -64,30 +56,62 @@ public class LasRoofsPointsExtractorCreator {
 
     var filesUrl = new ArrayList<>(geometries.keySet());
     var filesData =
-        filesUrl.stream().map(LasRoofsPointsExtractorCreator::createTempFileFromResources).toList();
+        filesUrl.stream().map(LasRoofsPointsExtractorCreator::getDuplicatedResourceFile).toList();
 
     var lidarApiMock = mock(LidarApiFacade.class);
     when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(projected);
-
-    when(lidarApiMock.download(any()))
+    when(lidarApiMock.download(any(), any()))
         .thenAnswer(
             invocation -> {
               var filename = invocation.getArguments()[0].toString();
               return Optional.of(filesData.get(filesUrl.indexOf(filename)));
             });
 
-    return new LasRoofsPointsExtractor(lidarApiMock, projector, swissBoundaryCheckerMock());
+    return new LasRoofsPointsExtractor(
+        lidarApiMock, projector, swissBoundaryCheckerMock(), fromOneUrl(lidarApiMock));
   }
 
-  @SneakyThrows
-  public static File createTempFileFromResources(String path) {
-    var lasFileFromResource =
-        new File(
-            requireNonNull(LasRoofsPointsExtractorCreator.class.getClassLoader().getResource(path))
-                .getFile());
-    return fileWriter.write(
-        readAllBytes(lasFileFromResource.toPath()),
-        createTempDirectory(),
-        lasFileFromResource.getName());
+  private static LasRoofPointsExtractorFromOneUrl fromOneUrl(LidarApiFacade lidarApi) {
+    var lasFileCleaner = lasFileCleanerMock();
+    var lasIndexApi = lasIndexApiMock();
+    return new LasRoofPointsExtractorFromOneUrl(lasIndexApi, lidarApi, lasFileCleaner);
+  }
+
+  private static LasIndexApi lasIndexApiMock() {
+    var lasIndexApi = mock(LasIndexApi.class);
+    when(lasIndexApi.download(any(), any())).thenReturn(Optional.empty());
+    return lasIndexApi;
+  }
+
+  private static LasFileCleaner lasFileCleanerMock() {
+    var cleaner = mock(LasFileCleaner.class);
+    doNothing().when(cleaner).clean(any());
+    return cleaner;
+  }
+
+  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
+    var checker = mock(SwissBoundaryChecker.class);
+    when(checker.isGeometryInSwiss(any())).thenReturn(false);
+    return checker;
+  }
+
+  public static File getDuplicatedResourceFile(String path) {
+    try {
+      File source = getResourceFile(path);
+
+      File copy = new File(createTempDirectory(), source.getName());
+
+      Files.copy(source.toPath(), copy.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+      return copy;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static File getResourceFile(String path) {
+    return new File(
+        requireNonNull(LasRoofsPointsExtractorCreator.class.getClassLoader().getResource(path))
+            .getFile());
   }
 }

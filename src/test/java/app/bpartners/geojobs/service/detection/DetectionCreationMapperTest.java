@@ -12,6 +12,7 @@ import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
@@ -24,6 +25,7 @@ class DetectionCreationMapperTest {
   FeatureTypeChecker featureTypeChecker = new FeatureTypeChecker();
   GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper = new GeoJsonDelimitationTypeMapper();
   GeometryConverter geometryConverterMock = mock();
+  BuildingFinder buildingFinderMock = mock();
 
   DetectionCreationMapper subject =
       new DetectionCreationMapper(
@@ -33,7 +35,8 @@ class DetectionCreationMapperTest {
           mock(AreaPictureApi.class),
           mock(GeoServerConfiguration.class),
           geoJsonDelimitationTypeMapper,
-          geometryConverterMock);
+          geometryConverterMock,
+          buildingFinderMock);
 
   @Test
   void map_detection_with_detectable_object_model_list_ok() {

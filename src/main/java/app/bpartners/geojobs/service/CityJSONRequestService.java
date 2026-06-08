@@ -50,6 +50,7 @@ public class CityJSONRequestService {
                 .id(requestIdentifier)
                 .status(PROCESSING)
                 .communityOwnerId(communityOwnerId)
+                .lidarProcessorType(lidarProcessorType)
                 .build());
     eventProducer.accept(
         List.of(

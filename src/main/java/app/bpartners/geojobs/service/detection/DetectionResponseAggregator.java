@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -12,60 +13,76 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class DetectionResponseAggregator
-    implements Function<List<DetectionResponseAggregator.DetectionResponseUrl>, DetectionResponse> {
+    implements Function<
+        List<DetectionResponseAggregator.DetectionResponseUrl>, DetectionResponseV2> {
+
+  private static final String VEGETATION_KEY_PREFIX = "vegetation";
 
   @Override
-  public DetectionResponse apply(List<DetectionResponseUrl> responseUrls) {
+  public DetectionResponseV2 apply(List<DetectionResponseUrl> responseUrls) {
     if (responseUrls == null || responseUrls.isEmpty()) {
       return null;
     }
 
-    Map<String, DetectionResponse.ImageData> aggregatedRstRaw = new HashMap<>();
+    Map<String, DetectionResponseV2.ImageData> aggregatedImages = new HashMap<>();
     int regionCounter = 0;
 
     for (var r : responseUrls) {
-      DetectionResponse response = r.detectionResponse();
+      DetectionResponseV2 response = r.detectionResponse();
       String actualUrl = r.apiUrl();
-      if (response.getRstRaw() == null && response.getVegetationData() == null) continue;
-
-      for (Map.Entry<String, DetectionResponse.ImageData> entry : response.getRstRaw().entrySet()) {
-        DetectionResponse.ImageData imgData = entry.getValue();
-
-        var imgKey = entry.getKey() + "_" + randomUUID();
-        regionCounter =
-            aggregateResponse(aggregatedRstRaw, imgKey, imgData, actualUrl, regionCounter);
+      if (response == null || response.getImages() == null) {
+        continue;
       }
-      if (response.getVegetationData() != null
-          && !response.getVegetationData().getRegions().isEmpty()) {
-        regionCounter =
-            aggregateResponse(
-                aggregatedRstRaw,
-                "vegetation_data_" + randomUUID(),
-                response.getVegetationData(),
-                actualUrl,
-                regionCounter);
+
+      for (Map.Entry<String, DetectionResponseV2.ImageData> entry :
+          response.getImages().entrySet()) {
+        String key = entry.getKey();
+        DetectionResponseV2.ImageData imgData = entry.getValue();
+
+        if (isVegetation(key, imgData)) {
+          // Vegetation is a dedicated image entry: aggregate it separately and skip it when it
+          // carries no region, just like the legacy vegetation_data handling.
+          if (imgData.getRegions() == null || imgData.getRegions().isEmpty()) {
+            continue;
+          }
+          regionCounter =
+              aggregateResponse(
+                  aggregatedImages,
+                  VEGETATION_KEY_PREFIX + "_data_" + randomUUID(),
+                  imgData,
+                  actualUrl,
+                  regionCounter);
+        } else {
+          regionCounter =
+              aggregateResponse(
+                  aggregatedImages, key + "_" + randomUUID(), imgData, actualUrl, regionCounter);
+        }
       }
     }
 
-    DetectionResponse aggregated = new DetectionResponse();
-    aggregated.setSrcImageUrl(responseUrls.getFirst().detectionResponse().getSrcImageUrl());
-    aggregated.setRstImageUrl(responseUrls.getFirst().detectionResponse().getRstImageUrl());
-    aggregated.setRstRaw(aggregatedRstRaw);
+    return DetectionResponseV2.builder().images(aggregatedImages).build();
+  }
 
-    return aggregated;
+  private boolean isVegetation(String key, DetectionResponseV2.ImageData imgData) {
+    if (key != null && key.toLowerCase(Locale.ROOT).startsWith(VEGETATION_KEY_PREFIX)) {
+      return true;
+    }
+    return imgData != null
+        && imgData.getFilename() != null
+        && imgData.getFilename().toLowerCase(Locale.ROOT).startsWith(VEGETATION_KEY_PREFIX);
   }
 
   private int aggregateResponse(
-      Map<String, DetectionResponse.ImageData> aggregatedRstRaw,
+      Map<String, DetectionResponseV2.ImageData> aggregatedImages,
       String imgKey,
-      DetectionResponse.ImageData imgData,
+      DetectionResponseV2.ImageData imgData,
       String actualUrl,
       int regionCounter) {
-    DetectionResponse.ImageData aggregatedImgData =
-        aggregateImageData(aggregatedRstRaw, imgKey, imgData);
+    DetectionResponseV2.ImageData aggregatedImgData =
+        aggregateImageData(aggregatedImages, imgKey, imgData);
 
     if (imgData.getRegions() != null) {
-      for (DetectionResponse.ImageData.Region region : imgData.getRegions().values()) {
+      for (DetectionResponseV2.ImageData.Region region : imgData.getRegions().values()) {
         region.getRegionAttributes().put("source_url", actualUrl);
         aggregatedImgData.getRegions().put("region_" + (++regionCounter), region);
       }
@@ -73,14 +90,14 @@ public class DetectionResponseAggregator
     return regionCounter;
   }
 
-  private DetectionResponse.ImageData aggregateImageData(
-      Map<String, DetectionResponse.ImageData> aggregatedRstRaw,
+  private DetectionResponseV2.ImageData aggregateImageData(
+      Map<String, DetectionResponseV2.ImageData> aggregatedImages,
       String imgKey,
-      DetectionResponse.ImageData imgData) {
-    return aggregatedRstRaw.computeIfAbsent(
+      DetectionResponseV2.ImageData imgData) {
+    return aggregatedImages.computeIfAbsent(
         imgKey,
         k ->
-            DetectionResponse.ImageData.builder()
+            DetectionResponseV2.ImageData.builder()
                 .fileref(imgData.getFileref())
                 .size(imgData.getSize())
                 .filename(imgData.getFilename())
@@ -93,5 +110,5 @@ public class DetectionResponseAggregator
                 .build());
   }
 
-  public record DetectionResponseUrl(DetectionResponse detectionResponse, String apiUrl) {}
+  public record DetectionResponseUrl(DetectionResponseV2 detectionResponse, String apiUrl) {}
 }

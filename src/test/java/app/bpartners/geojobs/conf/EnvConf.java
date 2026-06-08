@@ -48,5 +48,6 @@ public class EnvConf {
     registry.add("roofer.3d.bag.complexity.factor", () -> 0.88f);
     registry.add("roofer.3d.bag.base.url", () -> "http://dummy.com");
     registry.add("roofer.3d.bag.api.key", () -> "dummy");
+    registry.add("lidar.index.api.url", () -> "https://dummy.com");
   }
 }

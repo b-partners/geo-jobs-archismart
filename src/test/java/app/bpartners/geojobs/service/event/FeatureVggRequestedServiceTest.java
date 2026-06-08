@@ -52,13 +52,19 @@ class FeatureVggRequestedServiceTest {
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
   TileFinder tileFinderMock = mock();
   IgnCadastreFeatureFetcher ignCadastreFeatureFetcherMock = mock();
+  BuildingFinder buildingFinderMock = mock();
   TiledPixelPolygonComputer tiledPixelPolygonComputerMock =
       new TiledPixelPolygonComputer(
           geometryConverterMock, tileCoordinatesPolygonIntersectionMock, polygonCoordinatesCloser);
   TileCoordinatesService tileCoordinatesServiceMock =
-      new TileCoordinatesService(geometryConverterMock, tileFinderMock);
+      new TileCoordinatesService(
+          geometryConverterMock,
+          tileFinderMock,
+          new DetectionPolygonProcessedRetriever(
+              ignCadastreFeatureFetcherMock, geometryConverterMock, buildingFinderMock));
   FeaturePolygonRetriever featurePolygonRetrieverMock =
-      new FeaturePolygonRetriever(geometryConverterMock, ignCadastreFeatureFetcherMock);
+      new FeaturePolygonRetriever(
+          geometryConverterMock, ignCadastreFeatureFetcherMock, buildingFinderMock);
 
   FeatureVggRequestedService subject =
       new FeatureVggRequestedService(

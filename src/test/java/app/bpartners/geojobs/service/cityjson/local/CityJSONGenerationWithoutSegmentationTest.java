@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
@@ -41,6 +42,37 @@ class CityJSONGenerationWithoutSegmentationTest {
                     "cityjson/geojson/pans/roof2/pan1.geojson",
                     "cityjson/geojson/pans/roof2/pan2.geojson"),
                 Set.of("las/LHD_FXX_0644_6859_PTS_O_LAMB93_IGN69.copc.laz"),
+                BASE_OUTPUT_FOLDER));
+  }
+
+  @Test
+  @Disabled
+  void roof7() {
+    assertDoesNotThrow(
+        () ->
+            process(
+                "roof7",
+                List.of(
+                    "cityjson/geojson/pans/roof7/pan1.geojson",
+                    "cityjson/geojson/pans/roof7/pan2.geojson",
+                    "cityjson/geojson/pans/roof7/pan3.geojson"),
+                Set.of("cityjson/las/7.copc.laz"),
+                BASE_OUTPUT_FOLDER));
+  }
+
+  @Test
+  @Disabled
+  void roof12() {
+    assertDoesNotThrow(
+        () ->
+            process(
+                "roof12",
+                List.of(
+                    "cityjson/geojson/pans/roof12/pan2.geojson",
+                    "cityjson/geojson/pans/roof12/pan1.geojson",
+                    "cityjson/geojson/pans/roof12/pan3.geojson",
+                    "cityjson/geojson/pans/roof12/pan4.geojson"),
+                Set.of("cityjson/las/12_chimney.copc.laz"),
                 BASE_OUTPUT_FOLDER));
   }
 }

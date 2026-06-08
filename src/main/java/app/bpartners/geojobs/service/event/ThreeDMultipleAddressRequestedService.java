@@ -40,11 +40,11 @@ public class ThreeDMultipleAddressRequestedService
   public void accept(ThreeDMultipleAddressRequested requestEvent) {
     var requestIdentifier = requestEvent.getRequestIdentifier();
     var communityOwnerId = requestEvent.getCommunityOwnerId();
-    var lidarProcessorType = requestEvent.getLidarProcessorType();
     var persistedRequest =
         cityJSONRequestRepository
             .findByIdAndCommunityOwnerId(requestIdentifier, communityOwnerId)
             .orElseThrow();
+    var lidarProcessorType = persistedRequest.getLidarProcessorType();
     var addresses = requestEvent.getAddresses();
     var points = requestEvent.getPoints();
 

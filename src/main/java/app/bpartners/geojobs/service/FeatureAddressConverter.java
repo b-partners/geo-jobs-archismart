@@ -29,16 +29,19 @@ public class FeatureAddressConverter
   private final AreaPictureDetailsMapper areaPictureDetailsMapper;
   private final String adminApiKey;
   private final GeometryConverter geometryConverter;
+  private final BuildingFinder buildingFinder;
 
   public FeatureAddressConverter(
       AreaPictureApi areaPictureApi,
       AreaPictureDetailsMapper areaPictureDetailsMapper,
       @Value("${admin.api.key}") String adminApiKey,
-      GeometryConverter geometryConverter) {
+      GeometryConverter geometryConverter,
+      BuildingFinder buildingFinder) {
     this.areaPictureApi = areaPictureApi;
     this.areaPictureDetailsMapper = areaPictureDetailsMapper;
     this.adminApiKey = adminApiKey;
     this.geometryConverter = geometryConverter;
+    this.buildingFinder = buildingFinder;
   }
 
   @Override
@@ -70,7 +73,7 @@ public class FeatureAddressConverter
   // TODO: include delimitationObjectType when generalized
   public Feature apply(String address, Double longitude, Double latitude) {
     var nearestRoofMultiPolygon =
-        geometryConverter.retrieveNearestRoofMultiPolygon(
+        buildingFinder.getBuildingMultiPolygon(
             List.of(BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)));
     var properties = new HashMap<String, Object>();
     if (address != null) {

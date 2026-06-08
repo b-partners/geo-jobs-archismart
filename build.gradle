@@ -226,6 +226,7 @@ dependencies {
 implementation 'app.bpartners:geo-jobs-archismart-gen:latest'
 implementation 'org.thymeleaf:thymeleaf:3.1.1.RELEASE'
 implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1'
+implementation 'org.n52.jackson:jackson-datatype-jts:1.2.10'
 implementation 'org.geotools:gt-api:31.2'
 implementation 'org.geotools:gt-geojson:31.2'
 implementation 'org.geotools:gt-main:31.2'

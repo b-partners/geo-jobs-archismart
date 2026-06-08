@@ -20,6 +20,7 @@ import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
+import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import app.bpartners.geojobs.service.roofer3dbag.Roofer3DBagApiClient;
 import app.bpartners.geojobs.service.roofer3dbag.model.CityJsonGenerationRequest;
 import java.io.File;
@@ -39,6 +40,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -56,6 +58,7 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
   private final CoordinateTransformer coordinateTransformer;
   private final GeometryConverter geometryConverter;
   private final CityJsonTextureComputer textureComputer;
+  private final SwissBoundaryChecker swissBoundaryChecker;
 
   @Override
   public List<CityJSON> apply(CityJSONRequest request) {
@@ -153,9 +156,13 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
   private URL getGeoJsonBuildingPresignedURL(Feature feature) throws IOException {
     var tmpGeoJsonBucketKey = randomUUID() + GEOJSON_EXTENSION;
     var multiPolygon = getMultiPolygon(feature);
-    var lambert93Coordinates = convertWgs84ToLambert93Coordinates(multiPolygon);
+    var geometry = featureMapper.domainToGeometryWithMultipolygonHandler(feature);
+    var coordinates =
+        swissBoundaryChecker.isGeometryInSwiss(geometry)
+            ? convertWgs84ToSwissCoordinates(multiPolygon)
+            : convertWgs84ToLambert93Coordinates(multiPolygon);
     var geoJson =
-        new GeoJson(List.of(new GeoJson.GeoFeature(feature.getProperties(), lambert93Coordinates)));
+        new GeoJson(List.of(new GeoJson.GeoFeature(feature.getProperties(), coordinates)));
 
     var tmpGeoJsonFile =
         fileWriter.write(
@@ -178,14 +185,23 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
         "Unsupported geometry type for validation: " + actualInstance);
   }
 
-  private MultiPolygon convertWgs84ToLambert93Coordinates(MultiPolygon multiPolygon) {
+  private MultiPolygon convertCoordinates(
+      MultiPolygon multiPolygon, Function<Geometry, Geometry> transformer) {
     var convertedCoordinates =
-        coordinateTransformer.apply(geometryConverter.apply(multiPolygon.getCoordinates()));
+        transformer.apply(geometryConverter.apply(multiPolygon.getCoordinates()));
     if (convertedCoordinates
         instanceof org.locationtech.jts.geom.MultiPolygon multiPolygonConverted) {
       return geometryConverter.restMultiPolygonFromJts(multiPolygonConverted);
     }
     throw new NotImplementedException(
-        "Unable to convert coordinates to Lambert93 for multiPolygon " + multiPolygon);
+        "Unable to convert coordinates for multiPolygon " + multiPolygon);
+  }
+
+  private MultiPolygon convertWgs84ToSwissCoordinates(MultiPolygon multiPolygon) {
+    return convertCoordinates(multiPolygon, coordinateTransformer::convertToSwissCoordinates);
+  }
+
+  private MultiPolygon convertWgs84ToLambert93Coordinates(MultiPolygon multiPolygon) {
+    return convertCoordinates(multiPolygon, coordinateTransformer::apply);
   }
 }

@@ -14,7 +14,7 @@ import org.locationtech.jts.geom.Polygon;
 
 public class DominantRoof implements Supplier<DominantRoof.DominantDetectedRoof> {
   private static final String BATI_PREFIX = "BATI_";
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
+  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(), null);
   private final Set<PolygonObjectType> polygons;
 
   public DominantRoof(DetectedTile detectedTiles) {

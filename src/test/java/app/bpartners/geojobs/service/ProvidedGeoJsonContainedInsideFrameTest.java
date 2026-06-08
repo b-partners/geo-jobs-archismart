@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
-import app.bpartners.geojobs.service.gouv.fr.rnb.BuildingApi;
 import app.bpartners.geojobs.service.tiling.TileFinder;
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +14,7 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 class ProvidedGeoJsonContainedInsideFrameTest {
 
-  GeometryConverter geometryConverter = new GeometryConverter(new BuildingApi(), null);
+  GeometryConverter geometryConverter = new GeometryConverter();
   TileMultiPolygonFrame tileMultiPolygonFrame =
       new TileMultiPolygonFrame(new TileFinder(), geometryConverter);
 

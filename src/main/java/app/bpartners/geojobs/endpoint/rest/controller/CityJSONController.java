@@ -59,9 +59,6 @@ public class CityJSONController {
     threeDAddressesRequestValidator.accept(threeDRequest);
     var communityOwnerId = getCommunityAuthorizationId();
     cityJSONRequestValidator.accept(requestIdentifier, communityOwnerId);
-    var lidarProcessorType = threeDRequest.getLidarProcessorType();
-    var domainLidarProcessorType =
-        lidarProcessorType == null ? null : LidarProcessorType.valueOf(lidarProcessorType.name());
     if (threeDRequest.getAddresses().size() == 1) {
       var convertedAddressesToDelimitations =
           threeDRequest.getAddresses().stream()
@@ -73,10 +70,12 @@ public class CityJSONController {
       var request = new ThreeDRequest().delimitations(convertedAddressesToDelimitations);
       var toProcess =
           cityJSONRequestMapper.createToDomain(requestIdentifier, request, communityOwnerId);
-      toProcess.setLidarProcessorType(domainLidarProcessorType);
       return cityJSONRequestMapper.toRestThreeDResponseStatus(
           cityJSONRequestService.process(toProcess));
     }
+    var lidarProcessorType = threeDRequest.getLidarProcessorType();
+    var domainLidarProcessorType =
+        lidarProcessorType == null ? null : LidarProcessorType.valueOf(lidarProcessorType.name());
     var savedRequest =
         cityJSONRequestService.processAddressRequest(
             requestIdentifier,
@@ -95,7 +94,7 @@ public class CityJSONController {
 
     var communityOwnerId = getCommunityAuthorizationId();
     var toProcess =
-        cityJSONRequestMapper.createToDomain(
+        cityJSONRequestMapper.createToDomainFromDeprecatedDTO(
             requestIdentifier, createCityJSONRequest, communityOwnerId);
 
     return cityJSONRequestMapper.toRest(cityJSONRequestService.oldProcess(toProcess));

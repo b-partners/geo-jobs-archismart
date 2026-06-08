@@ -4,11 +4,13 @@ import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMappe
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +21,9 @@ import org.locationtech.jts.geom.Polygon;
 
 class FeatureMapperTest {
   private final String id = randomUUID().toString();
-  private final FeatureMapper subject = new FeatureMapper(new GeometryConverter(null, null));
+  BuildingFinder buildingFinderMock = mock(BuildingFinder.class);
+  private final FeatureMapper subject =
+      new FeatureMapper(new GeometryConverter(), buildingFinderMock);
 
   private Feature expectedFeature() {
     Feature feature = new Feature();

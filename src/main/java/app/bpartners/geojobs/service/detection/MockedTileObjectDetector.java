@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service.detection;
 
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_CONFIDENCE_PROPERTY;
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_LABEL_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_CONFIDENCE_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_LABEL_PROPERTY;
 
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(value = "objects.detector.mock.activated", havingValue = "true")
 public class MockedTileObjectDetector implements TileObjectDetector {
   @Override
-  public DetectionResponse apply(
+  public DetectionResponseV2 apply(
       TileDetectionTask tileDetectionTask,
       File mask,
       List<DetectableObjectConfiguration> detectableObjectConfigurations) {
@@ -32,21 +32,19 @@ public class MockedTileObjectDetector implements TileObjectDetector {
         detectableTypes.isEmpty() ? DetectableType.TOITURE_REVETEMENT : detectableTypes.getFirst());
   }
 
-  private DetectionResponse aMockedDetectionResponse(
+  private DetectionResponseV2 aMockedDetectionResponse(
       Double confidence, DetectableType detectableType) {
     double randomX = new SecureRandom().nextDouble() * 100;
     double randomY = new SecureRandom().nextDouble() * 100;
-    return DetectionResponse.builder()
-        .rstImageUrl("dummyImageUrl")
-        .srcImageUrl("dummyImageUrl")
-        .rstRaw(
+    return DetectionResponseV2.builder()
+        .images(
             Map.of(
-                "dummyRstRawProperty",
-                DetectionResponse.ImageData.builder()
+                "dummyImageProperty",
+                DetectionResponseV2.ImageData.builder()
                     .regions(
                         Map.of(
                             "dummyRegionProperty",
-                            DetectionResponse.ImageData.Region.builder()
+                            DetectionResponseV2.ImageData.Region.builder()
                                 .regionAttributes(
                                     Map.of(
                                         REGION_CONFIDENCE_PROPERTY,
@@ -54,7 +52,7 @@ public class MockedTileObjectDetector implements TileObjectDetector {
                                         REGION_LABEL_PROPERTY,
                                         detectableType.toString()))
                                 .shapeAttributes(
-                                    DetectionResponse.ImageData.ShapeAttributes.builder()
+                                    DetectionResponseV2.ImageData.ShapeAttributes.builder()
                                         .allPointsX(List.of(BigDecimal.valueOf(randomX)))
                                         .allPointsY(List.of(BigDecimal.valueOf(randomY)))
                                         .build())

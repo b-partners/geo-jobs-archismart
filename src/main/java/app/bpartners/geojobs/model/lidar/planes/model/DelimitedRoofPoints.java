@@ -24,7 +24,6 @@ public class DelimitedRoofPoints extends MultiPolygon {
   @EqualsAndHashCode.Exclude private final Set<LasPointGeometry> groundPoints;
 
   private static final double GROUND_BUFFER = 3;
-  private static final double MAX_GROUND_POINTS_COUNT = 100;
 
   public DelimitedRoofPoints(
       Envelope globalEnvelope,
@@ -79,10 +78,6 @@ public class DelimitedRoofPoints extends MultiPolygon {
   }
 
   public boolean addGroundPointIfInside(LasPointGeometry point) {
-    if (this.groundPoints.size() > MAX_GROUND_POINTS_COUNT) {
-      return false;
-    }
-
     if (isOutsideEnvelope(this.groundEnvelope, point)) {
       return false;
     }

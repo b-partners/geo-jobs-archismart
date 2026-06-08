@@ -10,7 +10,7 @@ import org.locationtech.jts.geom.Geometry;
 
 class PolygonInsideCircleDistanceComputerTest {
   PolygonInsideCircleDistanceComputer subject = new PolygonInsideCircleDistanceComputer();
-  GeometryConverter geometryConverter = new GeometryConverter(null, null);
+  GeometryConverter geometryConverter = new GeometryConverter();
 
   @Test
   void retrieve_about_10_meters() {

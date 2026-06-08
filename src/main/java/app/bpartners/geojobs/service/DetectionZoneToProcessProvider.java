@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 public class DetectionZoneToProcessProvider implements Function<Detection, MultiPolygon> {
   private final GeometryConverter geometryConverter;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
+  private final BuildingFinder buildingFinder;
 
   @Override
   public MultiPolygon apply(Detection detection) {
@@ -121,7 +122,7 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
                       }
                     }
                     yield new JtsGeoFeature(
-                        properties, geometryConverter.retrieveNearestRoofMultiPolygon(point));
+                        properties, buildingFinder.getBuildingMultiPolygon(point));
                   }
                   yield null;
                 }

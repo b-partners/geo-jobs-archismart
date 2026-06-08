@@ -19,6 +19,7 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
@@ -43,6 +44,7 @@ public class DetectionCreationMapper {
   private final GeoServerConfiguration geoServerConfiguration;
   private final GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper;
   private final GeometryConverter geometryConverter;
+  private final BuildingFinder buildingFinder;
 
   public Detection apply(
       CreateDetection createDetection,
@@ -194,8 +196,7 @@ public class DetectionCreationMapper {
         && providedGeoJsonZone.getFirst().getGeometry() != null
         && providedGeoJsonZone.getFirst().getGeometry().getActualInstance()
             instanceof Point point) {
-      var nearestRoofMultiPolygonGeometry =
-          geometryConverter.retrieveNearestRoofMultiPolygon(point);
+      var nearestRoofMultiPolygonGeometry = buildingFinder.getBuildingMultiPolygon(point);
       var nearestRoofMultiPolygonCoordinates =
           geometryConverter.multiPolygonToNestedList(nearestRoofMultiPolygonGeometry);
       return toDomainFeature(

@@ -16,6 +16,7 @@ README_WEBHOOK_SECRET: !Sub '{{resolve:ssm:/geo-jobs/${Env}/readme/webhook/secre
 BPARTNERS_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/bpartners/api/url}}'
 GEOSERVER_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/geoserver/api/url}}'
 IGN_LIDAR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/ign/lidar/api/url}}'
+LIDAR_INDEX_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/lidar/index/api/url}}'
 ROOF_COVERING_DETECTION_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/covering/detection/api/url}}'
 OPEN_SOURCE_LIDAR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/open-source/lidar/api/url}}'
 GOOGLE_GEOCODE_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/geocode/api-key}}'

@@ -54,6 +54,12 @@ public class GeometryUtilities {
 
   public static Polygon zSetter(Polygon polygon, ZSetterCallback callback) {
     var projectedCoordinates = zSetter(polygon.getCoordinates(), callback);
+
+    if (!projectedCoordinates[0].equals2D(projectedCoordinates[projectedCoordinates.length - 1])) {
+      projectedCoordinates = Arrays.copyOf(projectedCoordinates, projectedCoordinates.length + 1);
+      projectedCoordinates[projectedCoordinates.length - 1] = projectedCoordinates[0];
+    }
+
     return geometryFactory.createPolygon(projectedCoordinates);
   }
 

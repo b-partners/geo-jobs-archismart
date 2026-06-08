@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class TileCoordinatesService {
   private final GeometryConverter geometryConverter;
   private final TileFinder tileFinder;
+  private final DetectionPolygonProcessedRetriever detectionPolygonProcessedRetriever;
 
   public List<TileCoordinates> computeFeatureTileCoordinatesWithCompleteQuadrilateral(
       Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
@@ -69,8 +70,7 @@ public class TileCoordinatesService {
 
   private List<TileCoordinates> retrieveFeatureTileCoordinates(
       Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
-    var polygonGeometry =
-        geometryConverter.retrieveZonePolygonGeometryProcessed(feature, delimitationTypeEnum);
+    var polygonGeometry = detectionPolygonProcessedRetriever.apply(feature, delimitationTypeEnum);
     return tileFinder.getFromGeoJsonPolygon(polygonGeometry, HOUSES_0.getZoomLevel()).stream()
         .sorted(
             Comparator.comparing(TileCoordinates::getZ)

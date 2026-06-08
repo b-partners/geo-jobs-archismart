@@ -24,8 +24,7 @@ class DetectionSupportedAreaValidatorTest {
   private static final double OFFSET_LON = 0.0006;
 
   DetectionSupportedAreaValidator subject =
-      new DetectionSupportedAreaValidator(
-          new GeometrySquareMeterArea(), new GeometryConverter(null, null));
+      new DetectionSupportedAreaValidator(new GeometrySquareMeterArea(), new GeometryConverter());
 
   @SneakyThrows
   @Test

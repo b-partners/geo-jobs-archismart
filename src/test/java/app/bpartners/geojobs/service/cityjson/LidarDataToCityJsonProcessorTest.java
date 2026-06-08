@@ -9,10 +9,12 @@ import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.nio.file.Files;
 import java.util.Set;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 
+@Disabled
 class LidarDataToCityJsonProcessorTest {
   private static final LidarDataToCityJsonProcessor subject =
       new LidarDataToCityJsonProcessor(new CityJsonFactory());

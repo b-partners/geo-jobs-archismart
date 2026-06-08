@@ -11,7 +11,9 @@ import app.bpartners.geojobs.model.lidar.planes.postprocessing.Snapping3DCompute
 import java.util.*;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 public class Plane3DGeneratorWithoutSegmentations
     implements Function<DelimitedRoofPoints, List<Plane3D>> {
@@ -34,7 +36,10 @@ public class Plane3DGeneratorWithoutSegmentations
   @Override
   public List<Plane3D> apply(DelimitedRoofPoints delimitedPoints) {
     var rawPlanes = Arrays.stream(delimitedPoints.getItems()).map(this::apply).toList();
-    return postProcess(delimitedPoints, rawPlanes);
+    log.info("Starting PostProcessing");
+    var result = postProcess(delimitedPoints, rawPlanes);
+    log.info("Finished PostProcessing");
+    return result;
   }
 
   private List<Plane3D> postProcess(
@@ -45,7 +50,11 @@ public class Plane3DGeneratorWithoutSegmentations
   }
 
   private Plane3D getBestPlane(DelimitedRoofPointsItem item) {
-    var conf = Plane3DExtractorConf.getDefault().toBuilder().doSkinnyArmRemover(false).build();
+    var conf =
+        Plane3DExtractorConf.getDefault().toBuilder()
+            .doXYZClustering(false)
+            .doSkinnyArmRemover(false)
+            .build();
     var extractor = new OnePlane3DExtractor(conf);
     return extractor.apply(item.getPoints(), null).plane();
   }

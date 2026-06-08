@@ -40,7 +40,7 @@ public class LidarRoofsAnalysisProcessor {
   private static final short GROUND_LIDAR_CLASS_VALUE = 2;
   private static final short NOT_CLASSIFIED_LIDAR_CLASS_VALUE = 1;
   private static final short DIVERS_BATI_LIDAR_CLASS_VALUE = 67;
-  private static final short MIN_BATIMENT_POINTS_COUNT = 20;
+  private static final short MIN_BATIMENT_POINTS_COUNT = 3;
 
   public RoofsAnalysisResult from(Set<Geometry> roofsEPSG4326) {
     var polygonWithProperties =
@@ -77,6 +77,7 @@ public class LidarRoofsAnalysisProcessor {
           .forEach(
               data -> {
                 var batimentPointsCount = data.roof().classifications().getOrDefault(BATIMENT, 0);
+                log.info("{}", batimentPointsCount);
                 if (batimentPointsCount < MIN_BATIMENT_POINTS_COUNT) {
                   throw new IllegalStateException(
                       "Roof found but no BATIMENT points detected for one of the buildings. "

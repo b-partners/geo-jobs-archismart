@@ -18,29 +18,47 @@ public class CityJSONTexture {
   @Column(name = "image_uri")
   private String imageUri;
 
-  @Column(name = "top_left_longitude")
-  private double topLeftLongitude;
-
-  @Column(name = "top_left_latitude")
-  private double topLeftLatitude;
-
-  @Column(name = "pixel_width")
-  private double pixelWidth;
-
-  @Column(name = "pixel_height")
-  private double pixelHeight;
-
-  @Column(name = "shear_x")
-  private double shearX;
-
-  @Column(name = "shear_y")
-  private double shearY;
-
   @Column(name = "image_width")
   private int imageWidth;
 
   @Column(name = "image_height")
   private int imageHeight;
+
+  @Column(name = "tile_x")
+  private int tileX;
+
+  @Column(name = "tile_y")
+  private int tileY;
+
+  @Column(name = "tile_image_size_px")
+  private int tileImageSizePx;
+
+  @Column(name = "zoom")
+  private int zoom;
+
+  @Deprecated
+  @Column(name = "top_left_longitude")
+  private double topLeftLongitude;
+
+  @Deprecated
+  @Column(name = "top_left_latitude")
+  private double topLeftLatitude;
+
+  @Deprecated
+  @Column(name = "pixel_width")
+  private double pixelWidth;
+
+  @Deprecated
+  @Column(name = "pixel_height")
+  private double pixelHeight;
+
+  @Deprecated
+  @Column(name = "shear_x")
+  private double shearX;
+
+  @Deprecated
+  @Column(name = "shear_y")
+  private double shearY;
 
   @ManyToOne
   @JoinColumn(name = "city_json_request_id")

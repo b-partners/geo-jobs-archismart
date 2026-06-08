@@ -3,7 +3,6 @@ package app.bpartners.geojobs.endpoint.rest.controller;
 import static app.bpartners.geojobs.endpoint.rest.model.SuccessStatus.NOT_SUCCEEDED;
 import static app.bpartners.geojobs.endpoint.rest.model.SuccessStatus.SUCCEEDED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
-import static app.bpartners.geojobs.service.tiling.ZoneTilingJobService.getTilingTasks;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.status.ZTJStatusRecomputingSubmitted;
@@ -93,7 +92,7 @@ public class ZoneTilingController {
   @PostMapping("/tilingJobs")
   public ZoneTilingJob tileZone(@RequestBody CreateZoneTilingJob createJob) {
     var job = mapper.toDomain(createJob, false);
-    var tilingTasks = getTilingTasks(createJob, job.getId());
+    var tilingTasks = service.getTilingTasks(createJob, job.getId());
     return mapper.toRest(service.create(job, tilingTasks), tilingTasks);
   }
 

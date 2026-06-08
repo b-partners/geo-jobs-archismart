@@ -9,8 +9,8 @@ import static app.bpartners.geojobs.repository.model.GeoJobType.DETECTION;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.HUMAN;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.MACHINE;
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_CONFIDENCE_PROPERTY;
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_LABEL_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_CONFIDENCE_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_LABEL_PROPERTY;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
@@ -89,7 +89,7 @@ public class DetectionMapper {
   private final TileValidator tileValidator;
 
   public MachineDetectedTile toDetectedTile(
-      DetectionResponse detectionResponse,
+      DetectionResponseV2 detectionResponse,
       Tile tile,
       String parcelId,
       String zdjJobId,
@@ -98,12 +98,12 @@ public class DetectionMapper {
     var tileCoordinates = tile.getCoordinates();
     tileValidator.accept(tile);
 
-    var fileDataList = detectionResponse.getRstRaw().values().stream().toList();
+    var fileDataList = detectionResponse.getImages().values().stream().toList();
 
     List<DetectedObject> machineDetectedObjects = new ArrayList<>();
     fileDataList.forEach(
         fileData -> {
-          List<DetectionResponse.ImageData.Region> regions =
+          List<DetectionResponseV2.ImageData.Region> regions =
               fileData.getRegions().values().stream().toList();
           machineDetectedObjects.addAll(
               regions.stream()
@@ -124,7 +124,7 @@ public class DetectionMapper {
   }
 
   public DetectedObject toDetectedObject(
-      DetectionResponse.ImageData.Region region, String detectedTileId, Integer zoom) {
+      DetectionResponseV2.ImageData.Region region, String detectedTileId, Integer zoom) {
     var regionAttributes = region.getRegionAttributes();
     var label = regionAttributes.get(REGION_LABEL_PROPERTY);
     Double confidence = null;
@@ -188,7 +188,7 @@ public class DetectionMapper {
 
   @SneakyThrows
   private app.bpartners.geojobs.repository.model.Feature toFeature(
-      DetectionResponse.ImageData.ShapeAttributes shapeAttributes, int zoom) {
+      DetectionResponseV2.ImageData.ShapeAttributes shapeAttributes, int zoom) {
     List<List<BigDecimal>> coordinates = new ArrayList<>();
     var allX =
         shapeAttributes.getAllPointsX().stream().map(x -> new BigDecimal(x.intValue())).toList();

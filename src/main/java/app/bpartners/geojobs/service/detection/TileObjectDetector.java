@@ -8,4 +8,4 @@ import org.apache.commons.lang3.function.TriFunction;
 
 public interface TileObjectDetector
     extends TriFunction<
-        TileDetectionTask, File, List<DetectableObjectConfiguration>, DetectionResponse> {}
+        TileDetectionTask, File, List<DetectableObjectConfiguration>, DetectionResponseV2> {}

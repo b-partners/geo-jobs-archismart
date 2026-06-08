@@ -27,8 +27,7 @@ class GeometrySquareMeterAreaTest {
   void geometry_area_pcrs() {
     var feature = new ObjectMapper().readValue(featureFromZonePCRS(), Feature.class);
     var geometry =
-        new GeometryConverter(null, null)
-            .apply(feature.getGeometry().getMultiPolygon().getCoordinates());
+        new GeometryConverter().apply(feature.getGeometry().getMultiPolygon().getCoordinates());
 
     var actual = subject.apply(geometry);
 
@@ -41,8 +40,7 @@ class GeometrySquareMeterAreaTest {
     var feature =
         new ObjectMapper().readValue(featureAroundTenThousandSquareMeterZone(), Feature.class);
     var geometry =
-        new GeometryConverter(null, null)
-            .apply(feature.getGeometry().getMultiPolygon().getCoordinates());
+        new GeometryConverter().apply(feature.getGeometry().getMultiPolygon().getCoordinates());
 
     var actual = subject.apply(geometry);
 
@@ -84,8 +82,7 @@ class GeometrySquareMeterAreaTest {
   void geometry_area_tours() {
     var feature = new ObjectMapper().readValue(featureFromZoneTours(), Feature.class);
     var geometry =
-        new GeometryConverter(null, null)
-            .apply(feature.getGeometry().getMultiPolygon().getCoordinates());
+        new GeometryConverter().apply(feature.getGeometry().getMultiPolygon().getCoordinates());
 
     var actual = subject.apply(geometry);
 
@@ -348,7 +345,7 @@ class GeometrySquareMeterAreaTest {
   @SneakyThrows
   @Test
   void compute_3x3_tiles_area() {
-    var geometryConverter = new GeometryConverter(null, null);
+    var geometryConverter = new GeometryConverter();
     var featureDomainList =
         new ObjectMapper()
             .readValue(

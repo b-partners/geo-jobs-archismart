@@ -1,13 +1,13 @@
 package app.bpartners.geojobs.utils.detection;
 
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_CONFIDENCE_PROPERTY;
-import static app.bpartners.geojobs.service.detection.DetectionResponse.REGION_LABEL_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_CONFIDENCE_PROPERTY;
+import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_LABEL_PROPERTY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 import app.bpartners.geojobs.model.exception.ApiException;
-import app.bpartners.geojobs.service.detection.DetectionResponse;
+import app.bpartners.geojobs.service.detection.DetectionResponseV2;
 import app.bpartners.geojobs.service.detection.TileObjectDetector;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -37,20 +37,18 @@ public class ObjectsDetectorMockResponse {
         .apply(any(), any(), any());
   }
 
-  private DetectionResponse aDetectionResponse(Double confidence, String objectType) {
+  private DetectionResponseV2 aDetectionResponse(Double confidence, String objectType) {
     double randomX = new SecureRandom().nextDouble() * 100;
     double randomY = new SecureRandom().nextDouble() * 100;
-    return DetectionResponse.builder()
-        .rstImageUrl("dummyImageUrl")
-        .srcImageUrl("dummyImageUrl")
-        .rstRaw(
+    return DetectionResponseV2.builder()
+        .images(
             Map.of(
-                "dummyRstRawProperty",
-                DetectionResponse.ImageData.builder()
+                "dummyImageProperty",
+                DetectionResponseV2.ImageData.builder()
                     .regions(
                         Map.of(
                             "dummyRegionProperty",
-                            DetectionResponse.ImageData.Region.builder()
+                            DetectionResponseV2.ImageData.Region.builder()
                                 .regionAttributes(
                                     Map.of(
                                         REGION_CONFIDENCE_PROPERTY,
@@ -58,7 +56,7 @@ public class ObjectsDetectorMockResponse {
                                         REGION_LABEL_PROPERTY,
                                         objectType))
                                 .shapeAttributes(
-                                    DetectionResponse.ImageData.ShapeAttributes.builder()
+                                    DetectionResponseV2.ImageData.ShapeAttributes.builder()
                                         .allPointsX(List.of(BigDecimal.valueOf(randomX)))
                                         .allPointsY(List.of(BigDecimal.valueOf(randomY)))
                                         .build())

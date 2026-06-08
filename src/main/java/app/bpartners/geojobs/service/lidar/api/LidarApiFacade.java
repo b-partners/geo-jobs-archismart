@@ -1,13 +1,16 @@
 package app.bpartners.geojobs.service.lidar.api;
 
+import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.EPSG_2056;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
+import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toSet;
 
+import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.nio.file.Paths;
 import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,9 +30,10 @@ public class LidarApiFacade {
   private final FallbackLidarApi fallbackLidarApi;
   private final SwissBoundaryChecker swissBoundaryChecker;
   private final SwissLidarApi swissLidarApi;
-  private final RestTemplate restTemplate;
   private final GeometrySquareMeterArea projector;
+  private final RestTemplate restTemplate;
 
+  private static final String LAZ_FILE_SUFFIX = ".laz";
   private static final long UPDATED_VALID_DATA = 50_000_000;
   private static final String UPDATED_DATA_PREFIX = "https://data.geopf.fr/";
   private static final Set<String> ALLOWED_URL_PREFIXES =
@@ -79,6 +83,10 @@ public class LidarApiFacade {
   }
 
   public Optional<File> download(String fileUrl) {
+    return download(fileUrl, createTempDirectory());
+  }
+
+  public Optional<File> download(String fileUrl, File directory) {
     if (!isSafeUrl(fileUrl)) {
       log.warn("Unsafe URL blocked: {}", fileUrl);
       return Optional.empty();
@@ -86,18 +94,19 @@ public class LidarApiFacade {
 
     log.info("Downloading {}", fileUrl);
     try {
-      byte[] data = restTemplate.getForObject(fileUrl, byte[].class);
+      var data = restTemplate.getForObject(fileUrl, byte[].class);
       if (data == null) {
         return Optional.empty();
       }
 
-      var tempFile = File.createTempFile("lidar-", ".laz");
-      try (var outputStream = new FileOutputStream(tempFile)) {
-        outputStream.write(data);
-      }
+      var filename = randomUUID().toString();
+      var outputPath = Paths.get(directory.getPath(), filename + LAZ_FILE_SUFFIX);
+      FileWriter.write(outputPath, data);
 
       log.info("Finished downloading {}", fileUrl);
-      return Optional.of(tempFile);
+      var file = outputPath.toFile();
+      file.deleteOnExit();
+      return Optional.of(file);
     } catch (HttpClientErrorException.NotFound e) {
       log.warn("File not found (404): {}", fileUrl);
       return Optional.empty();

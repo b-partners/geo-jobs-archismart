@@ -23,10 +23,7 @@ import app.bpartners.geojobs.repository.model.ParcelContent;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
-import app.bpartners.geojobs.service.GeometrySquareMeterArea;
-import app.bpartners.geojobs.service.TileDuplicationRemover;
-import app.bpartners.geojobs.service.TileImageBlur;
-import app.bpartners.geojobs.service.TileImagesAssembler;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.TileFinder;
 import java.awt.image.BufferedImage;
@@ -51,6 +48,7 @@ class FeatureImageRequestedServiceTest {
   WhiteImageDetector whiteImageDetectorMock = mock();
   TileFinder tileFinderMock = mock();
   TileDuplicationRemover tileDuplicationRemoverMock = mock();
+  DetectionPolygonProcessedRetriever detectionPolygonProcessedRetrieverMock = mock();
   FeatureImageRequestedService subject =
       new FeatureImageRequestedService(
           detectionRepositoryMock,
@@ -63,7 +61,8 @@ class FeatureImageRequestedServiceTest {
           whiteImageDetectorMock,
           tileFinderMock,
           mock(),
-          tileDuplicationRemoverMock);
+          tileDuplicationRemoverMock,
+          detectionPolygonProcessedRetrieverMock);
 
   @BeforeEach
   void setUp() {
@@ -134,7 +133,7 @@ class FeatureImageRequestedServiceTest {
     when(detectionRepositoryMock.findById(detectionIdentifier))
         .thenReturn(Optional.of(detectionMock));
     var polygonGeometryMock = mock(org.locationtech.jts.geom.Polygon.class);
-    when(geometryConverterMock.retrieveZonePolygonGeometryProcessed(any(), any()))
+    when(detectionPolygonProcessedRetrieverMock.apply(any(), any()))
         .thenReturn(polygonGeometryMock);
     when(geometrySquareMeterAreaMock.apply(polygonGeometryMock)).thenReturn(ONE_KILOMETRE_AREA);
     when(detectionMock.getProvidedGeoJsonZone())

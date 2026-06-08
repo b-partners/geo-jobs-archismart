@@ -84,7 +84,10 @@ public class CityJSONRequest implements Serializable {
         : delimitations.stream().map(FeatureMapper::toRestFeature).toList();
   }
 
-  @Transient private LidarProcessorType lidarProcessorType;
+  @Column(name = "lidar_processor_type")
+  @Enumerated(STRING)
+  @JdbcTypeCode(NAMED_ENUM)
+  private LidarProcessorType lidarProcessorType;
 
   public List<Feature> getRequestDelimitations() {
     if (getFeaturesWithDelimitation() != null && !getFeaturesWithDelimitation().isEmpty()) {

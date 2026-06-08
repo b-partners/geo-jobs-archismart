@@ -1,14 +1,7 @@
 package app.bpartners.geojobs.service.cityjson.texture.model;
 
-import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import lombok.Builder;
 
+@Builder(toBuilder = true)
 public record RasterInfo(
-    double originX,
-    double originY,
-    double pixelWidth,
-    double pixelHeight,
-    double shearX,
-    double shearY,
-    int width,
-    int height,
-    CoordinateReferenceSystem crs) {}
+    int width, int height, int zoom, int tileX, int tileY, int tileImageSizePx) {}

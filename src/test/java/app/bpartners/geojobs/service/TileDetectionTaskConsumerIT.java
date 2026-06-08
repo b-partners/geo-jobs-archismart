@@ -11,6 +11,7 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.bucket.BucketConf;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.repository.DetectionRepository;
@@ -49,7 +50,7 @@ class TileDetectionTaskConsumerIT {
   CustomBucketComponent customBucketComponentMock = mock();
   RestTemplate restTemplateMock = mock();
 
-  GeometryConverter geometryConverter = new GeometryConverter(null, null);
+  GeometryConverter geometryConverter = new GeometryConverter();
   ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
   DetectionResponseAggregator detectionResponseAggregator = new DetectionResponseAggregator();
   TileValidator tileValidator = new TileValidator();
@@ -60,13 +61,15 @@ class TileDetectionTaskConsumerIT {
   DetectionMaskFromTileRetriever maskRetriever =
       new DetectionMaskFromTileRetriever(maskCreator, tilePolygonIntersection);
   DetectionMapper detectionMapper = new DetectionMapper(tileValidator);
+  BucketComponent bucketComponentMock = mock();
   HttpApiTileObjectDetector objectsDetector =
       new HttpApiTileObjectDetector(
           objectMapper,
           customBucketComponentMock,
           "dummyApiUrl",
           tileObjectDetectorConfMock,
-          detectionResponseAggregator);
+          detectionResponseAggregator,
+          bucketComponentMock);
   RoofCoveringDetector roofCoveringDetector =
       new RoofCoveringDetector(
           objectMapper, restTemplateMock, "dummyUrl", customBucketComponentMock);
@@ -142,7 +145,7 @@ class TileDetectionTaskConsumerIT {
     var machineDetectedTileCaptor = ArgumentCaptor.forClass(MachineDetectedTile.class);
     verify(machineDetectedTileRepositoryMock, times(1)).save(machineDetectedTileCaptor.capture());
     var actual = machineDetectedTileCaptor.getValue();
-    assertEquals(24, actual.getDetectedObjects().size());
+    assertEquals(21, actual.getDetectedObjects().size());
 
     assertEquals(
         expectedDetectedObjectTypes(),
@@ -157,13 +160,7 @@ class TileDetectionTaskConsumerIT {
 
   private Set<DetectableType> expectedDetectedObjectTypes() {
     return Set.of(
-        ESPACE_VERT,
-        MOISISSURE_CLAIR,
-        BATI_TUILES,
-        ARBRE,
-        USURE_IMPORTANTE,
-        CHEMINEE,
-        MOISISSURE_NOIRCIE);
+        ARBRE, MOISISSURE_NOIRCIE, OBSTACLE, MOISISSURE_CLAIR, ESPACE_VERT, VELUX, BATI_TUILES);
   }
 
   @SneakyThrows

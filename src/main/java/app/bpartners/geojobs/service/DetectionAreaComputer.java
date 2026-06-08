@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class DetectionAreaComputer implements Function<Detection, Double> {
   private final GeometryConverter geometryConverter;
   private final GeometrySquareMeterArea geometrySquareMeterArea;
+  private final BuildingFinder buildingFinder;
 
   @Override
   public Double apply(Detection detection) {
@@ -38,8 +39,7 @@ public class DetectionAreaComputer implements Function<Detection, Double> {
                   org.locationtech.jts.geom.MultiPolygon geometry;
                   switch (geometryType) {
                     // TODO: only used for BP_TOITURE model so must be fixed
-                    case Point point ->
-                        geometry = geometryConverter.retrieveNearestRoofMultiPolygon(point);
+                    case Point point -> geometry = buildingFinder.getBuildingMultiPolygon(point);
                     case Polygon polygon ->
                         geometry = geometryConverter.apply(List.of(polygon.getCoordinates()));
                     case MultiPolygon multiPolygon ->

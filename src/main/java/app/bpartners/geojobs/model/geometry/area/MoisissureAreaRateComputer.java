@@ -16,7 +16,7 @@ import org.locationtech.jts.geom.Polygon;
 @Slf4j
 public class MoisissureAreaRateComputer extends AreaRateComputer {
   static final double WEIGHT = 0.8;
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
+  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(), null);
   private final double roofArea;
   private final DetectedTile tile;
   private final Collection<PolygonObjectType> polygonObjectTypes;
@@ -63,8 +63,10 @@ public class MoisissureAreaRateComputer extends AreaRateComputer {
   }
 
   public double getMoisissureAreaRate() {
-    return (compute(MOISISSURE_NOIRCIE) + compute(MOISISSURE_CLAIR) + compute(MOISISSURE_COULEUR))
-        * 100;
+    var computedAreaRate =
+        (compute(MOISISSURE_NOIRCIE) + compute(MOISISSURE_CLAIR) + compute(MOISISSURE_COULEUR))
+            * 100;
+    return Math.min(computedAreaRate, 100.0);
   }
 
   @Override

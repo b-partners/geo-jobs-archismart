@@ -1,24 +1,31 @@
 package app.bpartners.geojobs.service.lidar;
 
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.*;
-import static java.util.stream.Collectors.toSet;
 
 import app.bpartners.geojobs.model.lidar.planes.model.DelimitedRoofPoints;
 import app.bpartners.geojobs.model.lidar.planes.model.LasRoofDelimitationType;
 import app.bpartners.geojobs.model.lidar.planes.model.RoofPointsDelimitationTransformer;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
+import app.bpartners.geojobs.service.lidar.api.LasIndexApi;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.util.GeometryFixer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
+@Builder
 @Component
 @RequiredArgsConstructor
 public class LasRoofsPointsExtractor
@@ -30,31 +37,34 @@ public class LasRoofsPointsExtractor
 
   @Autowired
   public LasRoofsPointsExtractor(
+      LasIndexApi lasIndexApi,
       LidarApiFacade lidarApi,
       GeometrySquareMeterArea projector,
       SwissBoundaryChecker swissBoundaryChecker) {
     this.lidarApi = lidarApi;
     this.projector = projector;
     this.swissBoundaryChecker = swissBoundaryChecker;
-    this.pointsExtractorFromOneUrl = new LasRoofPointsExtractorFromOneUrl(lidarApi);
+    this.pointsExtractorFromOneUrl = new LasRoofPointsExtractorFromOneUrl(lidarApi, lasIndexApi);
   }
 
-  private static final double ROOF_FACES_BUFFER = 3;
-  private static final int MIN_BATIMENT_POINTS_COUNT = 10;
+  private static final double ROOF_FACES_BUFFER = 0;
+  private static final int MIN_BATIMENT_POINTS_COUNT = 3;
 
   @Override
   public PointsExtractionResult apply(LasRoofDelimitationType type, Set<Geometry> roofsEPSG4326) {
     try {
-      var lidarFilesUrl = lidarApi.getUniqueLidarFilesUrls(roofsEPSG4326);
+      Set<Geometry> roofsEPSG4326Validated =
+          roofsEPSG4326.stream().map(this::validateAndFix).collect(Collectors.toSet());
+      var lidarFilesUrl = lidarApi.getUniqueLidarFilesUrls(roofsEPSG4326Validated);
+
       if (lidarFilesUrl.isEmpty()) {
         return new PointsExtractionResult(new HashMap<>());
       }
 
-      var delimitations = emptyDelimitedPoints(type, roofsEPSG4326);
+      var delimitations = emptyDelimitedPoints(type, roofsEPSG4326Validated);
       var pointsPerFiles = getPointsFromFiles(lidarFilesUrl, delimitations);
-      var all = new HashSet<>(pointsPerFiles);
+      var all = new ArrayList<>(pointsPerFiles);
       all.add(new HashSet<>(delimitations.values()));
-
       var merged = mergeSameRoofEnvelope(all);
 
       validateRoofPointsCount(merged);
@@ -66,9 +76,28 @@ public class LasRoofsPointsExtractor
     }
   }
 
+  private Geometry validateAndFix(Geometry geometry) {
+    log.info("Check and validate geometry={}", geometry);
+    if (geometry instanceof MultiPolygon multiPolygon) {
+      Polygon[] polygons =
+          IntStream.range(0, multiPolygon.getNumGeometries())
+              .mapToObj(i -> (Polygon) multiPolygon.getGeometryN(i))
+              .map(p -> p.isValid() ? p : (Polygon) GeometryFixer.fix(p))
+              .toArray(Polygon[]::new);
+      return geometry.getFactory().createMultiPolygon(polygons);
+    }
+
+    if (geometry instanceof Polygon polygon) {
+      return polygon.isValid() ? polygon : GeometryFixer.fix(polygon);
+    }
+
+    return geometry;
+  }
+
   private static void validateRoofPointsCount(Map<Envelope, DelimitedRoofPoints> delimitedPoints) {
     for (var delimitation : delimitedPoints.values()) {
       var roofPoints = delimitation.getPoints();
+      log.info("RoofPoints (delimitation) size = {}", roofPoints.size());
       if (roofPoints.size() < MIN_BATIMENT_POINTS_COUNT) {
         throw new IllegalStateException(
             "Roof found but no BATIMENT points detected for one of the buildings. "
@@ -78,8 +107,9 @@ public class LasRoofsPointsExtractor
   }
 
   private static Map<Envelope, DelimitedRoofPoints> mergeSameRoofEnvelope(
-      Set<Set<DelimitedRoofPoints>> roofsDataFromFiles) {
+      ArrayList<Set<DelimitedRoofPoints>> roofsDataFromFiles) {
     Map<Envelope, DelimitedRoofPoints> merged = new HashMap<>();
+
     for (var roofDataFromOneFile : roofsDataFromFiles) {
       for (var delimitation : roofDataFromOneFile) {
         var key = delimitation.getOriginalInEPSG4336().getEnvelopeInternal();
@@ -89,7 +119,7 @@ public class LasRoofsPointsExtractor
     return merged;
   }
 
-  private Set<Set<DelimitedRoofPoints>> getPointsFromFiles(
+  private List<Set<DelimitedRoofPoints>> getPointsFromFiles(
       Map<String, Set<Geometry>> filesUrls, Map<Envelope, DelimitedRoofPoints> delimitations) {
     return filesUrls.entrySet().parallelStream()
         .map(
@@ -99,7 +129,7 @@ public class LasRoofsPointsExtractor
               var toProcess = getDelimitationsToProcess(delimitations, roofsInLocalCRS);
               return pointsExtractorFromOneUrl.apply(fileUrl, toProcess);
             })
-        .collect(toSet());
+        .collect(Collectors.toList());
   }
 
   private Set<DelimitedRoofPoints> getDelimitationsToProcess(
@@ -142,5 +172,17 @@ public class LasRoofsPointsExtractor
       return projector.project(roofEPSG4326, WGS84, EPSG_2056);
     }
     return projector.project(roofEPSG4326, WGS84, LAMBERT_93);
+  }
+
+  private static Envelope normalize(Envelope envelope) {
+    return new Envelope(
+        round(envelope.getMinX()),
+        round(envelope.getMaxX()),
+        round(envelope.getMinY()),
+        round(envelope.getMaxY()));
+  }
+
+  private static double round(double value) {
+    return Math.round(value * 1_000_000d) / 1_000_000d;
   }
 }

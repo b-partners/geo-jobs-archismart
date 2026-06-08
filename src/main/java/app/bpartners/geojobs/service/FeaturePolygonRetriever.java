@@ -24,6 +24,7 @@ public class FeaturePolygonRetriever
     implements BiFunction<Feature, Detection.GeoJsonDelimitationTypeEnum, Feature> {
   private final GeometryConverter geometryConverter;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
+  private final BuildingFinder buildingFinder;
 
   @Override
   public Feature apply(
@@ -38,7 +39,7 @@ public class FeaturePolygonRetriever
         } else {
           geometryMultiPolygonCoordinates =
               geometryConverter.multiPolygonToNestedList(
-                  geometryConverter.retrieveNearestRoofMultiPolygon(point));
+                  buildingFinder.getBuildingMultiPolygon(point));
         }
         if (geometryMultiPolygonCoordinates.size() > 1) {
           log.error(

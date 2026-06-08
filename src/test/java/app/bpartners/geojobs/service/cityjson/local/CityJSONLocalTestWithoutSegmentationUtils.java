@@ -32,7 +32,7 @@ class CityJSONLocalTestWithoutSegmentationUtils {
             .collect(toSet());
     var geometry = geometryFactory.createMultiPolygon(pans.toArray(Polygon[]::new));
 
-    var exporter = new Plane3DExtractionStepExporter(OBJECT_MAPPER, outputFolder, "EPSG:2143", "1");
+    var exporter = new Plane3DExtractionStepExporter(OBJECT_MAPPER, outputFolder, "EPSG:2154", "1");
     var cityJsonProcessor =
         new LidarDataToCityJsonProcessor(new CityJsonFactory(directoryOutput), exporter);
     var lasRoofsPointsExtractor = LasRoofsPointsExtractorCreator.create(lasFiles, Set.of(geometry));

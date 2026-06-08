@@ -32,6 +32,7 @@ public class GeoCodeService {
   private final GeoCodingJobRepository repository;
   private final BucketComponent bucketComponent;
   private final EventProducer eventProducer;
+  private final BuildingFinder buildingFinder;
 
   public GeoCodingJob submitGeoCodingJobThroughExcel(
       String endToEndId, String communityOwnerId, File excelFile) {
@@ -77,19 +78,29 @@ public class GeoCodeService {
       throw new BadRequestException("Address is mandatory");
     }
     try {
-      var geoPosition = geoCodeApi.searchGeoPositionFromAddress(address);
-      var longitude = BigDecimal.valueOf(geoPosition.longitude());
-      var latitude = BigDecimal.valueOf(geoPosition.latitude());
-      var nearestRoofMultiPolygon =
-          geometryConverter.retrieveNearestRoofMultiPolygon(List.of(longitude, latitude));
+      var nearestRoofMultiPolygon = buildingFinder.getBuildingMultiPolygon(address);
 
       var properties = new HashMap<String, Object>();
       properties.put("address", address);
 
       return geometryConverter.toFeature(
           null, HOUSES_0.getZoomLevel(), properties, nearestRoofMultiPolygon);
-    } catch (IOException | InterruptedException | ApiException e) {
-      throw new BadRequestException("Unable to geocode address : " + address);
+    } catch (RuntimeException e) {
+      try {
+        var geoPosition = geoCodeApi.searchGeoPositionFromAddress(address);
+        var longitude = BigDecimal.valueOf(geoPosition.longitude());
+        var latitude = BigDecimal.valueOf(geoPosition.latitude());
+        var nearestRoofMultiPolygon =
+            buildingFinder.getBuildingMultiPolygon(List.of(longitude, latitude));
+
+        var properties = new HashMap<String, Object>();
+        properties.put("address", address);
+
+        return geometryConverter.toFeature(
+            null, HOUSES_0.getZoomLevel(), properties, nearestRoofMultiPolygon);
+      } catch (IOException | InterruptedException | ApiException exception) {
+        throw new BadRequestException("Unable to geocode address : " + address);
+      }
     }
   }
 }

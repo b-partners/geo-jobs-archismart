@@ -31,12 +31,14 @@ class DetectionDelimitationRetrieverTest {
   DetectionRepository detectionRepositoryMock = mock();
   ObjectMapper objectMapperMock = mock();
   IgnCadastreFeatureFetcher ignCadastreFeatureFetcher = mock();
+  BuildingFinder buildingFinderMock = mock();
   DetectionDelimitationRetriever subject =
       new DetectionDelimitationRetriever(
           geometryConverterMock,
           detectionRepositoryMock,
           objectMapperMock,
-          ignCadastreFeatureFetcher);
+          ignCadastreFeatureFetcher,
+          buildingFinderMock);
 
   @SneakyThrows
   @Test
@@ -72,11 +74,11 @@ class DetectionDelimitationRetrieverTest {
     var detection = detection(List.of(providedGeoJson), ZONE);
 
     when(detectionRepositoryMock.save(any())).thenReturn(detection);
-    when(geometryConverterMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
+    when(buildingFinderMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
 
     subject.accept(detection);
 
-    verify(geometryConverterMock, times(1)).retrieveRoofPolygonsFrom(any());
+    verify(buildingFinderMock, times(1)).retrieveRoofPolygonsFrom(any());
   }
 
   @Test
@@ -85,11 +87,11 @@ class DetectionDelimitationRetrieverTest {
     var detection = detection(List.of(providedGeoJson), null);
 
     when(detectionRepositoryMock.save(any())).thenReturn(detection);
-    when(geometryConverterMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
+    when(buildingFinderMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
 
     subject.accept(detection);
 
-    verify(geometryConverterMock, times(1)).retrieveRoofPolygonsFrom(any());
+    verify(buildingFinderMock, times(1)).retrieveRoofPolygonsFrom(any());
   }
 
   @Test

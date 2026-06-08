@@ -15,7 +15,6 @@ import app.bpartners.geojobs.endpoint.event.model.zone.ImportedZoneTilingJobSave
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobStatusChanged;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobWithoutTasksCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.TilingTaskMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoomMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
@@ -52,16 +51,10 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   private final ZoneDetectionJobService detectionJobService;
   private final JobFilteredMailer<ZoneTilingJob> tilingFilteredMailer;
   private final NotFinishedTaskRetriever<ParcelTilingTask> notFinishedTaskRetriever;
-  private static ZoomMapper zoomMapper;
-  private static TilingTaskMapper tilingTaskMapper;
+  private final ZoomMapper zoomMapper;
+  private final TilingTaskMapper tilingTaskMapper;
   private final TilingTaskConsumer tilingTaskConsumer;
   private final Workers workers;
-
-  static {
-    FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
-    zoomMapper = new ZoomMapper();
-    tilingTaskMapper = new TilingTaskMapper(featureMapper);
-  }
 
   public ZoneTilingJobService(
       JpaRepository<ZoneTilingJob, String> repository,
@@ -295,10 +288,10 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   }
 
   @SneakyThrows
-  public static List<ParcelTilingTask> getTilingTasks(CreateZoneTilingJob job, String jobId) {
+  public List<ParcelTilingTask> getTilingTasks(CreateZoneTilingJob job, String jobId) {
     var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
     var providedFeatures = Objects.requireNonNull(job.getFeatures());
-    var geometryConverter = new GeometryConverter(null, null);
+    var geometryConverter = new GeometryConverter();
     var imageZoom = computeSupportedImageZoom(job);
     var tilePolygonRetriever = new TilePolygonRetriever(new TileFinder(), geometryConverter);
     var featuresSplitByTiles =

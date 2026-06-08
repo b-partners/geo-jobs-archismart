@@ -2,44 +2,36 @@ package app.bpartners.geojobs.service.cityjson.texture;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
+import static app.bpartners.geojobs.service.cityjson.texture.Converter.lonLatToPixelInTile;
 
-import app.bpartners.geojobs.model.lidar.planes.algorithm.Vector3DUtils;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.cityjson.texture.model.CityJsonWithVertices;
 import app.bpartners.geojobs.service.cityjson.texture.model.RasterInfo;
-import app.bpartners.geojobs.service.cityjson.texture.model.RowCol;
 import app.bpartners.geojobs.service.cityjson.texture.model.TextureInfo;
 import app.bpartners.geojobs.service.cityjson.texture.model.TexturedCityJson;
-import app.bpartners.geojobs.service.cityjson.texture.model.UV;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
-import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.math.Vector3D;
 import org.springframework.stereotype.Component;
 
+// TODO: refactor
 @Component
 @RequiredArgsConstructor
 public class CityJsonTextureDomainService {
+  private static final String VALUES_ATTRIBUTE_NAME = "values";
+  private static final String DEFAULT_ATTRIBUTE_NAME = "default";
+  private static final String TEXTURE_ATTRIBUTE_NAME = "texture";
+  private static final String MATERIAL_ATTRIBUTE_NAME = "material";
 
-  public static final String VALUES_ATTRIBUTE_NAME = "values";
-  public static final String DEFAULT_ATTRIBUTE_NAME = "default";
-  public static final String TEXTURE_ATTRIBUTE_NAME = "texture";
-  public static final String MATERIAL_ATTRIBUTE_NAME = "material";
   private final ObjectMapper objectMapper;
-  private final GeometrySquareMeterArea geometrySquareMeterArea;
+  private final GeometrySquareMeterArea projector;
 
-  public CityJsonWithVertices toCityJsonFile(ObjectNode json) {
+  public CityJsonWithVertices toCityJsonWithVertices(ObjectNode json) {
     ArrayNode rawVertices = (ArrayNode) json.get("vertices");
 
     double scaleX = 1.0;
@@ -51,10 +43,9 @@ public class CityJsonTextureDomainService {
     double translateZ = 0.0;
 
     if (json.has("transform")) {
-      JsonNode transform = json.get("transform");
-
-      JsonNode scale = transform.get("scale");
-      JsonNode translate = transform.get("translate");
+      var transform = json.get("transform");
+      var scale = transform.get("scale");
+      var translate = transform.get("translate");
 
       scaleX = scale.get(0).asDouble();
       scaleY = scale.get(1).asDouble();
@@ -65,116 +56,82 @@ public class CityJsonTextureDomainService {
       translateZ = translate.get(2).asDouble();
     }
 
-    CoordinateReferenceSystem crs = LAMBERT_93;
-
-    List<Vector3D> vertices = new ArrayList<>();
-
-    for (JsonNode rawVertex : rawVertices) {
+    List<Coordinate> vertices = new ArrayList<>();
+    for (var rawVertex : rawVertices) {
       double x = rawVertex.get(0).asDouble() * scaleX + translateX;
       double y = rawVertex.get(1).asDouble() * scaleY + translateY;
       double z = rawVertex.get(2).asDouble() * scaleZ + translateZ;
-
-      vertices.add(new Vector3D(x, y, z));
+      vertices.add(new Coordinate(x, y, z));
     }
 
-    return new CityJsonWithVertices(json, vertices, crs);
-  }
-
-  public List<Vector3D> project(
-      List<Vector3D> vectors,
-      CoordinateReferenceSystem sourceCrs,
-      CoordinateReferenceSystem targetCrs) {
-    return vectors.stream()
-        .map(
-            v -> {
-              Point origin = geometryFactory.createPoint(new Coordinate(v.getX(), v.getY()));
-              Point projected =
-                  (Point) geometrySquareMeterArea.project(origin, sourceCrs, targetCrs);
-              return new Vector3D(
-                  projected.getCoordinate().x, projected.getCoordinate().y, v.getZ());
-            })
-        .toList();
+    return new CityJsonWithVertices(json, vertices, LAMBERT_93);
   }
 
   public TexturedCityJson texture(
       CityJsonWithVertices cityJsonWithVertices, TextureInfo textureInfo) {
-    ObjectNode cityJson = cityJsonWithVertices.json().deepCopy();
+    var rasterInfo = textureInfo.rasterInfo();
+    var vertices = cityJsonWithVertices.vertices();
+    var cityJson = cityJsonWithVertices.json().deepCopy();
+    var cityObjects = (ObjectNode) cityJson.get("CityObjects");
+    var objects = cityObjects.elements();
 
-    RasterInfo rasterInfo = textureInfo.rasterInfo();
-
-    List<Vector3D> vertices = cityJsonWithVertices.vertices();
+    List<Coordinate> vertexTexture = new ArrayList<>();
     ObjectNode appearance = initAppearance(textureInfo);
-
-    List<UV> vertexTexture = new ArrayList<>();
     Map<String, Integer> vertexTextureMap = new HashMap<>();
-
-    ObjectNode cityObjects = (ObjectNode) cityJson.get("CityObjects");
-    Iterator<JsonNode> objects = cityObjects.elements();
-
     while (objects.hasNext()) {
-      ObjectNode cityObject = (ObjectNode) objects.next();
-
-      if (!"Building".equals(cityObject.get("type").asText())) {
+      var cityObject = (ObjectNode) objects.next();
+      var supportedObjectTypes = List.of("Building", "BuildingPart");
+      var cityObjectType = cityObject.get("type").asText();
+      if (!supportedObjectTypes.contains(cityObjectType)) {
         continue;
       }
 
-      ArrayNode geometries = (ArrayNode) cityObject.get("geometry");
-
-      for (JsonNode geometryNode : geometries) {
+      var geometries = (ArrayNode) cityObject.get("geometry");
+      for (var geometryNode : geometries) {
         texturizeGeometry(
             (ObjectNode) geometryNode, vertices, rasterInfo, vertexTexture, vertexTextureMap);
       }
     }
 
-    ArrayNode verticesTextureNode = objectMapper.createArrayNode();
-
-    for (UV uv : vertexTexture) {
-      ArrayNode uvNode = objectMapper.createArrayNode();
-      uvNode.add(uv.u());
-      uvNode.add(uv.v());
+    var verticesTextureNode = objectMapper.createArrayNode();
+    for (var uv : vertexTexture) {
+      var uvNode = objectMapper.createArrayNode();
+      uvNode.add(uv.getX());
+      uvNode.add(uv.getY());
       verticesTextureNode.add(uvNode);
     }
 
     appearance.set("vertices-texture", verticesTextureNode);
     cityJson.set("appearance", appearance);
-
     return new TexturedCityJson(cityJson);
   }
 
   private ObjectNode initAppearance(TextureInfo textureInfo) {
-    String imageDataUri = textureInfo.dataUri();
-
+    var imageDataUri = textureInfo.dataUri();
     String textureDataUri = null;
     if (imageDataUri != null) {
       textureDataUri = imageDataUri;
     }
-
     return initAppearance(textureDataUri);
   }
 
   private void texturizeGeometry(
-      ObjectNode geometryNode,
-      List<Vector3D> vertices,
+      ObjectNode geometry,
+      List<Coordinate> vertices,
       RasterInfo rasterInfo,
-      List<UV> vertexTexture,
+      List<Coordinate> vertexTexture,
       Map<String, Integer> vertexTextureMap) {
-    ObjectNode geometry = geometryNode;
+    var geometryAppearance = initGeometryAppearance();
 
-    ObjectNode geometryAppearance = initGeometryAppearance();
     geometry.set("appearance", geometryAppearance);
 
-    List<JsonNode> faces = extractFaces(geometry);
-
-    ArrayNode surfaces = getSemanticSurfaces(geometry);
-    boolean hasSemantics = surfaces != null && surfaces.size() == faces.size();
-
-    List<String> surfaceTypes = resolveSurfaceTypes(surfaces, faces.size(), hasSemantics);
-
+    var faces = extractFaces(geometry);
+    var semantics = getSemanticSurfaces(geometry);
+    var surfaceTypes = resolveSurfaceTypes(semantics, faces.size());
     for (int i = 0; i < faces.size(); i++) {
       processFace(
           faces.get(i),
           surfaceTypes.get(i),
-          hasSemantics,
           vertices,
           rasterInfo,
           vertexTexture,
@@ -183,29 +140,26 @@ public class CityJsonTextureDomainService {
     }
   }
 
-  public List<UV> computeUv(List<Vector3D> coords, RasterInfo rasterInfo) {
-    List<UV> result = new ArrayList<>();
+  public List<Coordinate> getUV(List<Coordinate> vertices, RasterInfo info) {
+    var result = new ArrayList<Coordinate>();
 
-    for (Vector3D coord : coords) {
-      RowCol rowCol = rowColAffine(rasterInfo, coord.getX(), coord.getY());
-
-      double u = rowCol.col() / rasterInfo.width();
-      double v = 1.0 - (rowCol.row() / rasterInfo.height());
-
-      result.add(new UV(u, v));
+    for (var vertex : vertices) {
+      var pixelVertex = getPixelCoordinate(info, vertex);
+      double u = pixelVertex.getX() / info.width();
+      double v = 1.0 - (pixelVertex.getY() / info.height());
+      result.add(new Coordinate(u, v));
     }
 
     return result;
   }
 
   public List<Integer> deduplicateUvs(
-      List<UV> uv, List<UV> vertexTexture, Map<String, Integer> vertexTextureMap) {
+      List<Coordinate> uv, List<Coordinate> vertexTexture, Map<String, Integer> vertexTextureMap) {
     List<Integer> vtIndices = new ArrayList<>();
 
-    for (UV coordinate : uv) {
-      String key = "%.6f,%.6f".formatted(coordinate.u(), coordinate.v());
-
-      Integer existingIndex = vertexTextureMap.get(key);
+    for (var coordinate : uv) {
+      var key = "%.6f,%.6f".formatted(coordinate.getX(), coordinate.getY());
+      var existingIndex = vertexTextureMap.get(key);
 
       if (existingIndex == null) {
         int newIndex = vertexTexture.size();
@@ -221,25 +175,25 @@ public class CityJsonTextureDomainService {
   }
 
   public ObjectNode initAppearance(String textureDataUri) {
-    ObjectNode appearance = objectMapper.createObjectNode();
+    var appearance = objectMapper.createObjectNode();
+    var textures = objectMapper.createArrayNode();
+    var texture = objectMapper.createObjectNode();
 
-    ArrayNode textures = objectMapper.createArrayNode();
-    ObjectNode texture = objectMapper.createObjectNode();
     texture.put("type", "PNG");
     texture.put("image", textureDataUri);
     textures.add(texture);
 
-    ArrayNode materials = objectMapper.createArrayNode();
+    var materials = objectMapper.createArrayNode();
+    var roofMaterial = objectMapper.createObjectNode();
 
-    ObjectNode roofMaterial = objectMapper.createObjectNode();
     roofMaterial.put("name", "roof_material");
     roofMaterial.put("ambientIntensity", 1.0);
     materials.add(roofMaterial);
 
-    ObjectNode wallMaterial = objectMapper.createObjectNode();
+    var wallMaterial = objectMapper.createObjectNode();
     wallMaterial.put("name", "wall_gray");
 
-    ArrayNode diffuseColor = objectMapper.createArrayNode();
+    var diffuseColor = objectMapper.createArrayNode();
     diffuseColor.add(0.6);
     diffuseColor.add(0.6);
     diffuseColor.add(0.6);
@@ -255,15 +209,15 @@ public class CityJsonTextureDomainService {
   }
 
   public ObjectNode initGeometryAppearance() {
-    ObjectNode geometryAppearance = objectMapper.createObjectNode();
+    var geometryAppearance = objectMapper.createObjectNode();
 
-    ObjectNode texture = objectMapper.createObjectNode();
-    ObjectNode textureDefault = objectMapper.createObjectNode();
+    var texture = objectMapper.createObjectNode();
+    var textureDefault = objectMapper.createObjectNode();
     textureDefault.set(VALUES_ATTRIBUTE_NAME, objectMapper.createArrayNode());
     texture.set(DEFAULT_ATTRIBUTE_NAME, textureDefault);
 
-    ObjectNode material = objectMapper.createObjectNode();
-    ObjectNode materialDefault = objectMapper.createObjectNode();
+    var material = objectMapper.createObjectNode();
+    var materialDefault = objectMapper.createObjectNode();
     materialDefault.set(VALUES_ATTRIBUTE_NAME, objectMapper.createArrayNode());
     material.set(DEFAULT_ATTRIBUTE_NAME, materialDefault);
 
@@ -276,62 +230,55 @@ public class CityJsonTextureDomainService {
   public void processFace(
       JsonNode face,
       String faceType,
-      boolean hasSemantics,
-      List<Vector3D> vertices,
+      List<Coordinate> vertices,
       RasterInfo rasterInfo,
-      List<UV> vertexTexture,
+      List<Coordinate> vertexTexture,
       Map<String, Integer> vertexTextureMap,
       ObjectNode geometryAppearance) {
-    List<Vector3D> coords = getFaceCoords(face, vertices);
-
-    if (coords.size() < 3) {
+    var coordinates = getFaceCoordinates(face, vertices);
+    if (coordinates.size() < 3) {
       return;
     }
 
-    List<UV> uv = computeUv(coords, rasterInfo);
+    var roof = isRoofSemantic(faceType);
+    var uv = getUV(coordinates, rasterInfo);
+    var vtIndices = deduplicateUvs(uv, vertexTexture, vertexTextureMap);
 
-    List<Integer> vtIndices = deduplicateUvs(uv, vertexTexture, vertexTextureMap);
-
-    boolean roof = hasSemantics ? isRoofSemantic(faceType) : isRoof(coords);
-
-    ArrayNode textureValues =
+    var textureValues =
         (ArrayNode)
             geometryAppearance
                 .get(TEXTURE_ATTRIBUTE_NAME)
                 .get(DEFAULT_ATTRIBUTE_NAME)
                 .get(VALUES_ATTRIBUTE_NAME);
 
-    ArrayNode materialValues =
+    var materialValues =
         (ArrayNode)
             geometryAppearance
                 .get(MATERIAL_ATTRIBUTE_NAME)
                 .get(DEFAULT_ATTRIBUTE_NAME)
                 .get(VALUES_ATTRIBUTE_NAME);
 
-    if (roof) {
-      ArrayNode ringTextureIndices = objectMapper.createArrayNode();
-
-      for (Integer index : vtIndices) {
-        ringTextureIndices.add(index);
-      }
-
-      ArrayNode faceTextureIndices = objectMapper.createArrayNode();
-      faceTextureIndices.add(ringTextureIndices);
-
-      textureValues.add(faceTextureIndices);
-      materialValues.add(0);
-    } else {
+    if (!roof) {
       textureValues.addNull();
-
-      if (!hasSemantics) {
-        materialValues.add(1);
-      }
+      materialValues.add(1);
+      return;
     }
+
+    var ringTextureIndices = objectMapper.createArrayNode();
+    for (var index : vtIndices) {
+      ringTextureIndices.add(index);
+    }
+
+    var faceTextureIndices = objectMapper.createArrayNode();
+    faceTextureIndices.add(ringTextureIndices);
+
+    textureValues.add(faceTextureIndices);
+    materialValues.add(0);
   }
 
   public List<JsonNode> extractFaces(ObjectNode geometry) {
-    String type = geometry.get("type").asText();
-    ArrayNode boundaries = (ArrayNode) geometry.get("boundaries");
+    var type = geometry.get("type").asText();
+    var boundaries = (ArrayNode) geometry.get("boundaries");
 
     List<JsonNode> faces = new ArrayList<>();
 
@@ -342,7 +289,7 @@ public class CityJsonTextureDomainService {
         }
       }
     } else {
-      for (JsonNode face : boundaries) {
+      for (var face : boundaries) {
         faces.add(face);
       }
     }
@@ -350,66 +297,53 @@ public class CityJsonTextureDomainService {
     return faces;
   }
 
-  public List<Vector3D> getFaceCoords(JsonNode face, List<Vector3D> vertices) {
-    JsonNode outerRing = face.get(0);
-
-    List<Vector3D> coords = new ArrayList<>();
-
-    for (JsonNode vertexIndexNode : outerRing) {
+  public List<Coordinate> getFaceCoordinates(JsonNode face, List<Coordinate> vertices) {
+    var outerRing = face.get(0);
+    List<Coordinate> coordinates = new ArrayList<>();
+    for (var vertexIndexNode : outerRing) {
       int vertexIndex = vertexIndexNode.asInt();
-      coords.add(vertices.get(vertexIndex));
+      coordinates.add(vertices.get(vertexIndex));
     }
 
-    return coords;
-  }
-
-  public boolean isRoof(List<Vector3D> coords) {
-    if (coords.size() < 3) {
-      return false;
-    }
-
-    Vector3D p0 = coords.get(0);
-    Vector3D p1 = coords.get(1);
-    Vector3D p2 = coords.get(2);
-
-    Vector3D v1 = new Vector3D(p1.getX() - p0.getX(), p1.getY() - p0.getY(), p1.getZ() - p0.getZ());
-    Vector3D v2 = new Vector3D(p2.getX() - p0.getX(), p2.getY() - p0.getY(), p2.getZ() - p0.getZ());
-    Vector3D normal = Vector3DUtils.cross(v1, v2);
-
-    double unitZ = normal.getZ() / (normal.length() + 1e-12);
-
-    return Math.abs(unitZ) > 0.7;
+    return coordinates;
   }
 
   public boolean isRoofSemantic(String faceType) {
-    return faceType != null && faceType.toLowerCase(Locale.ROOT).contains("roof");
+    return "RoofSurface".equals(faceType);
   }
 
-  public ArrayNode getSemanticSurfaces(ObjectNode geometry) {
+  public List<String> getSemanticSurfaces(ObjectNode geometry) {
     if (!geometry.has("semantics")) {
       return null;
     }
 
-    JsonNode semantics = geometry.get("semantics");
-
-    if (!semantics.has("surfaces")) {
+    var semantics = geometry.get("semantics");
+    if (!semantics.has("surfaces") || !semantics.has("values")) {
       return null;
     }
 
-    return (ArrayNode) semantics.get("surfaces");
+    var surfaces = (ArrayNode) semantics.get("surfaces");
+    var values = (ArrayNode) semantics.get("values");
+    if (values.get(0) instanceof ArrayNode) {
+      values = (ArrayNode) values.get(0);
+    }
+
+    var result = new ArrayList<String>();
+    for (var value : values) {
+      var surfacesIndex = value.asInt();
+      result.add(surfaces.get(surfacesIndex).get("type").asText());
+    }
+    return result;
   }
 
-  public List<String> resolveSurfaceTypes(ArrayNode surfaces, int faceCount, boolean hasSemantics) {
+  public List<String> resolveSurfaceTypes(List<String> semantics, int faceCount) {
     List<String> surfaceTypes = new ArrayList<>();
 
-    if (hasSemantics) {
-      for (JsonNode surface : surfaces) {
-        String type = surface.has("type") ? surface.get("type").asText() : "WallSurface";
-
-        surfaceTypes.add(type);
-      }
-    } else {
-      for (int i = 0; i < faceCount; i++) {
+    for (int i = 0; i < faceCount; i++) {
+      if (semantics != null && i < semantics.size()) {
+        var semantic = semantics.get(i);
+        surfaceTypes.add(semantic);
+      } else {
         surfaceTypes.add(null);
       }
     }
@@ -417,27 +351,11 @@ public class CityJsonTextureDomainService {
     return surfaceTypes;
   }
 
-  public RowCol rowColAffine(RasterInfo t, double x, double y) {
-    double a = t.pixelWidth();
-    double b = t.shearX();
-    double c = t.originX();
-
-    double d = t.shearY();
-    double e = t.pixelHeight();
-    double f = t.originY();
-
-    double determinant = a * e - b * d;
-
-    if (Math.abs(determinant) < 1e-12) {
-      throw new IllegalArgumentException("Raster transform is not invertible");
-    }
-
-    double dx = x - c;
-    double dy = y - f;
-
-    double col = (e * dx - b * dy) / determinant;
-    double row = (-d * dx + a * dy) / determinant;
-
-    return new RowCol(row, col);
+  public Coordinate getPixelCoordinate(RasterInfo info, Coordinate vertex) {
+    var coordinate = new Coordinate(vertex.getX(), vertex.getY(), vertex.getZ());
+    var vertexAsPoint = geometryFactory.createPoint(coordinate);
+    var latLon = projector.project(vertexAsPoint, LAMBERT_93, WGS84);
+    return lonLatToPixelInTile(
+        latLon.getCoordinate(), info.tileX(), info.tileY(), info.zoom(), info.tileImageSizePx());
   }
 }

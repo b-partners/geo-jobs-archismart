@@ -98,7 +98,7 @@ class TileDetectionTaskConsumerTest {
     var centroidCoordinates = List.of(BigDecimal.valueOf(0), BigDecimal.valueOf(1));
     var roofMultiPolygonMock = mock(org.locationtech.jts.geom.MultiPolygon.class);
     var maskFileMock = mock(File.class);
-    var detectionResponseMock = mock(DetectionResponse.class);
+    var detectionResponseMock = mock(DetectionResponseV2.class);
     var machineDetectedTileMock = mock(MachineDetectedTile.class);
     var providedFeatureMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
     var roofDelimitationMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
@@ -174,7 +174,7 @@ class TileDetectionTaskConsumerTest {
     var featureMultiPolygonMock = mock(MultiPolygon.class);
     var roofMultiPolygonMock = mock(org.locationtech.jts.geom.MultiPolygon.class);
     var maskFileMock = mock(File.class);
-    var detectionResponseMock = mock(DetectionResponse.class);
+    var detectionResponseMock = mock(DetectionResponseV2.class);
     var machineDetectedTileMock = mock(MachineDetectedTile.class);
     var providedFeatureMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
     var roofDelimitationMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
@@ -259,7 +259,7 @@ class TileDetectionTaskConsumerTest {
     var featureGeometryMock = mock(FeatureGeometry.class);
     var featureMultiPolygonMock = mock(MultiPolygon.class);
     var centroidCoordinates = List.of(BigDecimal.valueOf(0), BigDecimal.valueOf(1));
-    var detectionResponseMock = mock(DetectionResponse.class);
+    var detectionResponseMock = mock(DetectionResponseV2.class);
     var machineDetectedTileMock = mock(MachineDetectedTile.class);
     var providedFeatureMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
     var roofDelimitationMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);

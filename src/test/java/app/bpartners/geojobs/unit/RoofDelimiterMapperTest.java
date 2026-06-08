@@ -3,11 +3,13 @@ package app.bpartners.geojobs.unit;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;
 import app.bpartners.geojobs.endpoint.rest.model.RoofDelimiter;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,7 +18,9 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 
 class RoofDelimiterMapperTest {
-  private final FeatureMapper featureMapper = new FeatureMapper(new GeometryConverter(null, null));
+  BuildingFinder buildingFinderMock = mock(BuildingFinder.class);
+  private final FeatureMapper featureMapper =
+      new FeatureMapper(new GeometryConverter(), buildingFinderMock);
   private final RoofDelimiterMapper subject = new RoofDelimiterMapper(featureMapper);
 
   private RoofDelimiter sampleRoofDelimiter() {

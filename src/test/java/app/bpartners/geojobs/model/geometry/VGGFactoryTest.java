@@ -18,7 +18,7 @@ import org.springframework.core.io.ClassPathResource;
 
 @Slf4j
 class VGGFactoryTest {
-  GeometryConverter geometryConverter = new GeometryConverter(null, null);
+  GeometryConverter geometryConverter = new GeometryConverter();
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection =
       new TileCoordinatesPolygonIntersection(new GeometryPixelProjector(), geometryConverter);
   GeometrySquareMeterArea geometrySquareMeterArea = new GeometrySquareMeterArea();

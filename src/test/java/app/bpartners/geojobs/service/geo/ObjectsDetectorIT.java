@@ -58,9 +58,7 @@ class ObjectsDetectorIT extends FacadeIT {
             List.of(DetectableObjectConfiguration.builder().objectType(PASSAGE_PIETON).build()));
 
     assertNotNull(actual);
-    assertNotNull(actual.getRstImageUrl());
-    assertNotNull(actual.getSrcImageUrl());
-    assertNotNull(actual.getRstRaw());
+    assertNotNull(actual.getImages());
   }
 
   @Test

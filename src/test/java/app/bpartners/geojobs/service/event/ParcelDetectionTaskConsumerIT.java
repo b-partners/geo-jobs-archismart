@@ -17,7 +17,7 @@ import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.*;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.DetectionMapper;
-import app.bpartners.geojobs.service.detection.DetectionResponse;
+import app.bpartners.geojobs.service.detection.DetectionResponseV2;
 import app.bpartners.geojobs.service.detection.TileObjectDetector;
 import app.bpartners.geojobs.utils.detection.SpecificDetectionTaskCreator;
 import java.time.Instant;
@@ -81,7 +81,8 @@ class ParcelDetectionTaskConsumerIT extends FacadeIT {
 
   @BeforeEach
   void setUp() {
-    when(objectDetector.apply(any(), any(), any())).thenReturn(DetectionResponse.builder().build());
+    when(objectDetector.apply(any(), any(), any()))
+        .thenReturn(DetectionResponseV2.builder().build());
     when(detectionMapper.toDetectedTile(any(), any(), any(), any(), any()))
         .thenReturn(new MachineDetectedTile());
     when(tileDetectionTaskRepository.saveAll(any())).thenReturn(List.of(new TileDetectionTask()));
