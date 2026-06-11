@@ -74,8 +74,8 @@ class GoogleGeocodingClientApiIT {
   @SneakyThrows
   @Test
   void geocode_location() {
-    var latitude = 43.57439412981392;
-    var longitude = 1.3805643810445678;
+    var latitude = 50.630354206820485;
+    var longitude = 3.068383335021788;
 
     var actual = subject.findBuildingByLocation(latitude, longitude);
 

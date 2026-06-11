@@ -55,7 +55,7 @@ public class GoogleGeocodingClientApi {
             null,
             new GeocodingDtos.LocationQuery(
                 new GeocodingDtos.LatLng(latitude, longitude),
-                new GeocodingDtos.PlaceFilter("BUILDING", "PRIMARY")),
+                new GeocodingDtos.PlaceFilter("BUILDING", "ANY")),
             "fr",
             "FR");
     return search(request);
@@ -94,12 +94,13 @@ public class GoogleGeocodingClientApi {
     GeocodingDtos.Destination dest = response.destinations().getFirst();
     GeocodingDtos.PlaceView primary = dest.primary();
     if (primary == null || primary.displayPolygon() == null || primary.displayPolygon().isEmpty()) {
+      if (body.locationQuery() != null) {
+        log.error("No building polygon found for location {}", body.locationQuery());
+        return Optional.empty();
+      }
       var containingPlaces = dest.containingPlaces();
       if (containingPlaces == null || containingPlaces.isEmpty()) {
-        log.error(
-            "No building found for address {} or location {}",
-            body.addressQuery(),
-            body.locationQuery());
+        log.error("No building found for address {}", body.addressQuery());
         return Optional.empty();
       }
       var firstContainingPlace = containingPlaces.getFirst();
