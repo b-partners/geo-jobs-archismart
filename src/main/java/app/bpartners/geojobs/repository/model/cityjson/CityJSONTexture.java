@@ -36,30 +36,6 @@ public class CityJSONTexture {
   @Column(name = "zoom")
   private int zoom;
 
-  @Deprecated
-  @Column(name = "top_left_longitude")
-  private double topLeftLongitude;
-
-  @Deprecated
-  @Column(name = "top_left_latitude")
-  private double topLeftLatitude;
-
-  @Deprecated
-  @Column(name = "pixel_width")
-  private double pixelWidth;
-
-  @Deprecated
-  @Column(name = "pixel_height")
-  private double pixelHeight;
-
-  @Deprecated
-  @Column(name = "shear_x")
-  private double shearX;
-
-  @Deprecated
-  @Column(name = "shear_y")
-  private double shearY;
-
   @ManyToOne
   @JoinColumn(name = "city_json_request_id")
   private CityJSONRequest cityJsonRequest;

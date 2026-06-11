@@ -38,6 +38,10 @@ public class CityJSONRequestMapper {
                 })
             .toList();
 
+    var textures = cityJSONRequest.getTextures();
+    var texture =
+        textures != null && !textures.isEmpty() ? textureMapper.toRest(textures.getFirst()) : null;
+
     return new CityJSONRequest()
         .id(cityJSONRequest.getId())
         .delimitations(restDelimitations)
@@ -46,7 +50,7 @@ public class CityJSONRequestMapper {
                 cityJSONRequest.getDelimitationObjectType()))
         .status(CityJSONRequestStatusMapper.toRest(cityJSONRequest.getStatus()))
         .delimitationType(cityJSONRequest.getDelimitationType())
-        .threeDTextureInfo(null)
+        .threeDTextureInfo(texture)
         .cityJsons(restCityJsons);
   }
 

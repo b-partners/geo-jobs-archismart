@@ -12,6 +12,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.geom.util.GeometryFixer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -30,8 +31,9 @@ public class SwissBoundaryChecker {
   }
 
   public boolean isGeometryInSwiss(Geometry geometry) {
-    return swissBoundary.getEnvelopeInternal().intersects(geometry.getEnvelopeInternal())
-        && swissBoundary.contains(geometry);
+    Geometry fixed = GeometryFixer.fix(geometry);
+    return swissBoundary.getEnvelopeInternal().intersects(fixed.getEnvelopeInternal())
+        && swissBoundary.contains(fixed);
   }
 
   private Geometry parseGeoJsonPolygon(String geoJson) throws JsonProcessingException {

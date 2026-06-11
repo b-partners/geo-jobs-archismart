@@ -65,6 +65,35 @@ class CityJsonTextureComputerTest {
     log.info("CityJSON with texture = {}", actual.getAbsolutePath());
   }
 
+  @Test
+  void switzerland() {
+    var cityjson =
+        getFile(
+            "cityjson/texture/inputs/switzerland/Chem. de Conches 44, 1321 Conches, Suisse.json");
+    var actual = subject.applyTexture(switzerlandRequest(), cityjson);
+
+    assertNotSame(actual, cityjson);
+    log.info("CityJSON with texture = {}", actual.getAbsolutePath());
+  }
+
+  private static CityJSONRequest switzerlandRequest() {
+    var texture =
+        CityJSONTexture.builder()
+            .zoom(19)
+            .tileX(271136)
+            .tileY(186147)
+            .imageWidth(3072)
+            .imageHeight(3072)
+            .imageUri(
+                getFile(
+                        "cityjson/texture/inputs/switzerland/Chem. de Conches 44, 1321 Conches,"
+                            + " Suisse.jpg")
+                    .getAbsolutePath())
+            .tileImageSizePx(1024)
+            .build();
+    return CityJSONRequest.builder().textures(List.of(texture)).build();
+  }
+
   private static CityJSONRequest roof7Request() {
     var texture =
         CityJSONTexture.builder()

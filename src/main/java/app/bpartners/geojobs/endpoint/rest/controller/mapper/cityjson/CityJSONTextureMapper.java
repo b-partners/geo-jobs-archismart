@@ -24,4 +24,16 @@ public class CityJSONTextureMapper {
         .tileImageSizePx(texture.getTileImageSizePx())
         .build();
   }
+
+  public ThreeDTextureInfo toRest(CityJSONTexture texture) {
+    return new ThreeDTextureInfo()
+        .imageUri(texture.getImageUri())
+        .tileImageSizePx(texture.getTileImageSizePx())
+        .imageWidth(texture.getImageWidth())
+        .imageHeight(texture.getImageHeight())
+        .imageUri(texture.getImageUri())
+        .zoom(texture.getZoom())
+        .tileX(texture.getTileX())
+        .tileY(texture.getTileY());
+  }
 }

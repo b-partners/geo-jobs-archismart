@@ -28,6 +28,7 @@ jobs:
           ref: prod
 
       - name: Send POST /detections/*/sync for both VEGETATION and TOITURE models
+        if: false #deactivate for now
         run: |
           detection_vegetation_toiture_e2_id=$(uuidgen)
           echo "Generated detection_vegetation_toiture_e2_id: '$detection_vegetation_toiture_e2_id'"

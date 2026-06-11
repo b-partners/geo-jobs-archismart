@@ -1,8 +1,7 @@
 package app.bpartners.geojobs.service.cityjson.texture;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
-import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.*;
 import static app.bpartners.geojobs.service.cityjson.texture.Converter.lonLatToPixelInTile;
 
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
@@ -16,10 +15,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.locationtech.jts.geom.Coordinate;
 import org.springframework.stereotype.Component;
 
-// TODO: refactor
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CityJsonTextureDomainService {
@@ -27,6 +28,8 @@ public class CityJsonTextureDomainService {
   private static final String DEFAULT_ATTRIBUTE_NAME = "default";
   private static final String TEXTURE_ATTRIBUTE_NAME = "texture";
   private static final String MATERIAL_ATTRIBUTE_NAME = "material";
+  public static final String METADATA_ATTRIBUTE_NAME = "metadata";
+  public static final String REFERENCE_SYSTEM_ATTRIBUTE_NAME = "referenceSystem";
 
   private final ObjectMapper objectMapper;
   private final GeometrySquareMeterArea projector;
@@ -64,13 +67,35 @@ public class CityJsonTextureDomainService {
       vertices.add(new Coordinate(x, y, z));
     }
 
-    return new CityJsonWithVertices(json, vertices, LAMBERT_93);
+    var crs = getCoordinateReferenceSystem(json);
+
+    return new CityJsonWithVertices(json, vertices, crs);
+  }
+
+  private static CoordinateReferenceSystem getCoordinateReferenceSystem(ObjectNode json) {
+    var crs = LAMBERT_93;
+    if (json.has(METADATA_ATTRIBUTE_NAME)
+        && json.get(METADATA_ATTRIBUTE_NAME).has(REFERENCE_SYSTEM_ATTRIBUTE_NAME)) {
+      var referenceSystem =
+          json.get(METADATA_ATTRIBUTE_NAME).get(REFERENCE_SYSTEM_ATTRIBUTE_NAME).asText();
+      if (referenceSystem.contains("2056")) {
+        crs = EPSG_2056;
+      } else if (referenceSystem.contains("4326")) {
+        crs = WGS84;
+      } else if (referenceSystem.contains("2154")) {
+        crs = LAMBERT_93;
+      } else {
+        log.warn("CRS {} not supported. Using {}", referenceSystem, crs.getName());
+      }
+    }
+    return crs;
   }
 
   public TexturedCityJson texture(
       CityJsonWithVertices cityJsonWithVertices, TextureInfo textureInfo) {
     var rasterInfo = textureInfo.rasterInfo();
     var vertices = cityJsonWithVertices.vertices();
+    var crs = cityJsonWithVertices.crs();
     var cityJson = cityJsonWithVertices.json().deepCopy();
     var cityObjects = (ObjectNode) cityJson.get("CityObjects");
     var objects = cityObjects.elements();
@@ -89,7 +114,7 @@ public class CityJsonTextureDomainService {
       var geometries = (ArrayNode) cityObject.get("geometry");
       for (var geometryNode : geometries) {
         texturizeGeometry(
-            (ObjectNode) geometryNode, vertices, rasterInfo, vertexTexture, vertexTextureMap);
+            (ObjectNode) geometryNode, vertices, crs, rasterInfo, vertexTexture, vertexTextureMap);
       }
     }
 
@@ -118,6 +143,7 @@ public class CityJsonTextureDomainService {
   private void texturizeGeometry(
       ObjectNode geometry,
       List<Coordinate> vertices,
+      org.geotools.api.referencing.crs.CoordinateReferenceSystem crs,
       RasterInfo rasterInfo,
       List<Coordinate> vertexTexture,
       Map<String, Integer> vertexTextureMap) {
@@ -133,6 +159,7 @@ public class CityJsonTextureDomainService {
           faces.get(i),
           surfaceTypes.get(i),
           vertices,
+          crs,
           rasterInfo,
           vertexTexture,
           vertexTextureMap,
@@ -140,11 +167,14 @@ public class CityJsonTextureDomainService {
     }
   }
 
-  public List<Coordinate> getUV(List<Coordinate> vertices, RasterInfo info) {
+  public List<Coordinate> getUV(
+      List<Coordinate> vertices,
+      org.geotools.api.referencing.crs.CoordinateReferenceSystem crs,
+      RasterInfo info) {
     var result = new ArrayList<Coordinate>();
 
     for (var vertex : vertices) {
-      var pixelVertex = getPixelCoordinate(info, vertex);
+      var pixelVertex = getPixelCoordinate(info, vertex, crs);
       double u = pixelVertex.getX() / info.width();
       double v = 1.0 - (pixelVertex.getY() / info.height());
       result.add(new Coordinate(u, v));
@@ -231,6 +261,7 @@ public class CityJsonTextureDomainService {
       JsonNode face,
       String faceType,
       List<Coordinate> vertices,
+      org.geotools.api.referencing.crs.CoordinateReferenceSystem crs,
       RasterInfo rasterInfo,
       List<Coordinate> vertexTexture,
       Map<String, Integer> vertexTextureMap,
@@ -241,7 +272,7 @@ public class CityJsonTextureDomainService {
     }
 
     var roof = isRoofSemantic(faceType);
-    var uv = getUV(coordinates, rasterInfo);
+    var uv = getUV(coordinates, crs, rasterInfo);
     var vtIndices = deduplicateUvs(uv, vertexTexture, vertexTextureMap);
 
     var textureValues =
@@ -351,10 +382,13 @@ public class CityJsonTextureDomainService {
     return surfaceTypes;
   }
 
-  public Coordinate getPixelCoordinate(RasterInfo info, Coordinate vertex) {
+  public Coordinate getPixelCoordinate(
+      RasterInfo info,
+      Coordinate vertex,
+      org.geotools.api.referencing.crs.CoordinateReferenceSystem crs) {
     var coordinate = new Coordinate(vertex.getX(), vertex.getY(), vertex.getZ());
     var vertexAsPoint = geometryFactory.createPoint(coordinate);
-    var latLon = projector.project(vertexAsPoint, LAMBERT_93, WGS84);
+    var latLon = projector.project(vertexAsPoint, crs, WGS84);
     return lonLatToPixelInTile(
         latLon.getCoordinate(), info.tileX(), info.tileY(), info.zoom(), info.tileImageSizePx());
   }
