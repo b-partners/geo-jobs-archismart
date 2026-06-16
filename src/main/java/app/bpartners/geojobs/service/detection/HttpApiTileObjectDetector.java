@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service.detection;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper.detectableObjectTypeForVegetationModel;
+import static app.bpartners.geojobs.service.detection.DetectionApiVersion.V2;
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
@@ -37,6 +38,8 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
   private final String defaultDetectionApiUrl;
   private final TileObjectDetectorConf tileObjectDetectorConf;
   private final DetectionResponseAggregator detectionResponseAggregator;
+  private final DetectionResponseAggregatorV1 detectionResponseAggregatorV1;
+  private final DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper;
   private final BucketComponent bucketComponent;
 
   @SneakyThrows
@@ -46,12 +49,16 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       @Value("${tile.detection.api.url}") String defaultApiUrl,
       TileObjectDetectorConf tileObjectDetectorConf,
       DetectionResponseAggregator detectionResponseAggregator,
+      DetectionResponseAggregatorV1 detectionResponseAggregatorV1,
+      DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper,
       BucketComponent bucketComponent1) {
     this.om = om;
     this.customBucketComponent = bucketComponent;
     this.defaultDetectionApiUrl = defaultApiUrl;
     this.tileObjectDetectorConf = tileObjectDetectorConf;
     this.detectionResponseAggregator = detectionResponseAggregator;
+    this.detectionResponseAggregatorV1 = detectionResponseAggregatorV1;
+    this.detectionResponseV1ToV2Mapper = detectionResponseV1ToV2Mapper;
     this.bucketComponent = bucketComponent1;
   }
 
@@ -99,74 +106,145 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     String base64ImgData = Base64.getEncoder().encodeToString(readFileToByteArray(tileImageFile));
     String base64MaskData =
         mask == null ? null : Base64.getEncoder().encodeToString(readFileToByteArray(mask));
+    boolean vegetation = hasVegetationModel(detectableObjectConfigurations);
 
-    var detectionPayloadBuilder =
-        DetectionPayloadV2.builder()
-            .fileName(tileImageFile.getName())
-            .base64ImgData(base64ImgData)
-            .base64MaskData(base64MaskData);
+    var requestV2 =
+        new HttpEntity<>(
+            om.writeValueAsString(
+                buildPayloadV2(tileImageFile.getName(), base64ImgData, base64MaskData, vegetation)),
+            headers);
+    var requestV1 =
+        new HttpEntity<>(
+            om.writeValueAsString(
+                buildPayloadV1(
+                    tileDetectionTask.getJobId(),
+                    tileImageFile.getName(),
+                    base64ImgData,
+                    base64MaskData,
+                    vegetation)),
+            headers);
 
-    if (detectableObjectConfigurations.stream()
+    var detectionApiUrls = getApiUrls(detectableObjectConfigurations);
+    var v2Responses = new ArrayList<DetectionResponseAggregator.DetectionResponseUrl>();
+    var v1Responses = new ArrayList<DetectionResponseAggregatorV1.DetectionResponseUrl>();
+    for (var apiUrl : detectionApiUrls) {
+      if (apiUrl.getVersion() == DetectionApiVersion.V1) {
+        var body = callApi(restTemplate, requestV1, apiUrl.getUrl(), DetectionResponse.class);
+        if (body != null) {
+          v1Responses.add(
+              new DetectionResponseAggregatorV1.DetectionResponseUrl(body, apiUrl.getUrl()));
+        }
+      } else {
+        var body = callApi(restTemplate, requestV2, apiUrl.getUrl(), DetectionResponseV2.class);
+        if (body != null) {
+          v2Responses.add(
+              new DetectionResponseAggregator.DetectionResponseUrl(body, apiUrl.getUrl()));
+        }
+      }
+    }
+
+    return mergeToV2(
+        detectionResponseAggregatorV1.apply(v1Responses),
+        detectionResponseAggregator.apply(v2Responses));
+  }
+
+  private <T> T callApi(
+      RestTemplate restTemplate, HttpEntity<String> request, String apiUrl, Class<T> responseType) {
+    UriComponentsBuilder uriBuilder;
+    try {
+      uriBuilder = UriComponentsBuilder.fromUri(new URI(apiUrl));
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+    log.info("Attempting to call API for detection {} ", apiUrl);
+    ResponseEntity<T> responseEntity;
+    try {
+      responseEntity = restTemplate.postForEntity(uriBuilder.toUriString(), request, responseType);
+    } catch (HttpStatusCodeException e) {
+      log.error(
+          "Error while calling API for detection {} with exception {}", apiUrl, e.getMessage());
+      return null;
+    }
+    if (responseEntity.getStatusCode().value() == 200) {
+      return responseEntity.getBody();
+    }
+    log.error("Error while calling API for detection {} ", apiUrl);
+    return null;
+  }
+
+  /**
+   * Merges the (optional) aggregated V1 response - converted to V2 - with the aggregated V2
+   * response into a single {@link DetectionResponseV2}. Returns {@code null} when neither side
+   * produced anything.
+   */
+  private DetectionResponseV2 mergeToV2(
+      DetectionResponse v1Aggregate, DetectionResponseV2 v2Aggregate) {
+    if (v1Aggregate == null && v2Aggregate == null) {
+      return null;
+    }
+    DetectionResponseV2 result =
+        v2Aggregate != null
+            ? v2Aggregate
+            : DetectionResponseV2.builder().images(new HashMap<>()).build();
+    var convertedV1 = detectionResponseV1ToV2Mapper.apply(v1Aggregate);
+    if (convertedV1 != null && convertedV1.getImages() != null) {
+      result.getImages().putAll(convertedV1.getImages());
+    }
+    return result;
+  }
+
+  private boolean hasVegetationModel(
+      List<DetectableObjectConfiguration> detectableObjectConfigurations) {
+    return detectableObjectConfigurations.stream()
         .anyMatch(
             detectableObjectConfiguration ->
                 detectableObjectTypeForVegetationModel().stream()
                     .map(detectableObjectType -> detectableObjectConfiguration.getObjectType())
                     .toList()
-                    .contains(detectableObjectConfiguration.getObjectType()))) {
-      detectionPayloadBuilder.vegetation(true);
+                    .contains(detectableObjectConfiguration.getObjectType()));
+  }
+
+  private DetectionPayloadV2 buildPayloadV2(
+      String fileName, String base64ImgData, String base64MaskData, boolean vegetation) {
+    var builder =
+        DetectionPayloadV2.builder()
+            .fileName(fileName)
+            .base64ImgData(base64ImgData)
+            .base64MaskData(base64MaskData);
+    if (vegetation) {
+      builder.vegetation(true);
     }
+    return builder.build();
+  }
 
-    var payload = detectionPayloadBuilder.build();
-    String requestBody = om.writeValueAsString(payload);
-
-    HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
-
-    var detectionApiUrls = getApiUrls(detectableObjectConfigurations);
-    var detectionResponses =
-        detectionApiUrls.stream()
-            .map(
-                apiUrl -> {
-                  UriComponentsBuilder uriBuilder;
-                  try {
-                    uriBuilder = UriComponentsBuilder.fromUri(new URI(apiUrl));
-                  } catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                  }
-                  log.info("Attempting to call API for detection {} ", apiUrl);
-                  ResponseEntity<DetectionResponseV2> responseEntity;
-                  try {
-                    responseEntity =
-                        restTemplate.postForEntity(
-                            uriBuilder.toUriString(), request, DetectionResponseV2.class);
-                  } catch (HttpStatusCodeException e) {
-                    log.error(
-                        "Error while calling API for detection {} with exception {}",
-                        apiUrl,
-                        e.getMessage());
-                    return null;
-                  }
-                  if (responseEntity.getStatusCode().value() == 200) {
-                    return new DetectionResponseAggregator.DetectionResponseUrl(
-                        responseEntity.getBody(), apiUrl);
-                  }
-                  log.error("Error while calling API for detection {} ", apiUrl);
-                  return null;
-                })
-            .filter(Objects::nonNull)
-            .toList();
-
-    return detectionResponseAggregator.apply(detectionResponses);
+  private DetectionPayload buildPayloadV1(
+      String projectName,
+      String fileName,
+      String base64ImgData,
+      String base64MaskData,
+      boolean vegetation) {
+    var builder =
+        DetectionPayload.builder()
+            .projectName(projectName)
+            .fileName(fileName)
+            .base64ImgData(base64ImgData)
+            .base64MaskData(base64MaskData);
+    if (vegetation) {
+      builder.vegetation(true);
+    }
+    return builder.build();
   }
 
   @SneakyThrows
-  private Set<String> getApiUrls(List<DetectableObjectConfiguration> objectConfigurations) {
+  private List<TileDetectorUrl> getApiUrls(
+      List<DetectableObjectConfiguration> objectConfigurations) {
     List<TileDetectorUrl> tileDetectionApiUrls =
         om.readValue(tileObjectDetectorConf.getTileDetectionApiUrls(), new TypeReference<>() {});
-    var urls = new HashSet<String>();
+    Map<String, TileDetectorUrl> urlsByUrl = new LinkedHashMap<>();
     for (var conf : objectConfigurations) {
       for (var url : tileDetectionApiUrls) {
         if (conf.getObjectType().equals(url.getObjectType())) {
-          urls.add(url.getUrl());
+          urlsByUrl.putIfAbsent(url.getUrl(), url);
         }
       }
     }
@@ -174,10 +252,11 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
         tileDetectionApiUrls.stream().map(TileDetectorUrl::getObjectType).toList();
     var detectableTypesFromObjectConfiguration =
         objectConfigurations.stream().map(DetectableObjectConfiguration::getObjectType).toList();
-    if (new HashSet<>(detectableTypes).containsAll(detectableTypesFromObjectConfiguration)) {
-      return urls;
+    if (!new HashSet<>(detectableTypes).containsAll(detectableTypesFromObjectConfiguration)) {
+      urlsByUrl.putIfAbsent(
+          defaultDetectionApiUrl,
+          TileDetectorUrl.builder().url(defaultDetectionApiUrl).version(V2).build());
     }
-    urls.add(defaultDetectionApiUrl);
-    return urls;
+    return new ArrayList<>(urlsByUrl.values());
   }
 }

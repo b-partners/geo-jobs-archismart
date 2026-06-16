@@ -2,7 +2,7 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 
-import app.bpartners.geojobs.endpoint.rest.model.Detection;
+import app.bpartners.geojobs.endpoint.rest.model.DelimitationType;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -19,7 +19,7 @@ public class TileCoordinatesService {
   private final DetectionPolygonProcessedRetriever detectionPolygonProcessedRetriever;
 
   public List<TileCoordinates> computeFeatureTileCoordinatesWithCompleteQuadrilateral(
-      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+      Feature feature, DelimitationType delimitationTypeEnum) {
     var tileCoordinates = retrieveFeatureTileCoordinates(feature, delimitationTypeEnum);
     return completeQuadrilateral(tileCoordinates);
   }
@@ -69,7 +69,7 @@ public class TileCoordinatesService {
   }
 
   private List<TileCoordinates> retrieveFeatureTileCoordinates(
-      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+      Feature feature, DelimitationType delimitationTypeEnum) {
     var polygonGeometry = detectionPolygonProcessedRetriever.apply(feature, delimitationTypeEnum);
     return tileFinder.getFromGeoJsonPolygon(polygonGeometry, HOUSES_0.getZoomLevel()).stream()
         .sorted(

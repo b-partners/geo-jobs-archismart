@@ -47,15 +47,15 @@ public class DetectionDelimitationRetriever implements Consumer<Detection> {
       return detection.toBuilder().featureWithDelimitations(zoneDelimitations).build();
     }
     return switch (detection.getGeoJsonDelimitationType()) {
-      case ZONE -> {
+      case ZONE, PARCEL_FREE_DELIMITATION -> {
         var zoneDelimitations = findRoofDelimitations(restProvidedGeoJsonZone);
         yield detection.toBuilder().featureWithDelimitations(zoneDelimitations).build();
       }
-      case ROOF -> {
+      case ROOF, USER_DEFINED_DELIMITATION -> {
         var roofDelimitations = convertProvidedToDelimitation(domainProvidedGeoJsonZone);
         yield detection.toBuilder().featureWithDelimitations(roofDelimitations).build();
       }
-      case PARCEL -> {
+      case PARCEL, PARCEL_CONSTRAINED_DELIMITATION -> {
         var parcelDelimitations = computeParcelDelimitation(domainProvidedGeoJsonZone);
         var roofDelimitations = findRoofDelimitations(restProvidedGeoJsonZone);
         yield detection.toBuilder()

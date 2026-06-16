@@ -1,8 +1,9 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 
-import app.bpartners.geojobs.endpoint.rest.model.Detection;
+import app.bpartners.geojobs.endpoint.rest.model.DelimitationType;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -20,14 +21,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class DetectionPolygonProcessedRetriever
-    implements BiFunction<Feature, Detection.GeoJsonDelimitationTypeEnum, Polygon> {
+    implements BiFunction<Feature, DelimitationType, Polygon> {
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
   private final GeometryConverter geometryConverter;
   private final BuildingFinder buildingFinder;
 
   @Override
-  public Polygon apply(
-      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+  public Polygon apply(Feature feature, DelimitationType delimitationTypeEnum) {
     var geometryInstance = feature.getGeometry().getActualInstance();
     switch (geometryInstance) {
       case app.bpartners.geojobs.endpoint.rest.model.Point point -> {
@@ -54,9 +54,10 @@ public class DetectionPolygonProcessedRetriever
 
   @SneakyThrows
   public Polygon retrievePolygonZoneGeomFromPoint(
-      Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum, Point point) {
+      DelimitationType delimitationTypeEnum, Point point) {
     MultiPolygon zoneToRetrievePolygon;
-    if (PARCEL.equals(delimitationTypeEnum)) {
+    if (PARCEL.equals(delimitationTypeEnum)
+        || PARCEL_CONSTRAINED_DELIMITATION.equals(delimitationTypeEnum)) {
       var parcelFeaturesFromPoint =
           ignCadastreFeatureFetcher.apply(
               geometryConverter.readGeometryFromString(

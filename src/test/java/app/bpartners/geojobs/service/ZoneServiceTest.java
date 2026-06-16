@@ -138,7 +138,6 @@ class ZoneServiceTest {
   DetectionVggAttributeRetriever vggAttributeRetrieverMock =
       mock(DetectionVggAttributeRetriever.class);
   RoofDelimiterMapper roofDelimiterMapper = mock();
-  GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper = mock();
   DetectionImageTileInfoOriginRetriever imageTileInfoOriginRetrieverMock = mock();
   DetectionFromStatisticRestMapper detectionFromStatisticRestMapperMock =
       new DetectionFromStatisticRestMapper(
@@ -220,7 +219,6 @@ class ZoneServiceTest {
               communityAuthRepositoryMock,
               areaPictureApiMock,
               geoServerConfiguration,
-              geoJsonDelimitationTypeMapper,
               geometryConverterMock,
               buildingFinderMock),
           fileWriterMock,

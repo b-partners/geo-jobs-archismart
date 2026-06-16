@@ -2,8 +2,8 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ZONE;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ZONE;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.POLYGON;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
-import app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
@@ -172,7 +171,7 @@ class DetectionDelimitationRetrieverTest {
   }
 
   private static Detection detection(
-      List<Feature> providedGeoJson, GeoJsonDelimitationTypeEnum delimitationType) {
+      List<Feature> providedGeoJson, DelimitationType delimitationType) {
     return Detection.builder()
         .id("detectionId")
         .detectableObjectModel(new DetectableObjectModel().modelName(TOITURE))

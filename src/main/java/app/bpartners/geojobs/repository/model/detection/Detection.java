@@ -1,7 +1,8 @@
 package app.bpartners.geojobs.repository.model.detection;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
@@ -17,7 +18,6 @@ import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
-import app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum;
 import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.repository.model.Feature;
@@ -139,7 +139,7 @@ public class Detection implements Serializable {
 
   @Enumerated(STRING)
   @JdbcTypeCode(NAMED_ENUM)
-  private GeoJsonDelimitationTypeEnum geoJsonDelimitationType;
+  private DelimitationType geoJsonDelimitationType;
 
   @OneToMany(fetch = EAGER, cascade = ALL)
   @JoinColumn(name = "detection_id")
@@ -186,7 +186,9 @@ public class Detection implements Serializable {
   }
 
   public boolean hasParcelDelimitationType() {
-    return getGeoJsonDelimitationType() != null && PARCEL.equals(getGeoJsonDelimitationType());
+    return getGeoJsonDelimitationType() != null
+        && (PARCEL.equals(getGeoJsonDelimitationType())
+            || PARCEL_CONSTRAINED_DELIMITATION.equals(getGeoJsonDelimitationType()));
   }
 
   public DetectableObjectModel getDetectableObjectModel() {

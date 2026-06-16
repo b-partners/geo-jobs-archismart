@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.*;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.*;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
@@ -85,14 +85,24 @@ public class DetectionBackgroundRetriever implements Function<Detection, MultiPo
 
   private List<FeatureWithDelimitation> computeFeatureDelimitations(Detection detection) {
     List<FeatureWithDelimitation> featureWithDelimitationList;
-    if (ROOF.equals(detection.getGeoJsonDelimitationType())
-        || ZONE.equals(detection.getGeoJsonDelimitationType())) {
+    var isUserDefinedDelimitationType =
+        ROOF.equals(detection.getGeoJsonDelimitationType())
+            || USER_DEFINED_DELIMITATION.equals(detection.getGeoJsonDelimitationType());
+    var isParcelFreeDelimitationType =
+        ZONE.equals(detection.getGeoJsonDelimitationType())
+            || PARCEL_FREE_DELIMITATION.equals(detection.getGeoJsonDelimitationType());
+    if (isUserDefinedDelimitationType || isParcelFreeDelimitationType) {
       featureWithDelimitationList = detection.getFeatureWithDelimitations();
-    } else if (PARCEL.equals(detection.getGeoJsonDelimitationType())) {
-      featureWithDelimitationList = detection.getParcelDelimitations();
     } else {
-      throw new IllegalStateException(
-          "Unexpected geojson delimitation type for detection: " + detection.getId());
+      var isParcelConstrainedDelimitationType =
+          PARCEL.equals(detection.getGeoJsonDelimitationType())
+              || PARCEL_CONSTRAINED_DELIMITATION.equals(detection.getGeoJsonDelimitationType());
+      if (isParcelConstrainedDelimitationType) {
+        featureWithDelimitationList = detection.getParcelDelimitations();
+      } else {
+        throw new IllegalStateException(
+            "Unexpected geojson delimitation type for detection: " + detection.getId());
+      }
     }
     return featureWithDelimitationList;
   }

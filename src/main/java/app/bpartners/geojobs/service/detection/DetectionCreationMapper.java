@@ -10,7 +10,6 @@ import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.GeoJsonDelimitationTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
 import app.bpartners.geojobs.model.exception.ApiException;
@@ -42,7 +41,6 @@ public class DetectionCreationMapper {
   private final CommunityAuthorizationRepository communityAuthRepository;
   private final AreaPictureApi areaPictureApi;
   private final GeoServerConfiguration geoServerConfiguration;
-  private final GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper;
   private final GeometryConverter geometryConverter;
   private final BuildingFinder buildingFinder;
 
@@ -97,9 +95,7 @@ public class DetectionCreationMapper {
             .needsImageOutput(
                 createDetection.getNeedsImageOutput() != null
                     && createDetection.getNeedsImageOutput())
-            .geoJsonDelimitationType(
-                geoJsonDelimitationTypeMapper.toDomain(
-                    createDetection.getGeoJsonDelimitationType()))
+            .geoJsonDelimitationType(createDetection.getGeoJsonDelimitationType())
             .build();
     detection.addFeatures(domainProvidedGeoJsonZone, PROVIDED_FEATURE);
     return detection;

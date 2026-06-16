@@ -1,7 +1,8 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.service.geojson.GeoJsonMapper.convertPixelToGeographicalCoordinates;
 
@@ -198,7 +199,7 @@ public class FeatureWithDetectionPropertiesRequestedService
   }
 
   private Geometry getLonLatGeometryIntersectedWithCurrentFeature(
-      Detection.GeoJsonDelimitationTypeEnum geoJsonDelimitationType,
+      DelimitationType geoJsonDelimitationType,
       Feature currentDelimitationFeature,
       Feature currentFeature) {
     var currentDelimitationFeatureRestMultiPolygon =
@@ -209,7 +210,8 @@ public class FeatureWithDetectionPropertiesRequestedService
     if (currentFeature.getGeometry().getActualInstance() instanceof Point) {
       return currentDelimitationGeometry;
     }
-    if (ROOF.equals(geoJsonDelimitationType)) {
+    if (ROOF.equals(geoJsonDelimitationType)
+        || USER_DEFINED_DELIMITATION.equals(geoJsonDelimitationType)) {
       var geometryInstance = currentDelimitationFeature.getGeometry().getActualInstance();
       var multiPolygon = getMultiPolygonFromRestFeatureGeometryInstance(geometryInstance);
       return geometryConverter.apply(multiPolygon.getCoordinates());

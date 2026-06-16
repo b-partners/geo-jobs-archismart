@@ -1,7 +1,8 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.Polygon.TypeEnum.POLYGON;
 
@@ -20,21 +21,20 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FeaturePolygonRetriever
-    implements BiFunction<Feature, Detection.GeoJsonDelimitationTypeEnum, Feature> {
+public class FeaturePolygonRetriever implements BiFunction<Feature, DelimitationType, Feature> {
   private final GeometryConverter geometryConverter;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
   private final BuildingFinder buildingFinder;
 
   @Override
-  public Feature apply(
-      Feature feature, Detection.GeoJsonDelimitationTypeEnum delimitationTypeEnum) {
+  public Feature apply(Feature feature, DelimitationType delimitationTypeEnum) {
     Feature polygonGeoJsonZone;
     var geometryInstance = feature.getGeometry().getActualInstance();
     switch (geometryInstance) {
       case Point point -> {
         List<List<List<List<BigDecimal>>>> geometryMultiPolygonCoordinates;
-        if (PARCEL.equals(delimitationTypeEnum)) {
+        if (PARCEL.equals(delimitationTypeEnum)
+            || PARCEL_CONSTRAINED_DELIMITATION.equals(delimitationTypeEnum)) {
           geometryMultiPolygonCoordinates = retrieveParcelMultiPolygonCoordinates(point);
         } else {
           geometryMultiPolygonCoordinates =

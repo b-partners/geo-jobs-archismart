@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.unit;
 
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ZONE;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ZONE;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_HEIGHT_PROPERTY_NAME;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.ROOF_SLOPE_PROPERTY_NAME;
 import static org.junit.jupiter.api.Assertions.*;

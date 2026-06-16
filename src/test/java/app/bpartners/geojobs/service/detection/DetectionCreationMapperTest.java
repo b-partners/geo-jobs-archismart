@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.GeoJsonDelimitationTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
@@ -23,7 +22,6 @@ class DetectionCreationMapperTest {
 
   DetectableObjectTypeMapper detectableObjectTypeMapper = new DetectableObjectTypeMapper();
   FeatureTypeChecker featureTypeChecker = new FeatureTypeChecker();
-  GeoJsonDelimitationTypeMapper geoJsonDelimitationTypeMapper = new GeoJsonDelimitationTypeMapper();
   GeometryConverter geometryConverterMock = mock();
   BuildingFinder buildingFinderMock = mock();
 
@@ -34,7 +32,6 @@ class DetectionCreationMapperTest {
           mock(CommunityAuthorizationRepository.class),
           mock(AreaPictureApi.class),
           mock(GeoServerConfiguration.class),
-          geoJsonDelimitationTypeMapper,
           geometryConverterMock,
           buildingFinderMock);
 

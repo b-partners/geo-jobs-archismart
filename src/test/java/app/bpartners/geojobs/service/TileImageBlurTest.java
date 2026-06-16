@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ZONE;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ZONE;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static java.util.UUID.randomUUID;

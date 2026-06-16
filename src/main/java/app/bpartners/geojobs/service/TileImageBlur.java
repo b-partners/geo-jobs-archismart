@@ -1,7 +1,8 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 import static java.awt.Color.WHITE;
 import static org.locationtech.jts.geom.util.GeometryCombiner.combine;
@@ -101,13 +102,13 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
     var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
     Geometry zoneToExcludeInsideProvidedZone;
     switch (geoJsonDelimitationType) {
-      case ROOF -> zoneToExcludeInsideProvidedZone = providedZone;
-      case ZONE -> {
+      case ROOF, USER_DEFINED_DELIMITATION -> zoneToExcludeInsideProvidedZone = providedZone;
+      case ZONE, PARCEL_FREE_DELIMITATION -> {
         var unifiedRoofMultiPolygon = getUnifiedRoofMultiPolygon(detection);
         zoneToExcludeInsideProvidedZone =
             handleGeometryCollectionType(providedZone.intersection(unifiedRoofMultiPolygon));
       }
-      case PARCEL -> {
+      case PARCEL, PARCEL_CONSTRAINED_DELIMITATION -> {
         var unifiedParcelsMultiPolygon = getUnifiedParcelsMultiPolygon(detection);
         zoneToExcludeInsideProvidedZone =
             handleGeometryCollectionType(providedZone.intersection(unifiedParcelsMultiPolygon));
@@ -130,7 +131,8 @@ public class TileImageBlur implements BiFunction<Detection, List<Tile>, List<Til
                           multiPolygonFromTile.intersection(zoneToExcludeInsideProvidedZone));
 
                   Geometry intersectionBetweenTileMultiPolygonAndBackground;
-                  if (ROOF.equals(geoJsonDelimitationType)) {
+                  if (ROOF.equals(geoJsonDelimitationType)
+                      || USER_DEFINED_DELIMITATION.equals(geoJsonDelimitationType)) {
                     intersectionBetweenTileMultiPolygonAndBackground =
                         multiPolygonFromTile.difference(excludedZoneInsideTileAndProvidedZone);
                   } else {

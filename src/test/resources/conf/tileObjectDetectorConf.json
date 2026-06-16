@@ -1,94 +1,107 @@
 [
   {
     "objectType": "PISCINE",
-    "url": "dummy"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "PASSAGE_PIETON",
-    "url": "dummy"
-  },
-  {
-    "objectType": "ARBRE",
-    "url": "dummy"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "TROTTOIR",
-    "url": "dummy"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "LINE",
-    "url": "dummy"
-  },
-  {
-    "objectType": "ESPACE_VERT",
-    "url": "dummy"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "VOIE_CARROSSABLE",
-    "url": "dummy"
+    "url": "https://jgzoqzwhm6r3oxcovqidd5onvm0sipnc.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "PARKING",
-    "url": "dummy"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "TOITURE_REVETEMENT",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod",
+    "version": "V2"
   },
   {
     "objectType": "PANNEAU_PHOTOVOLTAIQUE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://v6fceptj3rg5if4d7ieussgu3i0gytod.lambda-url.eu-west-3.on.aws/",
+    "version": "V1"
   },
   {
     "objectType": "MOISISSURE_NOIRCIE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "MOISISSURE_CLAIR",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "MOISISSURE_COULEUR",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "MOISISSURE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "USURE_IMPORTANTE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "USURE_LEGER",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "USURE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "OBSTACLE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod",
+    "version": "V2"
   },
   {
     "objectType": "CHEMINEE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod",
+    "version": "V2"
   },
   {
     "objectType": "HUMIDITE_INTENSE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "HUMIDITE_CLAIR",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "HUMIDITE",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://2smhvqvloy3s3hexpaz7r6duvi0hlkos.lambda-url.eu-west-3.on.aws",
+    "version": "V1"
   },
   {
     "objectType": "VELUX",
-    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod"
+    "url": "https://821ylmm5c2.execute-api.eu-west-3.amazonaws.com/Prod",
+    "version": "V2"
   }
 ]

@@ -1,14 +1,12 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
-import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
-import app.bpartners.geojobs.endpoint.rest.model.Feature;
-import app.bpartners.geojobs.endpoint.rest.model.ModelName;
-import app.bpartners.geojobs.endpoint.rest.model.Point;
+import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geometry.JtsGeoFeature;
@@ -75,8 +73,7 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
   public List<JtsGeoFeature> apply(
       List<Feature> featureList,
       List<ModelName> modelNames,
-      app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum
-          geoJsonDelimitationType) {
+      DelimitationType geoJsonDelimitationType) {
     if (featureList == null) {
       return List.of();
     }
@@ -95,7 +92,8 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
               return switch (geometryType) {
                 case Point point -> {
                   if (modelNames.contains(TOITURE)) {
-                    if (PARCEL.equals(geoJsonDelimitationType)) {
+                    if (PARCEL.equals(geoJsonDelimitationType)
+                        || PARCEL_CONSTRAINED_DELIMITATION.equals(geoJsonDelimitationType)) {
                       try {
                         var parcelsNearestPoint =
                             ignCadastreFeatureFetcher.apply(

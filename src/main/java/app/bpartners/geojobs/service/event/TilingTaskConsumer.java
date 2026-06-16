@@ -9,6 +9,7 @@ import app.bpartners.geojobs.endpoint.rest.model.TileInfoSize;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.zip.FileUnzipper;
 import app.bpartners.geojobs.job.model.Status;
+import app.bpartners.geojobs.model.exception.ImageSourcesTimeoutException;
 import app.bpartners.geojobs.repository.model.ParcelContent;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
@@ -77,9 +78,20 @@ public class TilingTaskConsumer implements TaskConsumer<ParcelTilingTask> {
 
       String entryParentPath = tilesFile.getPath();
       String[] dir = entryParentPath.split("/");
-      var x = Integer.valueOf(dir[dir.length - 2]);
-      var z = Integer.valueOf(dir[dir.length - 3]);
-      var y = Integer.valueOf(FileUnzipper.stripExtension(tilesFile.getName()));
+      int x;
+      int y;
+      int z;
+      try {
+        x = Integer.parseInt(dir[dir.length - 2]);
+        z = Integer.parseInt(dir[dir.length - 3]);
+        y = Integer.parseInt(FileUnzipper.stripExtension(tilesFile.getName()));
+      } catch (NumberFormatException e) {
+        throw new ImageSourcesTimeoutException(
+            String.format(
+                "Image sources%s are experiencing performance issues, which are preventing images"
+                    + " from loading.",
+                serverParameter == null ? "" : " from " + serverParameter.getLayers()));
+      }
       String[] segments = entryParentPath.split("/");
       String filePath = "";
 

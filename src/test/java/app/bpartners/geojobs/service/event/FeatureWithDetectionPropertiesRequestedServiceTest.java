@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.rest.model.Detection.GeoJsonDelimitationTypeEnum.ROOF;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.MOISISSURE_CLAIR;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
