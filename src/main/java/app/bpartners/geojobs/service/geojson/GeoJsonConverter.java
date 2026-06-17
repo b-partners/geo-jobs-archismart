@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Service;
 
@@ -45,14 +46,11 @@ public class GeoJsonConverter implements Converter<List<DetectedTile>, GeoJson> 
                 })
             .flatMap(List::stream)
             .toList();
-    log.info("DEBUG Detectable types for converting geojson : {}", detectableTypes);
-    if (detectableTypes.size() == 1
-        && (detectableTypes.contains(OBSTACLE)
-            || detectableTypes.contains(CHEMINEE)
-            || detectableTypes.contains(VELUX))) {
-      return fromFeatures(geoFeatures);
-    }
+    return fromFeatures(geoFeatures);
+  }
 
+  @NotNull
+  private List<GeoJson.GeoFeature> unifyGeoFeatures(List<GeoJson.GeoFeature> geoFeatures) {
     var toUnify =
         geoFeatures.stream()
             .map(f -> LatLonPolygon.latLon(f).tiledPolygon(TilingConf.getDefaultInstance()))
@@ -62,7 +60,6 @@ public class GeoJsonConverter implements Converter<List<DetectedTile>, GeoJson> 
     var invertedUnifiedLatLon = invert(unifiedLatLon);
     var unifiedGeoFeatures =
         invertedUnifiedLatLon.stream().map(LatLonPolygon::toGeoFeature).toList();
-
-    return fromFeatures(unifiedGeoFeatures);
+    return unifiedGeoFeatures;
   }
 }
