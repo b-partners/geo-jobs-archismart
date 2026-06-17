@@ -4,6 +4,7 @@ import static org.hibernate.type.SqlTypes.JSON;
 
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
@@ -25,6 +26,7 @@ public class FeatureDelimitationComputing {
 
   @ManyToOne
   @JoinColumn(name = "detection_identifier")
+  @JsonIgnore
   private Detection detection;
 
   @JdbcTypeCode(JSON)

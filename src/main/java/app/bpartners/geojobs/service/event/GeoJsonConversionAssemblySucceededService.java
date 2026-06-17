@@ -48,6 +48,7 @@ public class GeoJsonConversionAssemblySucceededService
 
     optionalDetection.ifPresent(
         detection ->
-            eventProducer.accept(List.of(new GeoJsonConversionProcessSucceeded(detection))));
+            eventProducer.accept(
+                List.of(new GeoJsonConversionProcessSucceeded(detection.getId()))));
   }
 }

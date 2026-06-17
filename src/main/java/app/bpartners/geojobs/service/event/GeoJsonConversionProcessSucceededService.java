@@ -3,7 +3,9 @@ package app.bpartners.geojobs.service.event;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionProcessSucceeded;
+import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
+import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.dashboard.DetectionTrackingApi;
@@ -20,10 +22,16 @@ public class GeoJsonConversionProcessSucceededService
     implements Consumer<GeoJsonConversionProcessSucceeded> {
   private final DetectionTrackingApi detectionTrackingApi;
   private final CommunityAuthorizationRepository communityAuthorizationRepository;
+  private final DetectionRepository detectionRepository;
 
   @Override
   public void accept(GeoJsonConversionProcessSucceeded event) {
-    var detection = event.getDetection();
+    var detectionIdentifier = event.getDetectionIdentifier();
+    var detection =
+        detectionRepository
+            .findById(detectionIdentifier)
+            .orElseThrow(
+                () -> new NotFoundException("Detection not found for id=" + detectionIdentifier));
 
     detectionTrackingApi.registerDetection(
         getApiKey(detection),

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionProcessSucceeded;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
+import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.dashboard.DetectionTrackingApi;
@@ -23,9 +24,10 @@ import org.mockito.ArgumentCaptor;
 class GeoJsonConversionProcessSucceededServiceTest {
   DetectionTrackingApi detectionTrackingApiMock = mock();
   CommunityAuthorizationRepository communityAuthorizationRepositoryMock = mock();
+  DetectionRepository detectionRepositoryMock = mock();
   GeoJsonConversionProcessSucceededService subject =
       new GeoJsonConversionProcessSucceededService(
-          detectionTrackingApiMock, communityAuthorizationRepositoryMock);
+          detectionTrackingApiMock, communityAuthorizationRepositoryMock, detectionRepositoryMock);
 
   final String apiKey = "apiKey";
 
@@ -37,19 +39,24 @@ class GeoJsonConversionProcessSucceededServiceTest {
 
   @Test
   void register_detection_ok() {
+    var detectionIdentifier = randomUUID().toString();
     var communityOwnerId = randomUUID().toString();
     var zoneName = "detection zone name";
     var emailReceiver = "detection email receiver";
 
     var detectionMock = mock(Detection.class);
+    when(detectionMock.getId()).thenReturn(detectionIdentifier);
     when(detectionMock.getZoneName()).thenReturn(zoneName);
     when(detectionMock.getEmailReceiver()).thenReturn(emailReceiver);
     when(detectionMock.getCommunityOwnerId()).thenReturn(communityOwnerId);
 
+    when(detectionRepositoryMock.findById(detectionIdentifier))
+        .thenReturn(Optional.of(detectionMock));
     when(communityAuthorizationRepositoryMock.findById(communityOwnerId))
         .thenReturn(Optional.of(CommunityAuthorization.builder().dashboardApiKey(apiKey).build()));
 
-    assertDoesNotThrow(() -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionMock)));
+    assertDoesNotThrow(
+        () -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionIdentifier)));
 
     var listCaptor = ArgumentCaptor.forClass(List.class);
     verify(detectionTrackingApiMock, only()).registerDetection(eq(apiKey), listCaptor.capture());
@@ -72,9 +79,13 @@ class GeoJsonConversionProcessSucceededServiceTest {
 
   @Test
   void register_detection_fail_on_api_failure() {
+    var detectionIdentifier = randomUUID().toString();
     var detectionMock = mock(Detection.class);
+    when(detectionMock.getId()).thenReturn(detectionIdentifier);
     when(detectionMock.getCommunityOwnerId()).thenReturn(randomUUID().toString());
     reset(detectionTrackingApiMock);
+    when(detectionRepositoryMock.findById(detectionIdentifier))
+        .thenReturn(Optional.of(detectionMock));
     when(communityAuthorizationRepositoryMock.findById(any()))
         .thenReturn(Optional.of(CommunityAuthorization.builder().apiKey(apiKey).build()));
     when(detectionTrackingApiMock.registerDetection(any(), any()))
@@ -82,17 +93,21 @@ class GeoJsonConversionProcessSucceededServiceTest {
 
     assertThrows(
         RuntimeException.class,
-        () -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionMock)));
+        () -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionIdentifier)));
   }
 
   @Test
   void register_detection_fail_on_api_key_not_found() {
+    var detectionIdentifier = randomUUID().toString();
     var detectionMock = mock(Detection.class);
+    when(detectionMock.getId()).thenReturn(detectionIdentifier);
     when(detectionMock.getCommunityOwnerId()).thenReturn(randomUUID().toString());
+    when(detectionRepositoryMock.findById(detectionIdentifier))
+        .thenReturn(Optional.of(detectionMock));
     when(communityAuthorizationRepositoryMock.findById(any())).thenReturn(Optional.empty());
 
     assertThrows(
         RuntimeException.class,
-        () -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionMock)));
+        () -> subject.accept(new GeoJsonConversionProcessSucceeded(detectionIdentifier)));
   }
 }
