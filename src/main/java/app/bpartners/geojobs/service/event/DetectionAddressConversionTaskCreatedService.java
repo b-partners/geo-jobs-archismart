@@ -33,6 +33,11 @@ public class DetectionAddressConversionTaskCreatedService
   }
 
   @Override
+  protected boolean isRetryable() {
+    return true;
+  }
+
+  @Override
   public void accept(DetectionAddressConversionTaskCreated event) {
     var task = event.getTask();
     try {

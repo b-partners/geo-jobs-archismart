@@ -67,20 +67,8 @@ class TileDetectionTaskCreatedServiceTest {
   }
 
   @Test
-  void accept_ko() {
+  void accept_ko_fails_fast_without_retry() {
     doThrow(ApiException.class).when(tileDetectionTaskConsumerMock).accept(any());
-    when(tileDetectionTaskStatusServiceMock.process(any()))
-        .thenReturn(
-            TileDetectionTask.builder()
-                .statusHistory(
-                    List.of(TaskStatus.builder().progression(PROCESSING).health(UNKNOWN).build()))
-                .build());
-    when(tileDetectionTaskStatusServiceMock.succeed(any()))
-        .thenReturn(
-            TileDetectionTask.builder()
-                .statusHistory(
-                    List.of(TaskStatus.builder().progression(FINISHED).health(SUCCEEDED).build()))
-                .build());
     TileDetectionTaskCreated expectedTileDetectionTaskCreated =
         new TileDetectionTaskCreated(
             "zdjId",
@@ -89,8 +77,10 @@ class TileDetectionTaskCreatedServiceTest {
             null,
             null);
 
-    assertThrows(ApiException.class, () -> subject.accept(expectedTileDetectionTaskCreated));
+    // fail-fast: the exception is swallowed (no rethrow) so the message is acked, not retried
+    assertDoesNotThrow(() -> subject.accept(expectedTileDetectionTaskCreated));
     verify(tileDetectionTaskStatusServiceMock, never()).succeed(any());
-    verify(tileDetectionTaskRepositoryMock, never()).save(any());
+    verify(tileDetectionTaskStatusServiceMock).fail(any());
+    verify(tileDetectionTaskRepositoryMock).save(any());
   }
 }

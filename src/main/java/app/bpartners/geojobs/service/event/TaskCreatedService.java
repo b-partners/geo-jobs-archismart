@@ -12,43 +12,64 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class TaskCreatedService<T extends Task, C extends TaskCreated<T>> implements Consumer<C> {
-  private static final int MAX_ATTEMPT_NB = 5;
+  protected static final int MAX_ATTEMPT_NB = 5;
   private final TaskConsumer<T> taskConsumer;
-  private final TaskStatusService<T> taskStatusService;
+  protected final TaskStatusService<T> taskStatusService;
   private final TaskRepository<T> taskRepository;
+
+  protected boolean isRetryable() {
+    return false;
+  }
 
   @Override
   public void accept(C event) {
     var task = event.getTask();
-    var actualAttemptNb = event.getAttemptNb();
-    var newAttemptNb = actualAttemptNb + 1;
+    var attemptNb = event.getAttemptNb();
 
-    if (actualAttemptNb == 1) {
+    if (attemptNb == 1) {
       taskStatusService.process(task);
     }
 
-    if (newAttemptNb > MAX_ATTEMPT_NB) {
-      log.info(
-          "Task [{} - id={}] reached attempt {}/{}",
+    // /!\ This only triggers if the queue's redrive maxReceiveCount is >= MAX_ATTEMPT_NB.
+    if (isRetryable() && attemptNb >= MAX_ATTEMPT_NB) {
+      log.error(
+          "Task [{} - id={}] reached max attempt {}/{}, marking it as FAILED",
           task,
           task.getId(),
-          newAttemptNb,
+          attemptNb,
           MAX_ATTEMPT_NB);
       fail(task);
       return;
     }
 
-    taskConsumer.accept(task);
+    try {
+      taskConsumer.accept(task);
+    } catch (RuntimeException e) {
+      if (isRetryable()) {
+        log.error(
+            "Task [{} - id={}] failed at attempt {}/{}, it will be retried",
+            task,
+            task.getId(),
+            attemptNb,
+            MAX_ATTEMPT_NB,
+            e);
+        throw e; // not acked -> SQS redelivers until attemptNb reaches MAX_ATTEMPT_NB
+      }
+      log.error(
+          "Task [{} - id={}] failed, marking it as FAILED without retry", task, task.getId(), e);
+      fail(task);
+      return;
+    }
 
     succeed(task);
   }
 
-  private void succeed(T task) {
+  protected void succeed(T task) {
     taskRepository.save(task);
     taskStatusService.succeed(task);
   }
 
-  private void fail(T task) {
+  protected void fail(T task) {
     taskRepository.save(task);
     taskStatusService.fail(task);
   }

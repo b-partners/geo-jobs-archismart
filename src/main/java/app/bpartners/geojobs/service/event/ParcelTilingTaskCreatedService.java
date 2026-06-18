@@ -19,6 +19,11 @@ public class ParcelTilingTaskCreatedService
   }
 
   @Override
+  protected boolean isRetryable() {
+    return true; // tiling failures (tile download) are typically transient: retry before failing
+  }
+
+  @Override
   public void accept(ParcelTilingTaskCreated parcelTilingTaskCreated) {
     super.accept(parcelTilingTaskCreated);
   }
