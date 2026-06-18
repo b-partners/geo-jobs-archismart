@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.file;
 
+import app.bpartners.geojobs.model.exception.ImageSourcesTimeoutException;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ public class ImageValidator implements Consumer<BufferedImage> {
   public void accept(BufferedImage img) {
     if (whiteImageDetector.apply(img)) {
       log.error("Invalid white image detected");
+      throw new ImageSourcesTimeoutException("Unable to retrieve image as image sources timed out");
     }
   }
 }

@@ -4,6 +4,7 @@ import app.bpartners.geojobs.endpoint.event.model.TaskCreated;
 import app.bpartners.geojobs.job.model.Task;
 import app.bpartners.geojobs.job.repository.TaskRepository;
 import app.bpartners.geojobs.job.service.TaskStatusService;
+import app.bpartners.geojobs.model.exception.ImageSourcesTimeoutException;
 import app.bpartners.geojobs.service.TaskConsumer;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ public class TaskCreatedService<T extends Task, C extends TaskCreated<T>> implem
     try {
       taskConsumer.accept(task);
     } catch (RuntimeException e) {
-      if (isRetryable()) {
+      if (isRetryable() && !e.getCause().getClass().equals(ImageSourcesTimeoutException.class)) {
         log.error(
             "Task [{} - id={}] failed at attempt {}/{}, it will be retried",
             task,
