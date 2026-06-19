@@ -6,7 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
+import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.job.model.TaskStatus;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
@@ -34,6 +36,8 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
     GeometryConverter geometryConverterMock = mock();
     DetectionMaskFromTileRetriever maskRetrieverMock = mock();
     RoofCoveringDetector roofCoveringDetectorMock = mock();
+    DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
+    BucketComponent bucketComponentMock = mock();
 
     when(roofCoveringDetectorMock.apply(any(Tile.class), any(File.class)))
         .thenReturn(
@@ -49,7 +53,9 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
             detectionRepositoryMock,
             geometryConverterMock,
             maskRetrieverMock,
-            roofCoveringDetectorMock);
+            roofCoveringDetectorMock,
+            detectionObjectHistoryRepositoryMock,
+            bucketComponentMock);
 
     var detectableObjectConfigurations = new ArrayList<DetectableObjectConfiguration>();
     var zdjId = "zdjId";

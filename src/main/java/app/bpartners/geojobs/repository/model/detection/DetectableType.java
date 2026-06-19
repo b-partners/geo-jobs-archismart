@@ -51,7 +51,8 @@ public enum DetectableType {
   TOMBE_DOUBLE(0),
   POINTILLE(0),
   FLECHE_DIRECTIONNELLE(0),
-  TOMBE_NON_GEOMETRIQUE(0);
+  TOMBE_NON_GEOMETRIQUE(0),
+  PLACE_STANDARD(0);
 
   private int minAreaThreshold;
 

@@ -11,6 +11,7 @@ import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import java.time.Instant;
@@ -33,6 +34,32 @@ class DetectionServiceTest {
           eventProducerMock,
           zoneServiceMock,
           detectionRoofSlopeValidatorMock);
+
+  @Test
+  void throw_not_found_during_get_detection_file_object() {
+    var detectionE2Id = randomUUID().toString();
+    when(detectionRepositoryMock.findByEndToEndId(detectionE2Id)).thenReturn(Optional.empty());
+
+    var actual =
+        assertThrows(NotFoundException.class, () -> subject.getDetectionFileObjects(detectionE2Id));
+
+    assertEquals("Detection.id= " + detectionE2Id + " not found.", actual.getMessage());
+  }
+
+  @Test
+  void get_detection_file_object_when_detection_found() {
+    var detectionE2Id = randomUUID().toString();
+    var detectionMock = mock(Detection.class);
+    var detectionFileObjectMock = mock(DetectionFileObject.class);
+
+    when(detectionMock.getFileObjects()).thenReturn(List.of(detectionFileObjectMock));
+    when(detectionRepositoryMock.findByEndToEndId(detectionE2Id))
+        .thenReturn(Optional.of(detectionMock));
+
+    var actual = subject.getDetectionFileObjects(detectionE2Id);
+
+    assertEquals(List.of(detectionFileObjectMock), actual);
+  }
 
   @Test
   void compute_roofs_properties_when_not_containing_slope_and_height_property() {

@@ -41,7 +41,7 @@ class DetectionCreationMapperTest {
     var communityOwnerId = randomUUID().toString();
     var createDetection = createDetection();
 
-    var actual = subject.apply(createDetection, detectionE2Id, communityOwnerId, false);
+    var actual = subject.apply(createDetection, detectionE2Id, communityOwnerId, false, null);
 
     assertTrue(actual.getDetectableObjectModelList().containsAll(detectableObjectModelList()));
     assertFalse(actual.getDetectableObjectConfigurations().isEmpty()); // TODO
@@ -53,7 +53,7 @@ class DetectionCreationMapperTest {
     var communityOwnerId = randomUUID().toString();
     var createDetection = createDetection().detectableObjectModelList(null);
 
-    var actual = subject.apply(createDetection, detectionE2Id, communityOwnerId, false);
+    var actual = subject.apply(createDetection, detectionE2Id, communityOwnerId, false, null);
 
     assertNotNull(actual.getDetectableObjectModel());
     assertFalse(actual.getDetectableObjectConfigurations().isEmpty());

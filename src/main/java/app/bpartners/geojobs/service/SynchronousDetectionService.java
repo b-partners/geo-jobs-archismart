@@ -183,7 +183,13 @@ public class SynchronousDetectionService
         Duration.between(vggRequestAndGeoJsonEventTriggerStart, now()).toSeconds(),
         detection.getEndToEndId());
 
-    return attemptVggFileKeyRetrieve(detectionWithResultProperties);
+    return detectionWithResultProperties.hasToitureModelName()
+        ? attemptVggFileKeyRetrieve(detectionWithResultProperties)
+        : detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
+            detectionRepository.findById(detection.getId()).orElseThrow(),
+            FINISHED,
+            SUCCEEDED,
+            MACHINE_DETECTION);
   }
 
   @SneakyThrows

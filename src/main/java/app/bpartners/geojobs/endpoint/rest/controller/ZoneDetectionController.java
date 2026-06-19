@@ -7,12 +7,7 @@ import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.status.ZDJParcelsStatusRecomputingSubmitted;
 import app.bpartners.geojobs.endpoint.event.model.status.ZDJStatusRecomputingSubmitted;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneDetectionJobSucceeded;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectConfigurationMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionSurfaceUnitMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionTaskMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.StatusMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.TaskStatisticMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoneDetectionJobMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.mapper.*;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.DetectionAuthorizer;
@@ -75,6 +70,8 @@ public class ZoneDetectionController {
   private final ConfigureAddressValidator configureAddressValidator;
   private final CreateDetectionValidator createDetectionValidator;
   private final DetectionService detectionService;
+  private final DetectionFileObjectMapper detectionFileObjectMapper;
+  private final CreateDetectionMapper createDetectionMapper;
 
   @PostMapping("/detectionJobs/{id}/succeed")
   public app.bpartners.geojobs.endpoint.rest.model.ZoneDetectionJob succeedJob(
@@ -220,15 +217,26 @@ public class ZoneDetectionController {
     return zoneService.configureFileResult(communityOwnerId, detectionId, file, extensionType);
   }
 
+  @GetMapping("/detections/{id}/fileObjects")
+  public List<DetectionFileObject> getDetectionFileObjects(
+      @PathVariable(name = "id") String detectionId) {
+    return detectionService.getDetectionFileObjects(detectionId).stream()
+        .map(detectionFileObjectMapper::toRest)
+        .toList();
+  }
+
   @PostMapping("/detections/{id}")
   public Detection processDetection(
-      @PathVariable(name = "id") String detectionId, @RequestBody CreateDetection createDetection) {
+      @PathVariable(name = "id") String detectionId,
+      @RequestBody CreateDetectionDebugMode createDetectionDebugMode) {
+    var createDetection = createDetectionMapper.fromDebugMode(createDetectionDebugMode);
     createDetectionValidator.accept(createDetection);
     detectionAuthorizer.accept(detectionId, createDetection, authProvider.getPrincipal());
     var communityAuthorization =
         communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword());
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId).orElse(null);
-    return zoneService.processDetection(detectionId, createDetection, communityOwnerId);
+    return zoneService.processDetection(
+        detectionId, createDetection, communityOwnerId, createDetectionDebugMode.getDebugMode());
   }
 
   @PutMapping("/detections/{id}/step")
@@ -261,14 +269,16 @@ public class ZoneDetectionController {
 
   @PostMapping("/detections/{id}/sync")
   public Detection processDetectionSynchronously(
-      @PathVariable(name = "id") String detectionId, @RequestBody CreateDetection createDetection) {
+      @PathVariable(name = "id") String detectionId,
+      @RequestBody CreateDetectionDebugMode createDetectionDebugMode) {
+    var createDetection = createDetectionMapper.fromDebugMode(createDetectionDebugMode);
     createDetectionValidator.accept(createDetection);
     detectionAuthorizer.accept(detectionId, createDetection, authProvider.getPrincipal());
     var communityAuthorization =
         communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword());
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId).orElse(null);
     return zoneService.processDetectionSynchronously(
-        detectionId, createDetection, communityOwnerId);
+        detectionId, createDetection, communityOwnerId, createDetectionDebugMode.getDebugMode());
   }
 
   @PutMapping("/detections/{id}/roofs/properties")

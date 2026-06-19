@@ -37,6 +37,12 @@ public class TileDetectionTask extends Task implements Serializable {
   @Transient private String zoneDetectionJobId;
   @Transient private String address;
   @Transient private Feature point;
+  @Transient private String detectionIdentifier;
+  @Transient private Boolean debugMode;
+
+  public boolean isDebugMode() {
+    return debugMode != null && debugMode;
+  }
 
   public TileDetectionTask(
       String id,

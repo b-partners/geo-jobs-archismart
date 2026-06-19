@@ -316,7 +316,7 @@ class ZoneDetectionJobControllerIT extends FacadeIT {
   void process_detection_with_empty_geojson_zone() {
     var detectionId = UUID.randomUUID().toString();
     var detectionCreation =
-        new CreateDetection()
+        new CreateDetectionDebugMode()
             .detectableObjectModel(new DetectableObjectModel().modelName(ModelName.TOITURE))
             .zoneName("emptyZoneName")
             .emailReceiver("john@mail.com")

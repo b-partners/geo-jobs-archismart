@@ -12,7 +12,9 @@ import app.bpartners.geojobs.endpoint.rest.api.DetectionApi;
 import app.bpartners.geojobs.endpoint.rest.api.MachineDetectionApi;
 import app.bpartners.geojobs.endpoint.rest.client.ApiClient;
 import app.bpartners.geojobs.endpoint.rest.client.ApiException;
+import app.bpartners.geojobs.endpoint.rest.controller.mapper.CreateDetectionMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
+import app.bpartners.geojobs.endpoint.rest.model.CreateDetectionDebugMode;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.DetectionAuthorizer;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.validator.CreateDetectionValidator;
@@ -43,6 +45,7 @@ class CommunityAuthorizationIT extends FacadeIT {
   @MockBean DetectionAuthorizer detectionAuthorizerMock;
   @MockBean DetectionCreationMapper detectionCreationMapperMock;
   @MockBean EventProducer eventProducerMock;
+  @MockBean CreateDetectionMapper createDetectionMapperMock;
 
   @LocalServerPort private int port;
 
@@ -51,6 +54,7 @@ class CommunityAuthorizationIT extends FacadeIT {
 
   @BeforeEach
   void setUp() {
+    when(createDetectionMapperMock.fromDebugMode(any())).thenReturn(mock(CreateDetection.class));
     communityAuthorizationRepository.save(communityAuthorization());
     doNothing().when(createDetectionValidatorMock).accept(any());
     doNothing().when(eventProducerMock).accept(any());
@@ -68,10 +72,10 @@ class CommunityAuthorizationIT extends FacadeIT {
 
     var detectionID = UUID.randomUUID().toString();
     when(detectionCreationMapperMock.apply(
-            any(CreateDetection.class), anyString(), anyString(), anyBoolean()))
+            any(CreateDetection.class), anyString(), anyString(), anyBoolean(), any()))
         .thenReturn(detection(detectionID));
 
-    var actual = detectionApi.processDetection(detectionID, createDetection());
+    var actual = detectionApi.processDetection(detectionID, new CreateDetectionDebugMode());
 
     assertEquals(detection(detectionID).getId(), actual.getId());
   }
@@ -82,10 +86,10 @@ class CommunityAuthorizationIT extends FacadeIT {
 
     var detectionID = UUID.randomUUID().toString();
     when(detectionCreationMapperMock.apply(
-            any(CreateDetection.class), anyString(), anyString(), anyBoolean()))
+            any(CreateDetection.class), anyString(), anyString(), anyBoolean(), any()))
         .thenReturn(detection(detectionID));
 
-    var actual = detectionApi.processDetection(detectionID, createDetection());
+    var actual = detectionApi.processDetection(detectionID, new CreateDetectionDebugMode());
 
     assertEquals(detection(detectionID).getId(), actual.getId());
   }
@@ -98,7 +102,7 @@ class CommunityAuthorizationIT extends FacadeIT {
     var exception =
         assertThrows(
             ApiException.class,
-            () -> detectionApi.processDetection(detectionID, createDetection()));
+            () -> detectionApi.processDetection(detectionID, new CreateDetectionDebugMode()));
 
     assertTrue(exception.getMessage().contains("403"));
     assertTrue(exception.getMessage().contains("FORBIDDEN"));
@@ -106,10 +110,6 @@ class CommunityAuthorizationIT extends FacadeIT {
 
   private static Detection detection(String detectionId) {
     return new Detection().toBuilder().id(detectionId).endToEndId(detectionId).build();
-  }
-
-  private static CreateDetection createDetection() {
-    return new CreateDetection();
   }
 
   void setupClientWithDashboardApiKey() {

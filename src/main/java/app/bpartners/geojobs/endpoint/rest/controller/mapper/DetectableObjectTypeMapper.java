@@ -34,6 +34,7 @@ public class DetectableObjectTypeMapper {
       case ESPACE_VERT -> DetectableType.ESPACE_VERT;
       case VOIE_CARROSSABLE -> DetectableType.VOIE_CARROSSABLE;
       case PARKING -> DetectableType.PARKING;
+      case PLACE_STANDARD -> DetectableType.PLACE_STANDARD;
       case MOISISSURE_COULEUR -> DetectableType.MOISISSURE_COULEUR;
       case MOISISSURE_CLAIR -> DetectableType.MOISISSURE_CLAIR;
       case MOISISSURE_NOIRCIE -> DetectableType.MOISISSURE_NOIRCIE;
@@ -119,6 +120,7 @@ public class DetectableObjectTypeMapper {
       case TOMBE_NON_GEOMETRIQUE -> TOMBE_NON_GEOMETRIQUE;
       case POINTILLE -> null;
       case FLECHE_DIRECTIONNELLE -> null;
+      case PLACE_STANDARD -> PLACE_STANDARD;
     };
   }
 
@@ -254,8 +256,10 @@ public class DetectableObjectTypeMapper {
   }
 
   private List<DetectableObjectType> detectableObjectTypeForStationnementModel() {
-    // TODO: not implemented
-    return new ArrayList<>();
+    var objectTypes = new ArrayList<DetectableObjectType>();
+    objectTypes.add(PARKING);
+    objectTypes.add(PLACE_STANDARD);
+    return objectTypes;
   }
 
   public List<DetectableObjectConfiguration> mapDefaultConfigurationsFromModel(

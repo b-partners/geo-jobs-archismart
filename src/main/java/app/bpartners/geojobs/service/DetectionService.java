@@ -5,6 +5,7 @@ import app.bpartners.geojobs.endpoint.event.model.DetectionRoofSlopeAndHeightReq
 import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import java.util.List;
@@ -61,5 +62,15 @@ public class DetectionService {
     }
 
     return zoneService.getProcessedDetection(detection.getEndToEndId());
+  }
+
+  public List<DetectionFileObject> getDetectionFileObjects(String detectionE2Id) {
+    var detection =
+        detectionRepository
+            .findByEndToEndId(detectionE2Id)
+            .orElseThrow(
+                () -> new NotFoundException("Detection.id= " + detectionE2Id + " not found."));
+
+    return detection.getFileObjects();
   }
 }

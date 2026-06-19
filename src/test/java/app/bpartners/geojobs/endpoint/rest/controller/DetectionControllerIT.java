@@ -137,9 +137,9 @@ class DetectionControllerIT extends FacadeIT {
         .build();
   }
 
-  private CreateDetection createDetection() {
+  private CreateDetectionDebugMode createDetection() {
     var detectableObjectModel = new DetectableObjectModel().modelName(TOITURE);
-    return new CreateDetection()
+    return new CreateDetectionDebugMode()
         .emailReceiver("mock@hotmail.com")
         .zoneName("Lyon")
         .detectableObjectModel(detectableObjectModel)

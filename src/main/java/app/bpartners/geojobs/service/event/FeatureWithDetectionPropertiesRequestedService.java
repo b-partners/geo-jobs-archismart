@@ -47,7 +47,7 @@ public class FeatureWithDetectionPropertiesRequestedService
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
     var delimitations = detection.getDelimitationOf(feature);
     var savedDetection = apply(detection, feature, delimitations);
-    if (savedDetection != null) {
+    if (savedDetection != null && !savedDetection.equals(detection)) {
       var optionalProvidedUpdatedFeature =
           savedDetection.getProvidedGeoJsonZone().stream()
               .filter(
@@ -87,7 +87,7 @@ public class FeatureWithDetectionPropertiesRequestedService
       List<Feature> delimitationsFeature) {
     if (!detection.hasToitureModelName()) {
       log.error("Only BP_TOITURE model is supported to generated VGG from now");
-      return null;
+      return detection;
     }
     var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
     var delimitationFeatureWithResultProperties =

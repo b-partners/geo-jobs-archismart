@@ -1,11 +1,18 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_MASK;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
+import static java.time.Instant.now;
+import static java.util.UUID.randomUUID;
 
+import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.detection.DetectionMapper;
 import app.bpartners.geojobs.service.detection.RoofCoveringDetector;
@@ -34,6 +41,8 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
   private final GeometryConverter geometryConverter;
   private final DetectionMaskFromTileRetriever maskRetriever;
   private final RoofCoveringDetector roofCoveringDetector;
+  private final DetectionFileObjectRepository detectionObjectHistoryRepository;
+  private final BucketComponent bucketComponent;
 
   @SneakyThrows
   @Override
@@ -47,6 +56,9 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
     File mask = null;
     var tileCoordinates = tile.getCoordinates();
     var detection = detectionRepository.findByZdjId(zoneDetectionJobId).orElse(null);
+    var detectionIdentifier = detection == null ? null : detection.getId();
+    tileDetectionTask.setDetectionIdentifier(detectionIdentifier);
+    tileDetectionTask.setDebugMode(detection != null && detection.isDebugMode());
     if (detection != null) {
       if (detection.hasToitureModelName()) {
         var multiPolygonFromTile =
@@ -96,12 +108,37 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
           return;
         }
       }
+      var tileImageBucketPath = tile.getBucketPath();
+      if (detection.isDebugMode()) {
+        detectionObjectHistoryRepository.save(
+            DetectionFileObject.builder()
+                .id(randomUUID().toString())
+                .detectionIdentifier(detectionIdentifier)
+                .fileName(replaceSeparator(tileImageBucketPath))
+                .bucketKey(tileImageBucketPath)
+                .fileType(TILE_IMAGE)
+                .creationDatetime(now())
+                .build());
+      }
       if (mask == null && detection.hasToitureModelName()) {
         log.info(
             "Actual tile detection could not compute mask, skipping detection for TileDetectionTask"
                 + " : {}",
             tileDetectionTask);
         return;
+      }
+      if (detection.isDebugMode()) {
+        var maskBucketKey = toMaskPath(tileImageBucketPath);
+        bucketComponent.upload(mask, maskBucketKey);
+        detectionObjectHistoryRepository.save(
+            DetectionFileObject.builder()
+                .id(randomUUID().toString())
+                .detectionIdentifier(detectionIdentifier)
+                .fileName(replaceSeparator(maskBucketKey))
+                .bucketKey(maskBucketKey)
+                .fileType(TILE_MASK)
+                .creationDatetime(now())
+                .build());
       }
     }
     var detectionResponse =
@@ -145,5 +182,27 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
               });
     }
     machineDetectedTileRepository.save(machineDetectedTile);
+  }
+
+  private static String toMaskPath(String path) {
+    return insertSuffix(path, "_mask");
+  }
+
+  private static String insertSuffix(String path, String suffix) {
+    if (path == null) {
+      return null;
+    }
+    int dotIndex = path.lastIndexOf('.');
+    if (dotIndex < 0) {
+      return path + suffix;
+    }
+    return path.substring(0, dotIndex) + suffix + path.substring(dotIndex);
+  }
+
+  private static String replaceSeparator(String path) {
+    if (path == null) {
+      return null;
+    }
+    return path.replace('/', '_');
   }
 }

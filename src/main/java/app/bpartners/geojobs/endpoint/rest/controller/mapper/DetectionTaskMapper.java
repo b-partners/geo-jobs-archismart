@@ -114,6 +114,7 @@ public class DetectionTaskMapper {
       case LINE -> LINE;
       case ESPACE_VERT -> ESPACE_VERT;
       case PARKING -> PARKING;
+      case PLACE_STANDARD -> PLACE_STANDARD;
       case TROTTOIR -> TROTTOIR;
       case MOISISSURE_CLAIR -> MOISISSURE_CLAIR;
       case MOISISSURE_COULEUR -> MOISISSURE_COULEUR;

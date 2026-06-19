@@ -21,9 +21,11 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class DetectionRoofPropertiesRequestedService
@@ -41,6 +43,10 @@ public class DetectionRoofPropertiesRequestedService
 
   public Detection apply(String detectionIdentifier) {
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
+    if (!detection.hasToitureModelName()) {
+      log.info("Only BP_TOITURE model is supporting roof properties computing");
+      return detection;
+    }
     var machineDetectedTiles =
         machineDetectedTileRepository.findAllByZdjJobId(detection.getZdjId());
     var featureWithDelimitationsHavingRoofProperties = apply(detection, machineDetectedTiles);

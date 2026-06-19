@@ -53,6 +53,7 @@ public class DetectionMapper {
   public static final String LINE_STRING_VALUE = "LINE";
   public static final String TROTTOIR_STRING_VALUE = "TROTTOIR";
   public static final String PARKING_STRING_VALUE = "PARKING";
+  public static final String PLACE_STANDARD_STRING_VALUE = "PLACE_STANDARD";
   public static final String ESPACE_VERT_STRING_VALUE = "ESPACE_VERT";
   public static final String GREEN_SPACE_STRING_VALUE = "GREEN_SPACE";
   public static final String OBSTACLE_STRING_VALUE = "OBSTACLE";
@@ -182,6 +183,7 @@ public class DetectionMapper {
       case MOISISSURE_CLAIR_TUILES_STRING_VALUE -> DetectableType.MOISISSURE_CLAIR;
       case HUMIDITE_CLAIR_AUTRES_STRING_VALUE -> DetectableType.HUMIDITE_CLAIR;
       case HUMIDITE_INTENSE_AUTRES_STRING_VALUE -> DetectableType.HUMIDITE_INTENSE;
+      case PLACE_STANDARD_STRING_VALUE -> DetectableType.PLACE_STANDARD;
       default -> throw new IllegalStateException("Unexpected value: " + label.toLowerCase());
     };
   }
@@ -300,6 +302,7 @@ public class DetectionMapper {
       case LINE_STRING_VALUE -> create(objectId, LINE);
       case TROTTOIR_STRING_VALUE -> create(objectId, TROTTOIR);
       case PARKING_STRING_VALUE -> create(objectId, PARKING);
+      case PLACE_STANDARD_STRING_VALUE -> create(objectId, PLACE_STANDARD);
       case ESPACE_VERT_STRING_VALUE -> create(objectId, ESPACE_VERT);
       default ->
           throw new IllegalStateException("Unexpected value: " + label.getName().toUpperCase());

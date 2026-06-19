@@ -48,7 +48,8 @@ public class DetectionCreationMapper {
       CreateDetection createDetection,
       String detectionE2Id,
       @Nullable String communityOwnerId,
-      boolean isSynchronous) {
+      boolean isSynchronous,
+      Boolean debugMode) {
     var detectableObjectModel = createDetection.getDetectableObjectModel();
     var detectableObjectModelList = createDetection.getDetectableObjectModelList();
     var detectionId = randomUUID().toString();
@@ -96,6 +97,7 @@ public class DetectionCreationMapper {
                 createDetection.getNeedsImageOutput() != null
                     && createDetection.getNeedsImageOutput())
             .geoJsonDelimitationType(createDetection.getGeoJsonDelimitationType())
+            .debugMode(debugMode)
             .build();
     detection.addFeatures(domainProvidedGeoJsonZone, PROVIDED_FEATURE);
     return detection;

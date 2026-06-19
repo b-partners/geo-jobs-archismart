@@ -280,7 +280,8 @@ class ZoneServiceTest {
         .thenReturn(
             List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24), 5)));
 
-    var actual = subject.processDetection(detectionIdentifier, createDetection, communityOwnerId);
+    var actual =
+        subject.processDetection(detectionIdentifier, createDetection, communityOwnerId, null);
 
     var expectedGeoServerProperties =
         geoServerConfiguration.defaultGeoServerProperties(LATEST_DEFAULT_LAYER, 5);
@@ -336,7 +337,7 @@ class ZoneServiceTest {
                         .build())
                 .build());
 
-    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId);
+    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId, null);
 
     verify(conversionInitiationServiceMock, only())
         .getOrComputeGeoJsonConversionJob(detection, zoneDetectionJobMock);
@@ -391,7 +392,7 @@ class ZoneServiceTest {
                         .build())
                 .build());
 
-    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId);
+    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId, null);
 
     var eventCaptor = ArgumentCaptor.forClass(List.class);
     verify(conversionInitiationServiceMock, never()).getOrComputeGeoJsonConversionJob(any(), any());
@@ -416,7 +417,7 @@ class ZoneServiceTest {
     String communityOwnerId = null;
     setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
 
-    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId);
+    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId, null);
 
     assertEquals(TILING, actual.getStep().getName());
     assertEquals(Status.ProgressionEnum.PENDING, actual.getStep().getStatus().getProgression());
@@ -431,7 +432,7 @@ class ZoneServiceTest {
     String communityOwnerId = null;
     setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
 
-    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId);
+    var actual = subject.processDetection(detectionId, createDetection, communityOwnerId, null);
 
     assertEquals(REQUEST_ACCEPTED, actual.getStep().getName());
     assertEquals(Status.ProgressionEnum.PENDING, actual.getStep().getStatus().getProgression());

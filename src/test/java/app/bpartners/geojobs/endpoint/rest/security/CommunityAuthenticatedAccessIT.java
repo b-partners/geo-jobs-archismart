@@ -74,7 +74,7 @@ class CommunityAuthenticatedAccessIT extends FacadeIT {
   void community_cannot_access_endpoint_if_api_key_is_revoked() {
     caRepository.save(communityAuthorization(true));
     var detectionId = randomUUID().toString();
-    var createDetection = new CreateDetection();
+    var createDetection = new CreateDetectionDebugMode();
     var error =
         assertThrows(
             ApiException.class, () -> detectionApi.processDetection(detectionId, createDetection));
@@ -86,7 +86,8 @@ class CommunityAuthenticatedAccessIT extends FacadeIT {
     var detectionId = randomUUID().toString();
     var detectableObjectModel = new DetectableObjectModel();
     detectableObjectModel.setModelName(TOITURE);
-    var createDetection = new CreateDetection().detectableObjectModel(detectableObjectModel);
+    var createDetection =
+        new CreateDetectionDebugMode().detectableObjectModel(detectableObjectModel);
 
     var actual =
         assertThrows(

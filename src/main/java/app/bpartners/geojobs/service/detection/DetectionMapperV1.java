@@ -117,6 +117,7 @@ public class DetectionMapperV1 {
       case LINE_STRING_VALUE -> DetectableType.LINE;
       case TROTTOIR_STRING_VALUE, SIDEWALK_STRING_VALUE -> DetectableType.TROTTOIR;
       case PARKING_STRING_VALUE -> DetectableType.PARKING;
+      case PLACE_STANDARD_STRING_VALUE -> DetectableType.PLACE_STANDARD;
       case ESPACE_VERT_STRING_VALUE, GREEN_SPACE_STRING_VALUE -> DetectableType.ESPACE_VERT;
       case OBSTACLE_STRING_VALUE -> DetectableType.OBSTACLE;
       case CHEMINEE_STRING_VALUE -> DetectableType.CHEMINEE;

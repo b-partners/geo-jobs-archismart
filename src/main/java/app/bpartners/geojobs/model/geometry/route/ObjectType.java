@@ -63,6 +63,7 @@ public enum ObjectType {
       case PASSAGE_PIETON -> pathway;
       case LINE -> road;
       case TROTTOIR -> sidewalk;
+      case PLACE_STANDARD -> place_standard;
       case RISQUE_FEU,
               MOISISSURE,
               USURE,

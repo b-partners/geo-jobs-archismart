@@ -796,7 +796,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDetection'
+              $ref: '#/components/schemas/CreateDetectionDebugMode'
             examples:
               detectionForRoof:
                 $ref: '#/components/examples/DetectionUsingToitureModel'
@@ -809,6 +809,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detection'
+  '/detections/{id}/fileObjects':
+    get:
+      tags:
+        - Detection
+      operationId: getDetectionFileObjects
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      responses:
+        200:
+          description: List of detection file objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DetectionFileObject'
   '/detections/{id}/step':
     put:
       deprecated: true
@@ -947,7 +968,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDetection'
+              $ref: '#/components/schemas/CreateDetectionDebugMode'
       responses:
         200:
           description: Detection created or processing
@@ -2020,6 +2041,7 @@ components:
         - ESPACE_VERT
         - VOIE_CARROSSABLE
         - PARKING
+        - PLACE_STANDARD
         - MOISISSURE_COULEUR
         - MOISISSURE_CLAIR
         - MOISISSURE_NOIRCIE
@@ -2383,7 +2405,7 @@ components:
           - **BP_VEGETATION** : Espace vert, Espace arboré, arbre individualisé, canopée
           - **BP_TAMPONS** : Tampons de voiries, avaloirs, tampons hydroliques
           - **BP_CIMETIERE** : Cimetière, espace arboré, espace vert, tombe simple, tombe double, tombe non géométrique
-          - **BP_STATIONNEMENT** : Parking
+          - **BP_STATIONNEMENT** : Parking, Place standard
       enum:
         - BP_TOITURE
         - BP_LOM
@@ -2398,6 +2420,12 @@ components:
         - BP_TAMPONS
         - BP_CIMETIERE
         - BP_STATIONNEMENT
+    CreateDetectionDebugMode:
+      allOf:
+        - $ref: '#/components/schemas/CreateDetection'
+      properties:
+        debugMode:
+          type: boolean
     CreateDetection:
       type: object
       properties:
@@ -2457,6 +2485,22 @@ components:
           type: string
         readmeProject:
           type: string
+    DetectionFileObject:
+      type: object
+      properties:
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        fileType:
+          $ref: '#/components/schemas/DetectionFileType'
+    DetectionFileType:
+      type: string
+      enum:
+        - TILE_IMAGE
+        - TILE_MASK
+        - TILE_DETECTION_RESULT_V1
+        - TILE_DETECTION_RESULT_V2
     Detection:
       allOf:
         - $ref: '#/components/schemas/CreateDetection'

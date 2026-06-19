@@ -87,6 +87,8 @@ class ZoneDetectionControllerTest {
   ConfigureAddressValidator configureAddressValidatorMock = mock();
   CreateDetectionValidator createDetectionValidatorMock = mock(CreateDetectionValidator.class);
   DetectionService detectionServiceMock = mock();
+  DetectionFileObjectMapper detectionFileObjectMapperMock = mock();
+  CreateDetectionMapper createDetectionMapperMock = mock();
   ZoneDetectionController subject =
       new ZoneDetectionController(
           parcelServiceMock,
@@ -111,7 +113,9 @@ class ZoneDetectionControllerTest {
           mediaTypeGuesserMock,
           configureAddressValidatorMock,
           createDetectionValidatorMock,
-          detectionServiceMock);
+          detectionServiceMock,
+          detectionFileObjectMapperMock,
+          createDetectionMapperMock);
 
   @BeforeEach
   void setup() {
@@ -119,6 +123,22 @@ class ZoneDetectionControllerTest {
         .thenReturn(new Principal("dummyApiKey", Set.of(new Authority(ROLE_ADMIN))));
     when(communityAuthRepositoryMock.findByApiKey(any())).thenReturn(Optional.empty());
     doNothing().when(createDetectionValidatorMock).accept(any());
+  }
+
+  @Test
+  void get_file_objects() {
+    var detectionE2Id = randomUUID().toString();
+    var detectionFileObjectMock =
+        mock(app.bpartners.geojobs.repository.model.detection.DetectionFileObject.class);
+    var restDetectionFileObject = mock(DetectionFileObject.class);
+    when(detectionServiceMock.getDetectionFileObjects(detectionE2Id))
+        .thenReturn(List.of(detectionFileObjectMock));
+    when(detectionFileObjectMapperMock.toRest(detectionFileObjectMock))
+        .thenReturn(restDetectionFileObject);
+
+    var actual = subject.getDetectionFileObjects(detectionE2Id);
+
+    assertEquals(List.of(restDetectionFileObject), actual);
   }
 
   @Test
@@ -260,6 +280,7 @@ class ZoneDetectionControllerTest {
   @Test
   void processDetectionSynchronously_ok() {
     var detectionId = randomUUID().toString();
+    var createDetectionDebugModeMock = mock(CreateDetectionDebugMode.class);
     var createDetection = mock(CreateDetection.class);
     var principal = mock(Principal.class);
     var communityAuth = mock(CommunityAuthorization.class);
@@ -270,14 +291,15 @@ class ZoneDetectionControllerTest {
         .thenReturn(Optional.of(communityAuth));
     when(communityAuth.getId()).thenReturn("community-id");
     doNothing().when(detectionAuthorizerMock).accept(detectionId, createDetection, principal);
-    when(zoneServiceMock.processDetectionSynchronously(anyString(), any(), anyString()))
+    when(zoneServiceMock.processDetectionSynchronously(anyString(), any(), anyString(), any()))
         .thenReturn(expectedDetection);
+    when(createDetectionMapperMock.fromDebugMode(any())).thenReturn(createDetection);
 
-    var actual = subject.processDetectionSynchronously(detectionId, createDetection);
+    var actual = subject.processDetectionSynchronously(detectionId, createDetectionDebugModeMock);
 
     assertEquals(expectedDetection, actual);
     verify(zoneServiceMock)
-        .processDetectionSynchronously(detectionId, createDetection, "community-id");
+        .processDetectionSynchronously(detectionId, createDetection, "community-id", false);
     verify(detectionAuthorizerMock).accept(detectionId, createDetection, principal);
     verify(authProviderMock, times(2)).getPrincipal();
     verify(principal).getPassword();

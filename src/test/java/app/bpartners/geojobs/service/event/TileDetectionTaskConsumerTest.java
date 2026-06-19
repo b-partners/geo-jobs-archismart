@@ -1,18 +1,24 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_MASK;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
+import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.*;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
 import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
@@ -33,6 +39,8 @@ class TileDetectionTaskConsumerTest {
   GeometryConverter geometryConverterMock = mock();
   DetectionMaskFromTileRetriever maskRetrieverMock = mock();
   RoofCoveringDetector roofCoveringDetectorMock = mock();
+  BucketComponent bucketComponentMock = mock();
+  DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
   TileDetectionTaskConsumer subject =
       new TileDetectionTaskConsumer(
           machineDetectedTileRepositoryMock,
@@ -41,7 +49,116 @@ class TileDetectionTaskConsumerTest {
           detectionRepositoryMock,
           geometryConverterMock,
           maskRetrieverMock,
-          roofCoveringDetectorMock);
+          roofCoveringDetectorMock,
+          detectionObjectHistoryRepositoryMock,
+          bucketComponentMock);
+
+  @Test
+  void persist_detection_file_object_when_detection_debug_mode() {
+    var detectionMock = mock(Detection.class);
+    var detectableObjectConfigurations = List.of(mock(DetectableObjectConfiguration.class));
+    var zoneDetectionJobId = randomUUID().toString();
+    var parcelId = randomUUID().toString();
+    var parcelJobId = randomUUID().toString();
+    var detectionIdentifier = randomUUID().toString();
+    var tileMock = mock(Tile.class);
+    var featureMock = mock(Feature.class);
+    var featureGeometryMock = mock(FeatureGeometry.class);
+    var featureMultiPolygonMock = mock(MultiPolygon.class);
+    var roofMultiPolygonMock = mock(org.locationtech.jts.geom.MultiPolygon.class);
+    var maskFileMock = mock(File.class);
+    var detectionResponseMock = mock(DetectionResponseV2.class);
+    var machineDetectedTileMock = mock(MachineDetectedTile.class);
+    var providedFeatureMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
+    var roofDelimitationMockDomain = mock(app.bpartners.geojobs.repository.model.Feature.class);
+    var roofFeatureGeometryMock =
+        mock(app.bpartners.geojobs.repository.model.Feature.FeatureGeometry.class);
+    var tileDetectionTask =
+        TileDetectionTask.builder()
+            .parcelId(parcelId)
+            .zoneDetectionJobId(zoneDetectionJobId)
+            .detectableObjectConfigurations(detectableObjectConfigurations)
+            .tile(tileMock)
+            .jobId(parcelJobId)
+            .build();
+    var tileImageBucketPath = "layer/20/0/10/tileBucketPath.jpg";
+    var tileMaskBucketPath = "layer/20/0/10/tileBucketPath_mask.jpg";
+    var tileBuilderMock = mock(Tile.TileBuilder.class);
+    when(tileBuilderMock.detectionE2Id(any())).thenReturn(tileBuilderMock);
+    when(tileBuilderMock.build()).thenReturn(tileMock);
+    when(tileMock.toBuilder()).thenReturn(tileBuilderMock);
+    when(tileMock.getBucketPath()).thenReturn(tileImageBucketPath);
+    when(tileMock.getCoordinates()).thenReturn(new TileCoordinates().x(0).y(0).z(20));
+    when(roofDelimitationMockDomain.getGeometry()).thenReturn(mock());
+    when(geometryConverterMock.apply(featureMultiPolygonMock.getCoordinates()))
+        .thenReturn(roofMultiPolygonMock);
+    when(featureGeometryMock.getMultiPolygon()).thenReturn(featureMultiPolygonMock);
+    when(featureGeometryMock.getActualInstance()).thenReturn(featureMultiPolygonMock);
+    when(featureMock.getGeometry()).thenReturn(featureGeometryMock);
+    when(detectionMock.isDebugMode()).thenReturn(true);
+    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.getProvidedGeoJsonZone()).thenReturn(List.of(featureMock));
+    when(roofFeatureGeometryMock.getActualInstanceStringValue())
+        .thenReturn("roofGeometryActualInstanceStringValue");
+    var multiPolygonFromTileMock = mock(org.locationtech.jts.geom.MultiPolygon.class);
+    when(roofDelimitationMockDomain.getGeometry()).thenReturn(roofFeatureGeometryMock);
+    when(roofMultiPolygonMock.contains(eq(multiPolygonFromTileMock))).thenReturn(true);
+    when(multiPolygonFromTileMock.intersection(roofMultiPolygonMock))
+        .thenReturn(roofMultiPolygonMock);
+    when(detectionMock.getId()).thenReturn(detectionIdentifier);
+    when(detectionMock.getFeatureWithDelimitations())
+        .thenReturn(
+            List.of(
+                new FeatureWithDelimitation(
+                    providedFeatureMockDomain, List.of(roofDelimitationMockDomain))));
+    when(detectionRepositoryMock.findByZdjId(zoneDetectionJobId))
+        .thenReturn(Optional.of(detectionMock));
+    when(geometryConverterMock.getMultiPolygonFromTile(0, 0, 20))
+        .thenReturn(multiPolygonFromTileMock);
+    when(geometryConverterMock.readGeometryFromString(eq("roofGeometryActualInstanceStringValue")))
+        .thenReturn(roofMultiPolygonMock);
+    when(roofMultiPolygonMock.intersection(any())).thenReturn(roofMultiPolygonMock);
+    when(machineDetectedTileRepositoryMock.save(any())).thenReturn(machineDetectedTileMock);
+    when(objectDetectorMock.apply(any(), any(), any())).thenReturn(detectionResponseMock);
+    when(detectionMapperMock.toDetectedTile(any(), any(), any(), any(), any()))
+        .thenReturn(new MachineDetectedTile());
+    when(maskRetrieverMock.apply(tileMock, roofMultiPolygonMock)).thenReturn(maskFileMock);
+    when(roofCoveringDetectorMock.apply(any(Tile.class), any(File.class)))
+        .thenReturn(
+            new RoofCoveringDetector.RoofCoveringDetectionResponse(
+                new RoofCovering(RoofCoveringType.ROOF_ARDOISE, 1100L),
+                new RoofCovering(RoofCoveringType.ROOF_TUILES, 1000L)));
+    when(bucketComponentMock.upload(any(), any())).thenReturn(mock());
+
+    assertDoesNotThrow(() -> subject.accept(tileDetectionTask));
+
+    var detectionFileObjectCaptor = ArgumentCaptor.forClass(DetectionFileObject.class);
+    verify(detectionObjectHistoryRepositoryMock, times(2))
+        .save(detectionFileObjectCaptor.capture());
+    var actualSavedFileObject = detectionFileObjectCaptor.getAllValues();
+    var savedFileObjectTile = actualSavedFileObject.getFirst();
+    var savedTileMaskFileObject = actualSavedFileObject.getLast();
+    assertEquals(
+        DetectionFileObject.builder()
+            .id(savedFileObjectTile.getId())
+            .detectionIdentifier(detectionIdentifier)
+            .bucketKey(tileImageBucketPath)
+            .fileType(TILE_IMAGE)
+            .fileName("layer_20_0_10_tileBucketPath.jpg")
+            .creationDatetime(savedFileObjectTile.getCreationDatetime())
+            .build(),
+        savedFileObjectTile);
+    assertEquals(
+        DetectionFileObject.builder()
+            .id(savedTileMaskFileObject.getId())
+            .detectionIdentifier(detectionIdentifier)
+            .bucketKey(tileMaskBucketPath)
+            .fileName("layer_20_0_10_tileBucketPath_mask.jpg")
+            .fileType(TILE_MASK)
+            .creationDatetime(savedTileMaskFileObject.getCreationDatetime())
+            .build(),
+        savedTileMaskFileObject);
+  }
 
   @Test
   void do_nothing_when_detection_has_toiture_model_but_without_mask() {

@@ -1,21 +1,29 @@
 package app.bpartners.geojobs.service.detection;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper.detectableObjectTypeForVegetationModel;
+import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_DETECTION_RESULT_V1;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_DETECTION_RESULT_V2;
 import static app.bpartners.geojobs.service.detection.DetectionApiVersion.V2;
+import static java.lang.System.currentTimeMillis;
+import static java.time.Instant.now;
+import static java.util.UUID.randomUUID;
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.Duration;
 import java.util.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -40,26 +48,35 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
   private final DetectionResponseAggregator detectionResponseAggregator;
   private final DetectionResponseAggregatorV1 detectionResponseAggregatorV1;
   private final DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper;
+  private final DetectionFileObjectRepository detectionFileObjectRepository;
+  private final FileWriter fileWriter;
+  private final ObjectMapper objectMapper;
   private final BucketComponent bucketComponent;
 
   @SneakyThrows
   public HttpApiTileObjectDetector(
       ObjectMapper om,
-      CustomBucketComponent bucketComponent,
+      CustomBucketComponent customBucketComponent,
       @Value("${tile.detection.api.url}") String defaultApiUrl,
       TileObjectDetectorConf tileObjectDetectorConf,
       DetectionResponseAggregator detectionResponseAggregator,
       DetectionResponseAggregatorV1 detectionResponseAggregatorV1,
       DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper,
-      BucketComponent bucketComponent1) {
+      DetectionFileObjectRepository detectionFileObjectRepository,
+      BucketComponent bucketComponent,
+      FileWriter fileWriter,
+      ObjectMapper objectMapper) {
     this.om = om;
-    this.customBucketComponent = bucketComponent;
+    this.customBucketComponent = customBucketComponent;
     this.defaultDetectionApiUrl = defaultApiUrl;
     this.tileObjectDetectorConf = tileObjectDetectorConf;
     this.detectionResponseAggregator = detectionResponseAggregator;
     this.detectionResponseAggregatorV1 = detectionResponseAggregatorV1;
     this.detectionResponseV1ToV2Mapper = detectionResponseV1ToV2Mapper;
-    this.bucketComponent = bucketComponent1;
+    this.detectionFileObjectRepository = detectionFileObjectRepository;
+    this.bucketComponent = bucketComponent;
+    this.fileWriter = fileWriter;
+    this.objectMapper = objectMapper;
   }
 
   @SneakyThrows
@@ -69,6 +86,7 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       File mask,
       List<DetectableObjectConfiguration> detectableObjectConfigurations) {
     Tile tile = tileDetectionTask.getTile();
+    var isDebugMode = tileDetectionTask.isDebugMode();
     if (tile == null) {
       return null;
     }
@@ -77,32 +95,9 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     headers.setContentType(APPLICATION_JSON);
 
     var tileImageBucketPath = tile.getBucketPath();
-    var maskBucketKey = "mask_" + tileImageBucketPath;
-    if (mask != null) {
-      bucketComponent.upload(mask, maskBucketKey);
-    }
     var tileImageFile =
         customBucketComponent.download(
             customBucketComponent.getBucketConf().getBucketName(), tileImageBucketPath);
-    var tileCoordinates = tile.getCoordinates();
-    var coordinatesDescription =
-        tileCoordinates.getZ() + "_" + tileCoordinates.getX() + "_" + tileCoordinates.getY();
-    log.info(
-        "{} coordinates original image : {} ",
-        coordinatesDescription,
-        customBucketComponent.presign(
-            tileImageBucketPath,
-            Duration.ofHours(1L),
-            Optional.of(coordinatesDescription + ".jpeg")));
-    if (mask != null) {
-      log.info(
-          "{} coordinates mask : {} ",
-          coordinatesDescription,
-          customBucketComponent.presign(
-              maskBucketKey,
-              Duration.ofHours(1L),
-              Optional.of("mask_" + coordinatesDescription + ".png")));
-    }
     String base64ImgData = Base64.getEncoder().encodeToString(readFileToByteArray(tileImageFile));
     String base64MaskData =
         mask == null ? null : Base64.getEncoder().encodeToString(readFileToByteArray(mask));
@@ -133,12 +128,53 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
         if (body != null) {
           v1Responses.add(
               new DetectionResponseAggregatorV1.DetectionResponseUrl(body, apiUrl.getUrl()));
+
+          if (isDebugMode) {
+            var detectionResponseBytes = objectMapper.writeValueAsBytes(body);
+            var suffix = "_response_v1_" + currentTimeMillis();
+            var tileDetectionResultV1BucketKey = insertSuffix(tileImageBucketPath, suffix, ".json");
+            var fileName = replaceSeparator(tileDetectionResultV1BucketKey);
+            bucketComponent.upload(
+                fileWriter.write(detectionResponseBytes, createTempDirectory(), fileName),
+                tileDetectionResultV1BucketKey);
+
+            detectionFileObjectRepository.save(
+                DetectionFileObject.builder()
+                    .id(randomUUID().toString())
+                    .fileName(fileName)
+                    .bucketKey(tileDetectionResultV1BucketKey)
+                    .detectionIdentifier(tileDetectionTask.getDetectionIdentifier())
+                    .fileType(TILE_DETECTION_RESULT_V1)
+                    .creationDatetime(now())
+                    .build());
+          }
         }
       } else {
         var body = callApi(restTemplate, requestV2, apiUrl.getUrl(), DetectionResponseV2.class);
         if (body != null) {
           v2Responses.add(
               new DetectionResponseAggregator.DetectionResponseUrl(body, apiUrl.getUrl()));
+
+          if (isDebugMode) {
+            var detectionResponseBytes = objectMapper.writeValueAsBytes(body);
+            var suffix = "_response_v2_" + currentTimeMillis();
+            var tileDetectionResultV2BucketKey = insertSuffix(tileImageBucketPath, suffix, ".json");
+            var fileName = replaceSeparator(tileDetectionResultV2BucketKey);
+
+            bucketComponent.upload(
+                fileWriter.write(detectionResponseBytes, createTempDirectory(), fileName),
+                tileDetectionResultV2BucketKey);
+
+            detectionFileObjectRepository.save(
+                DetectionFileObject.builder()
+                    .id(randomUUID().toString())
+                    .fileName(fileName)
+                    .bucketKey(tileDetectionResultV2BucketKey)
+                    .detectionIdentifier(tileDetectionTask.getDetectionIdentifier())
+                    .fileType(TILE_DETECTION_RESULT_V2)
+                    .creationDatetime(now())
+                    .build());
+          }
         }
       }
     }
@@ -223,10 +259,11 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       String base64ImgData,
       String base64MaskData,
       boolean vegetation) {
+    var payloadFileName = !fileName.contains(".") ? fileName + ".jpg" : fileName;
     var builder =
         DetectionPayload.builder()
             .projectName(projectName)
-            .fileName(fileName)
+            .fileName(payloadFileName)
             .base64ImgData(base64ImgData)
             .base64MaskData(base64MaskData);
     if (vegetation) {
@@ -258,5 +295,24 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
           TileDetectorUrl.builder().url(defaultDetectionApiUrl).version(V2).build());
     }
     return new ArrayList<>(urlsByUrl.values());
+  }
+
+  private static String insertSuffix(String path, String suffix, String extension) {
+    if (path == null) {
+      return null;
+    }
+    String normalizedExt = extension.startsWith(".") ? extension : "." + extension;
+
+    int dotIndex = path.lastIndexOf('.');
+    String base = (dotIndex < 0) ? path : path.substring(0, dotIndex);
+
+    return base + suffix + normalizedExt;
+  }
+
+  private static String replaceSeparator(String path) {
+    if (path == null) {
+      return null;
+    }
+    return path.replace('/', '_');
   }
 }
