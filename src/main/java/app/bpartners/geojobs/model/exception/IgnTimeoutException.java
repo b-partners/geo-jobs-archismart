@@ -1,9 +1,7 @@
 package app.bpartners.geojobs.model.exception;
 
-import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
-
-public class IgnTimeoutException extends ApiException {
+public class IgnTimeoutException extends GatewayTimeoutException {
   public IgnTimeoutException(String message) {
-    super(SERVER_EXCEPTION, message);
+    super(message);
   }
 }

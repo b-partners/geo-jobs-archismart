@@ -1,10 +1,8 @@
 package app.bpartners.geojobs.model.exception;
 
-import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
-
-public class ImageSourcesTimeoutException extends ApiException {
+public class ImageSourcesTimeoutException extends GatewayTimeoutException {
 
   public ImageSourcesTimeoutException(String message) {
-    super(SERVER_EXCEPTION, message);
+    super(message);
   }
 }

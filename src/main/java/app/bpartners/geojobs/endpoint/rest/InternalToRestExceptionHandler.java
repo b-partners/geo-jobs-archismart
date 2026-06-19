@@ -107,6 +107,12 @@ public class InternalToRestExceptionHandler {
     return new ResponseEntity<>(toRest(e, HttpStatus.GATEWAY_TIMEOUT), HttpStatus.GATEWAY_TIMEOUT);
   }
 
+  @ExceptionHandler(value = {GatewayTimeoutException.class})
+  ResponseEntity<RestException> handleGatewayTimeout(GatewayTimeoutException e) {
+    log.info("Gateway timeout", e);
+    return new ResponseEntity<>(toRest(e, HttpStatus.GATEWAY_TIMEOUT), HttpStatus.GATEWAY_TIMEOUT);
+  }
+
   @ExceptionHandler(value = {IgnTimeoutException.class})
   ResponseEntity<RestException> handleTimeout(IgnTimeoutException e) {
     log.info("IGN timeout", e);

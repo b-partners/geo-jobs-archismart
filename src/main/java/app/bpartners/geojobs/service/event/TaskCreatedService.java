@@ -46,7 +46,8 @@ public class TaskCreatedService<T extends Task, C extends TaskCreated<T>> implem
     try {
       taskConsumer.accept(task);
     } catch (RuntimeException e) {
-      if (isRetryable() && !e.getCause().getClass().equals(ImageSourcesTimeoutException.class)) {
+      var exceptionType = e.getClass();
+      if (isRetryable() && !exceptionType.equals(ImageSourcesTimeoutException.class)) {
         log.error(
             "Task [{} - id={}] failed at attempt {}/{}, it will be retried",
             task,

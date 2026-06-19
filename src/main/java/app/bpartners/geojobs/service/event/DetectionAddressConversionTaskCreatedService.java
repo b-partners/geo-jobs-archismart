@@ -8,6 +8,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import app.bpartners.geojobs.endpoint.event.model.DetectionAddressConversionTaskCreated;
 import app.bpartners.geojobs.job.model.Status;
 import app.bpartners.geojobs.job.service.TaskStatusService;
+import app.bpartners.geojobs.model.exception.GatewayTimeoutException;
 import app.bpartners.geojobs.repository.DetectionAddressConversionTaskRepository;
 import app.bpartners.geojobs.repository.model.DetectionAddressConversionTask;
 import app.bpartners.geojobs.service.TaskConsumer;
@@ -59,7 +60,7 @@ public class DetectionAddressConversionTaskCreatedService
                   .build());
           taskRepository.save(task);
         } else {
-          throw new RuntimeException(
+          throw new GatewayTimeoutException(
               "Unexpected internal server error causing retry from dashboard API : "
                   + apiExceptionResponseBodyAsString);
         }
