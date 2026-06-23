@@ -17,6 +17,8 @@ import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
 import app.bpartners.geojobs.repository.model.detection.RoofCoveringType;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
+import app.bpartners.geojobs.service.FilePolygonDrawer;
+import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
 import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -38,6 +40,8 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
     RoofCoveringDetector roofCoveringDetectorMock = mock();
     DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
     BucketComponent bucketComponentMock = mock();
+    TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersectionMock = mock();
+    FilePolygonDrawer filePolygonDrawerMock = mock();
 
     when(roofCoveringDetectorMock.apply(any(Tile.class), any(File.class)))
         .thenReturn(
@@ -55,7 +59,9 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
             maskRetrieverMock,
             roofCoveringDetectorMock,
             detectionObjectHistoryRepositoryMock,
-            bucketComponentMock);
+            bucketComponentMock,
+            tileCoordinatesPolygonIntersectionMock,
+            filePolygonDrawerMock);
 
     var detectableObjectConfigurations = new ArrayList<DetectableObjectConfiguration>();
     var zdjId = "zdjId";

@@ -21,6 +21,8 @@ import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
+import app.bpartners.geojobs.service.FilePolygonDrawer;
+import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
 import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -41,6 +43,9 @@ class TileDetectionTaskConsumerTest {
   RoofCoveringDetector roofCoveringDetectorMock = mock();
   BucketComponent bucketComponentMock = mock();
   DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
+  TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersectionMock = mock();
+  FilePolygonDrawer filePolygonDrawerMock = mock();
+
   TileDetectionTaskConsumer subject =
       new TileDetectionTaskConsumer(
           machineDetectedTileRepositoryMock,
@@ -51,7 +56,9 @@ class TileDetectionTaskConsumerTest {
           maskRetrieverMock,
           roofCoveringDetectorMock,
           detectionObjectHistoryRepositoryMock,
-          bucketComponentMock);
+          bucketComponentMock,
+          tileCoordinatesPolygonIntersectionMock,
+          filePolygonDrawerMock);
 
   @Test
   void persist_detection_file_object_when_detection_debug_mode() {
@@ -83,6 +90,7 @@ class TileDetectionTaskConsumerTest {
             .build();
     var tileImageBucketPath = "layer/20/0/10/tileBucketPath.jpg";
     var tileMaskBucketPath = "layer/20/0/10/tileBucketPath_mask.jpg";
+    var tileDrawnMaskBucketPath = "layer/20/0/10/tileBucketPath_drawn_mask.jpg";
     var tileBuilderMock = mock(Tile.TileBuilder.class);
     when(tileBuilderMock.detectionE2Id(any())).thenReturn(tileBuilderMock);
     when(tileBuilderMock.build()).thenReturn(tileMock);
@@ -133,11 +141,22 @@ class TileDetectionTaskConsumerTest {
     assertDoesNotThrow(() -> subject.accept(tileDetectionTask));
 
     var detectionFileObjectCaptor = ArgumentCaptor.forClass(DetectionFileObject.class);
-    verify(detectionObjectHistoryRepositoryMock, times(2))
+    verify(detectionObjectHistoryRepositoryMock, times(3))
         .save(detectionFileObjectCaptor.capture());
     var actualSavedFileObject = detectionFileObjectCaptor.getAllValues();
-    var savedFileObjectTile = actualSavedFileObject.getFirst();
+    var savedDrawnMaskFileObject = actualSavedFileObject.getFirst();
+    var savedFileObjectTile = actualSavedFileObject.get(1);
     var savedTileMaskFileObject = actualSavedFileObject.getLast();
+    assertEquals(
+        DetectionFileObject.builder()
+            .id(savedDrawnMaskFileObject.getId())
+            .detectionIdentifier(detectionIdentifier)
+            .bucketKey(tileDrawnMaskBucketPath)
+            .fileType(TILE_MASK)
+            .fileName("layer_20_0_10_tileBucketPath_drawn_mask.jpg")
+            .creationDatetime(savedDrawnMaskFileObject.getCreationDatetime())
+            .build(),
+        savedDrawnMaskFileObject);
     assertEquals(
         DetectionFileObject.builder()
             .id(savedFileObjectTile.getId())

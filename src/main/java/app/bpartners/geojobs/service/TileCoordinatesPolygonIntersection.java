@@ -38,4 +38,22 @@ public class TileCoordinatesPolygonIntersection {
     var multiPolygonFromTile = geometryConverter.getMultiPolygonFromTile(xTile, yTile, zTile);
     return multiPolygon.intersection(multiPolygonFromTile);
   }
+
+  // Same as intersects(...) but keeps the multi-polygon structure instead of flattening every ring
+  // into a single coordinate list, so a multi-part intersection stays a valid MultiPolygon.
+  public Geometry intersectsAsPixelGeometry(Geometry latLonGeometry, int x, int y, int z) {
+    var geometryIntersectionWithTile =
+        intersection(latLonGeometry, new TileCoordinates().x(x).y(y).z(z));
+    var pixelMultiPolygonCoordinates =
+        geometryPixelProjector.toMultiPolygonPixels(
+            geometryIntersectionWithTile, x, y, z, DEFAULT_PIXEL_SIZE);
+    var pixelMultiPolygon = geometryConverter.apply(pixelMultiPolygonCoordinates);
+    return pixelMultiPolygon.isEmpty() ? pixelMultiPolygon : pixelMultiPolygon.buffer(0);
+  }
+
+  public Geometry intersectsAsPixelGeometry(
+      Geometry latLonGeometry, TileCoordinates tileCoordinates) {
+    return intersectsAsPixelGeometry(
+        latLonGeometry, tileCoordinates.getX(), tileCoordinates.getY(), tileCoordinates.getZ());
+  }
 }

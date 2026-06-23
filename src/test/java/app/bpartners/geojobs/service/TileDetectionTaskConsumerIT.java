@@ -86,6 +86,9 @@ class TileDetectionTaskConsumerIT {
       new RoofCoveringDetector(
           objectMapper, restTemplateMock, "dummyUrl", customBucketComponentMock);
   DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
+  TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection =
+      new TileCoordinatesPolygonIntersection(geometryPixelProjector, geometryConverter);
+  FilePolygonDrawer filePolygonDrawer = new FilePolygonDrawer();
 
   TileDetectionTaskConsumer subject =
       new TileDetectionTaskConsumer(
@@ -97,7 +100,9 @@ class TileDetectionTaskConsumerIT {
           maskRetriever,
           roofCoveringDetector,
           detectionObjectHistoryRepositoryMock,
-          bucketComponentMock);
+          bucketComponentMock,
+          tileCoordinatesPolygonIntersection,
+          filePolygonDrawer);
 
   @SneakyThrows
   @Test

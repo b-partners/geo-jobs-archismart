@@ -61,15 +61,24 @@ public class VGGFactory {
                             var tileY = tiledPixelPolygonGrouped.tileY();
                             var zoom = tiledPixelPolygonGrouped.zoom();
                             var polygonGroups = new ArrayList<>(tiledPixelPolygonGrouped.groups());
-                            var polygonRoofPixelCoordinates =
-                                tilePolygonIntersection.intersects(
+                            var polygonRoofPixelGeometry =
+                                tilePolygonIntersection.intersectsAsPixelGeometry(
                                     roofMultiPolygon, tileX, tileY, zoom);
-                            if (!polygonRoofPixelCoordinates.isEmpty()) {
-                              var polygonRoofPixelPolygon =
-                                  geometryConverter.convertToPolygon(polygonRoofPixelCoordinates);
-                              polygonGroups.add(
-                                  new PolygonGroup(
-                                      TOITURE_REVETEMENT, List.of(polygonRoofPixelPolygon)));
+                            if (!polygonRoofPixelGeometry.isEmpty()) {
+                              var roofPixelPolygons = new ArrayList<Polygon>();
+                              for (int g = 0;
+                                  g < polygonRoofPixelGeometry.getNumGeometries();
+                                  g++) {
+                                if (polygonRoofPixelGeometry.getGeometryN(g)
+                                        instanceof Polygon roofPolygon
+                                    && !roofPolygon.isEmpty()) {
+                                  roofPixelPolygons.add(roofPolygon);
+                                }
+                              }
+                              if (!roofPixelPolygons.isEmpty()) {
+                                polygonGroups.add(
+                                    new PolygonGroup(TOITURE_REVETEMENT, roofPixelPolygons));
+                              }
                             }
                             return polygonGroups.stream()
                                 .map(

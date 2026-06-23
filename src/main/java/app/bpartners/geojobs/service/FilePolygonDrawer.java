@@ -69,12 +69,11 @@ public class FilePolygonDrawer implements TriFunction<List<List<List<IntXY>>>, C
 
     g2d.dispose();
     File tmpPngFile =
-        File.createTempFile(
-            "tmp_file_with_background_" + randomUUID(), ".png", createTempDirectory());
+        File.createTempFile("tmp_drawn_file_" + randomUUID(), ".png", createTempDirectory());
     ImageIO.write(imageWithAlpha, "png", tmpPngFile);
 
     var outputJpg = convertPngToJpg(tmpPngFile, color);
-    log.info("Image with background created at {}", outputJpg.getAbsolutePath());
+    log.info("Image with polygon drawn created at {}", outputJpg.getAbsolutePath());
 
     tmpPngFile.delete();
 

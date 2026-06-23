@@ -4,10 +4,13 @@ import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFacto
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_MASK;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
+import static java.awt.Color.MAGENTA;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
+import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
@@ -26,6 +29,7 @@ import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Component;
@@ -43,6 +47,8 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
   private final RoofCoveringDetector roofCoveringDetector;
   private final DetectionFileObjectRepository detectionObjectHistoryRepository;
   private final BucketComponent bucketComponent;
+  private final TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection;
+  private final FilePolygonDrawer filePolygonDrawer;
 
   @SneakyThrows
   @Override
@@ -59,6 +65,7 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
     var detectionIdentifier = detection == null ? null : detection.getId();
     tileDetectionTask.setDetectionIdentifier(detectionIdentifier);
     tileDetectionTask.setDebugMode(detection != null && detection.isDebugMode());
+    var tileImageBucketPath = tile.getBucketPath();
     if (detection != null) {
       if (detection.hasToitureModelName()) {
         var multiPolygonFromTile =
@@ -99,6 +106,10 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
               roofMultiPolygonIntersectedWithTilePolygon.stream()
                   .reduce(unifyMultiPolygon())
                   .orElse(null);
+          if (detection.isDebugMode()) {
+            saveDrawnMaskAndUpload(
+                maskMultiPolygon, tileCoordinates, tileImageBucketPath, detectionIdentifier);
+          }
           mask = maskRetriever.apply(tile, maskMultiPolygon);
         } else {
           log.info(
@@ -108,7 +119,6 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
           return;
         }
       }
-      var tileImageBucketPath = tile.getBucketPath();
       if (detection.isDebugMode()) {
         detectionObjectHistoryRepository.save(
             DetectionFileObject.builder()
@@ -182,6 +192,50 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
               });
     }
     machineDetectedTileRepository.save(machineDetectedTile);
+  }
+
+  private void saveDrawnMaskAndUpload(
+      MultiPolygon maskMultiPolygon,
+      TileCoordinates tileCoordinates,
+      String tileImageBucketPath,
+      String detectionIdentifier) {
+    var convertedMaskPixelCoordinates =
+        computeMaskPixelCoordinates(maskMultiPolygon, tileCoordinates);
+
+    var originalTileImageFile = bucketComponent.download(tileImageBucketPath);
+
+    var drawnMaskFile =
+        filePolygonDrawer.apply(convertedMaskPixelCoordinates, MAGENTA, originalTileImageFile);
+
+    var drawnMaskBucketKey = toDrawnMaskPath(tileImageBucketPath);
+
+    bucketComponent.upload(drawnMaskFile, drawnMaskBucketKey);
+
+    detectionObjectHistoryRepository.save(
+        DetectionFileObject.builder()
+            .id(randomUUID().toString())
+            .detectionIdentifier(detectionIdentifier)
+            .fileName(replaceSeparator(drawnMaskBucketKey))
+            .bucketKey(drawnMaskBucketKey)
+            .fileType(TILE_MASK)
+            .creationDatetime(now())
+            .build());
+  }
+
+  @NotNull
+  private List<List<List<IntXY>>> computeMaskPixelCoordinates(
+      MultiPolygon maskMultiPolygon, TileCoordinates tileCoordinates) {
+    var maskPixelCoordinates =
+        tileCoordinatesPolygonIntersection.intersects(maskMultiPolygon, tileCoordinates);
+    return List.of(
+        List.of(
+            maskPixelCoordinates.stream()
+                .map(coor -> new IntXY(coor.getFirst().intValue(), coor.getLast().intValue()))
+                .toList()));
+  }
+
+  private static String toDrawnMaskPath(String path) {
+    return insertSuffix(path, "_drawn_mask");
   }
 
   private static String toMaskPath(String path) {

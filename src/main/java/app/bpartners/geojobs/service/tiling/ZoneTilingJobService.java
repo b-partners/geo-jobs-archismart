@@ -37,11 +37,13 @@ import app.bpartners.geojobs.service.event.TilingTaskConsumer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.locationtech.jts.geom.util.GeometryFixer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -318,7 +320,9 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
       GeometryConverter geometryConverter,
       TilePolygonRetriever tilePolygonRetriever,
       ArcgisImageZoom imageZoom) {
-    return providedFeatures.stream()
+    LinkedHashMap<String, org.locationtech.jts.geom.Polygon> distinctTilesByKey =
+        new LinkedHashMap<>();
+    providedFeatures.stream()
         .map(
             feature -> {
               if (feature.getGeometry() == null
@@ -335,20 +339,23 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
               }
             })
         .filter(Objects::nonNull)
-        .map(
-            multiPolygon -> {
-              for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
-                var geometry = multiPolygon.getGeometryN(i);
+        .map(GeometryFixer::fix)
+        .flatMap(
+            fixedGeometry -> {
+              // Process ALL sub-polygons, not only the first one.
+              List<org.locationtech.jts.geom.Polygon> tiles = new ArrayList<>();
+              for (int i = 0; i < fixedGeometry.getNumGeometries(); i++) {
+                var geometry = fixedGeometry.getGeometryN(i);
                 if (geometry instanceof org.locationtech.jts.geom.Polygon jtsPolygon) {
-                  return tilePolygonRetriever.apply(jtsPolygon, imageZoom);
+                  tiles.addAll(tilePolygonRetriever.apply(jtsPolygon, imageZoom));
                 }
               }
-              return null;
+              return tiles.stream();
             })
-        .filter(Objects::nonNull)
-        .flatMap(List::stream)
+        .forEach(tilePolygon -> distinctTilesByKey.putIfAbsent(tilePolygon.toText(), tilePolygon));
+    return distinctTilesByKey.values().stream()
         .map(geometryConverter::toRestFeature)
-        .toList();
+        .collect(toList());
   }
 
   @NotNull
