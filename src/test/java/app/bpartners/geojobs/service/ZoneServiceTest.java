@@ -5,8 +5,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob.Zoom
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.*;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.GEO_JSON;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
-import static app.bpartners.geojobs.endpoint.rest.model.Status.HealthEnum.SUCCEEDED;
-import static app.bpartners.geojobs.endpoint.rest.model.Status.HealthEnum.UNKNOWN;
+import static app.bpartners.geojobs.endpoint.rest.model.Status.HealthEnum.*;
 import static app.bpartners.geojobs.endpoint.rest.security.model.Authority.Role.*;
 import static app.bpartners.geojobs.file.hash.FileHashAlgorithm.SHA256;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.*;
@@ -582,22 +581,22 @@ class ZoneServiceTest {
     var actual = subject.getProcessedDetection(detectionId);
 
     assertEquals(POST_PROCESSING, actual.getStep().getName());
-    assertEquals(Status.ProgressionEnum.PROCESSING, actual.getStep().getStatus().getProgression());
-    assertEquals(UNKNOWN, actual.getStep().getStatus().getHealth());
+    assertEquals(Status.ProgressionEnum.FINISHED, actual.getStep().getStatus().getProgression());
+    assertEquals(FAILED, actual.getStep().getStatus().getHealth());
   }
 
   @Test
   void admin_role_read_detection_with_finished_machine_detection_statistics() {
     var detectionId = randomUUID().toString();
     var tilingId = randomUUID().toString();
-    var detectionJobId = randomUUID().toString();
-    var detection = detectionCreator.create(detectionId, tilingId, detectionJobId);
+    var zoneDetectionJobId = randomUUID().toString();
+    var detection = detectionCreator.create(detectionId, tilingId, zoneDetectionJobId);
     detection.setMultiPolygonGeoJsonZone(List.of(new Feature()));
     detection.setGeoServerProperties(new GeoServerProperties());
     setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
-    when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(detectionJobId))
+    when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(zoneDetectionJobId))
         .thenReturn(0L);
-    when(zoneDetectionJobServiceMock.computeTaskStatistics(detectionJobId))
+    when(zoneDetectionJobServiceMock.computeTaskStatistics(zoneDetectionJobId))
         .thenReturn(
             TaskStatistic.builder()
                 .actualJobStatus(
@@ -607,21 +606,67 @@ class ZoneServiceTest {
                         .build())
                 .taskStatusStatistics(new ArrayList<>())
                 .build());
-    when(zoneDetectionJobServiceMock.findById(detectionJobId))
+    when(zoneDetectionJobServiceMock.findById(zoneDetectionJobId))
         .thenReturn(
             zoneDetectionJobCreator.create(
-                detectionJobId,
+                zoneDetectionJobId,
                 null,
                 null,
                 FINISHED,
                 app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED,
                 new ZoneTilingJob()));
+    when(geoJsonConversionJobRepositoryMock.findByZoneDetectionJobId(zoneDetectionJobId))
+        .thenReturn(
+            List.of(
+                GeoJsonConversionJob.builder()
+                    .statusHistory(List.of(JobStatus.builder().creationDatetime(now()).build()))
+                    .build()));
 
     var actual = subject.getProcessedDetection(detectionId);
 
     assertEquals(MACHINE_DETECTION, actual.getStep().getName());
     assertEquals(Status.ProgressionEnum.FINISHED, actual.getStep().getStatus().getProgression());
     assertEquals(SUCCEEDED, actual.getStep().getStatus().getHealth());
+  }
+
+  @Test
+  void admin_role_read_detection_with_finished_failed_post_processing_statistics() {
+    var detectionId = randomUUID().toString();
+    var tilingId = randomUUID().toString();
+    var zoneDetectionJobId = randomUUID().toString();
+    var detection = detectionCreator.create(detectionId, tilingId, zoneDetectionJobId);
+    detection.setMultiPolygonGeoJsonZone(List.of(new Feature()));
+    detection.setGeoServerProperties(new GeoServerProperties());
+    setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
+    when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(zoneDetectionJobId))
+        .thenReturn(0L);
+    when(zoneDetectionJobServiceMock.computeTaskStatistics(zoneDetectionJobId))
+        .thenReturn(
+            TaskStatistic.builder()
+                .actualJobStatus(
+                    JobStatus.builder()
+                        .progression(FINISHED)
+                        .health(app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED)
+                        .build())
+                .taskStatusStatistics(new ArrayList<>())
+                .build());
+    when(zoneDetectionJobServiceMock.findById(zoneDetectionJobId))
+        .thenReturn(
+            zoneDetectionJobCreator.create(
+                zoneDetectionJobId,
+                null,
+                null,
+                FINISHED,
+                app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED,
+                new ZoneTilingJob()));
+    when(geoJsonConversionJobRepositoryMock.findByZoneDetectionJobId(zoneDetectionJobId))
+        .thenReturn(List.of());
+
+    var actual = subject.getProcessedDetection(detectionId);
+
+    assertEquals(POST_PROCESSING, actual.getStep().getName());
+    assertEquals(Status.ProgressionEnum.FINISHED, actual.getStep().getStatus().getProgression());
+    assertEquals(FAILED, actual.getStep().getStatus().getHealth());
   }
 
   @Test

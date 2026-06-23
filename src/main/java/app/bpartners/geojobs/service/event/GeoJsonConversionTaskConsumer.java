@@ -2,11 +2,13 @@ package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.model.page.BoundedPageSize.MAX_SIZE;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
 import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.GeoJsonConversionJobRepository;
 import app.bpartners.geojobs.repository.HumanDetectedTileRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
@@ -17,10 +19,12 @@ import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionTask;
 import app.bpartners.geojobs.service.TaskConsumer;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
+import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.MultiPolygon;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +43,7 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
   private final BucketComponent bucketComponent;
   private final FileWriter writer;
   private final ZoneDetectionJobService zoneDetectionJobService;
+  private final DetectionRepository detectionRepository;
 
   @Override
   public void accept(GeoJsonConversionTask geoJsonConversionTask) {
@@ -57,11 +62,11 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
     int pageNumber = geoJsonConversionTask.getPage() - 1;
     var paginatedDetectedTiles =
         computeDetectedTile(zoneDetectionType, zoneDetectionJobId, pageNumber, detectableType);
-
+    var providedGeometryMultiPolygon = getProvidedGeometryMultiPolygon(zoneDetectionJobId);
     var zoneName = zoneDetectionJob.getZoneName();
     var fileName = zoneName + "_" + detectableType + "-part" + "-" + pageNumber;
     var fileKey = GEO_JSON_BUCKET_FOLDER + zoneDetectionJobId + "/" + fileName + GEO_JSON_EXTENSION;
-    var geoJson = geoJsonConverter.convert(paginatedDetectedTiles);
+    var geoJson = geoJsonConverter.apply(paginatedDetectedTiles, providedGeometryMultiPolygon);
     var geoJsonAsByte = geoJson.getStringValue().getBytes();
     var geoJsonAsFile =
         writer.write(geoJsonAsByte, createTempDirectory(), fileName + GEO_JSON_EXTENSION);
@@ -69,6 +74,23 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
     bucketComponent.upload(geoJsonAsFile, fileKey);
 
     geoJsonConversionTask.setFileKey(fileKey);
+  }
+
+  private MultiPolygon getProvidedGeometryMultiPolygon(String zoneDetectionJobId) {
+    var optionalDetection = detectionRepository.findByZdjId(zoneDetectionJobId);
+    if (optionalDetection.isEmpty()) {
+      return null;
+    }
+    var detection = optionalDetection.get();
+    return detection.getProvidedGeoJsonZone().stream()
+        .map(GeometryConverter::retrieveMultiPolygonFromFeature)
+        .filter(Objects::nonNull)
+        .reduce(unifyMultiPolygon())
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Unable to assemble provided geometry as MultiPolygon for detection.id "
+                        + detection.getId()));
   }
 
   private List<DetectedTile> computeDetectedTile(

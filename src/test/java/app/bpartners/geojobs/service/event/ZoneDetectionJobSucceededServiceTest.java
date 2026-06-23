@@ -237,6 +237,7 @@ class ZoneDetectionJobSucceededServiceTest {
     var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
     var detectionMock = mock(Detection.class);
     when(detectionMock.getId()).thenReturn(detectionId);
+    when(detectionMock.hasToitureModelName()).thenReturn(true);
     when(detectionMock.needsImageOutput()).thenReturn(true);
     when(detectionMock.getProvidedGeoJsonZone()).thenReturn(List.of(new Feature()));
     when(detectionMock.getPolygonGeoJsonZone()).thenReturn(new Feature());

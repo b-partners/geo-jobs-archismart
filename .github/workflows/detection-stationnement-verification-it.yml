@@ -1,10 +1,9 @@
-name: Detection toiture sync IT
+name: Detection stationnement verification IT
 
 on:
   schedule:
-    - cron: "0 0,2,4,6,8,10,12,14,16,18,20,22 * * *"
+    - cron: "15,30,45,59 * * * *"
   workflow_dispatch:
-
 env:
   API_URL: ${{ secrets.DETECTION_API_URL }}
   API_KEY: ${{ secrets.DETECTION_API_KEY }}
@@ -12,63 +11,67 @@ env:
   IN_STATUS_API_KEY: ${{ secrets.INSTATUS_API_KEY }}
   IN_STATUS_500_TMPL_ID: ${{ secrets.INSTATUS_500_TMPL_ID }}
   IN_STATUS_RESOLVE_500_TMPL_ID: ${{ secrets.INSTATUS_RESOLVE_500_TMPL_ID }}
-  IN_STATUS_VGG_EXCEPTION_TMPL_ID: ${{ secrets.IN_STATUS_VGG_EXCEPTION_TMPL_ID }}
-  IN_STATUS_RESOLVE_VGG_TMPL_ID: ${{ secrets.IN_STATUS_RESOLVE_VGG_TMPL_ID }}
   IN_STATUS_IMAGE_SOURCES_DEGRADED_TMPL_ID: ${{ secrets.IN_STATUS_IMAGE_SOURCES_DEGRADED_TMPL_ID }}
   IN_STATUS_IMAGE_SOURCES_RESTORED_TMPL_ID: ${{ secrets.IN_STATUS_IMAGE_SOURCES_RESTORED_TMPL_ID }}
-
 jobs:
-  detection-creation:
+  detection-completion-verification:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: prod
 
-      - name: Send POST /detections/*/sync request for BP_TOITURE model only
+      - name: Retrieve detection_stationnement_e2_id from cache
+        id: restore-detection_stationnement_e2_id
+        uses: actions/cache@v4
+        with:
+          path: detection_stationnement_e2_id.txt
+          key: detection_stationnement_e2_id-cache-${{ runner.os }}-${{ github.sha }}
+
+      - name: Read detection_stationnement_e2_id from file
         run: |
-          detection_sync_e2_id=$(uuidgen)
-          echo "Generated detection_sync_e2_id: '$detection_sync_e2_id'"
+          if [[ ! -f detection_stationnement_e2_id.txt ]]; then
+            echo "No cached detection_stationnement_e2_id found, skipping verification"
+            exit 1
+          fi
+          detection_e2_id=$(cat detection_stationnement_e2_id.txt)
+          echo "Reusing detection_stationnement_e2_id: $detection_e2_id"
+          echo "detection_e2_id=$detection_e2_id" >> $GITHUB_ENV
+
+      - name: Send GET /detections/* request for retrieving result
+        run: |
           response_file="detection-response.json"
-          
-          http_code=$(curl -s -w "%{http_code}" -X POST "$API_URL/detections/$detection_sync_e2_id/sync" \
+
+          http_code=$(curl -s -w "%{http_code}" -X GET "$API_URL/detections/$detection_e2_id" \
           -H "Content-Type: application/json" \
-          -H "x-api-key: $API_KEY" \
           -H "x-test-request: true" \
-          --data "@.github/workflows/detection-request-sync.json" \
+          -H "x-api-key: $API_KEY" \
           -o "$response_file")
-          
+
           echo "HTTP Response Code: $http_code"
           echo "Response Body:"
               cat $response_file
-          
+
           incident_list=$(curl -s -X GET "https://api.instatus.com/v1/$IN_STATUS_PAGE_ID/incidents" \
           -H "Authorization: Bearer $IN_STATUS_API_KEY")
-          
+
           internal_incident_lines=$(echo "$incident_list" | jq -r '
           .[]
           | select(.status != "RESOLVED" and
           (.name == "Internal server error"))
           | "\(.id)|\(.name)|\(.status)"')
-          
-          vgg_incident_lines=$(echo "$incident_list" | jq -r '
-          .[]
-          | select(.status != "RESOLVED" and
-          (.name == "Unexpected obtained detection VGG result"))
-          | "\(.id)|\(.name)|\(.status)"')
-          
+
           image_performance_incident_lines=$(echo "$incident_list" | jq -r '
           .[]
           | select(.status != "RESOLVED" and
           (.name == "Image sources performance degradation"))
           | "\(.id)|\(.name)|\(.status)"')
-          
+
           if [ "${http_code:-0}" -ne 200 ]; then
+            echo "Detection request test failed: HTTP error '$http_code'"
             echo "Response Body:"
-              cat $response_file
-          
+                cat $response_file
+
             if [ "$http_code" -eq 504 ]; then
               echo "Gateway Timeout detected (504)"
               if grep -q "Image sources" "$response_file"; then
@@ -83,7 +86,7 @@ jobs:
                 exit 1
               fi
             fi
-          
+
             if [[ -z "$internal_incident_lines" ]]; then
               echo "No active 'Internal server error' incident. Creating one..."
               in_status_response=$(curl -s -o in-status-response.json -w "%{http_code}" \
@@ -96,82 +99,20 @@ jobs:
             fi
             exit 1
           fi
-          
-          stepName=$(jq -r '.step.name' "$response_file")
-          progression=$(jq -r '.step.status.progression' "$response_file")
-          health=$(jq -r '.step.status.health' "$response_file")
-          vgg_file_url=$(jq -r '.geoJsonZone[0].properties.vgg_file_url' "$response_file")
-          original_image_url=$(jq -r '.geoJsonZone[0].properties.original_image_url' "$response_file")
-          
-          errors=""
-          
-          if [[ "$stepName" != "MACHINE_DETECTION" ]]; then
-            errors+=" detection is not in step MACHINE_DETECTION but : $stepName"$'\n'
-          fi
 
-          if [[ "$progression" != "FINISHED" ]]; then
-            errors+=" detection progression is not FINISHED but : $progression"$'\n'
-          fi
+          geoJsonUrl=$(jq -r '.geoJsonUrl' "$response_file")
 
-          if [[ "$vgg_file_url" == "null" || -z "$vgg_file_url" ]]; then
-            errors+=" vgg_file_url is actually null or empty"$'\n'
-          fi
-
-          if [[ "$original_image_url" == "null" || -z "$original_image_url" ]]; then
-            errors+=" original_image_url is actually null or empty"$'\n'
-          fi
-          
-          vgg_error=""
-          
-          if [[ -n "$vgg_file_url" ]]; then
-            expected_vgg=".github/workflows/examples/detection-toiture-response-example.json"
-          
-            curl -sf "$vgg_file_url" -o downloaded-vgg.json
-          
-              jq -r '
-              .[0]
-              | to_entries[0].value
-              | .regions
-              | to_entries[]
-              | .value.region_attributes.label
-              ' downloaded-vgg.json | sort | uniq -c > actual-vgg.txt
-          
-            jq -r '
-              .[0]
-              | to_entries[0].value
-              | .regions
-              | to_entries[]
-              | .value.region_attributes.label
-              ' "$expected_vgg" | sort | uniq -c > expected-vgg.txt
-          
-            if ! diff actual-vgg.txt expected-vgg.txt > /dev/null; then
-              vgg_error+="Unexpected number of regions per label in vgg_file"$'\n'
-            fi
-          fi
-          
-          if [[ -n "$errors" || -n "$vgg_error" ]]; then
-            echo "Response contains unexpected values"
-            echo "general errors : $errors"
-            echo "vgg error : $vgg_error"
+          if [[ -z "$geoJsonUrl" || "$geoJsonUrl" == "null" ]]; then
+            echo "Detection test failed: 'geoJsonUrl' is still empty or null"
             if [[ -z "$internal_incident_lines" ]]; then
               echo "No active 'Internal server error' incident. Creating one..."
               in_status_response=$(curl -s -o in-status-response.json -w "%{http_code}" \
               -X POST https://api.instatus.com/v1/$IN_STATUS_PAGE_ID/incidents/$IN_STATUS_500_TMPL_ID \
               -H "Authorization: Bearer $IN_STATUS_API_KEY")
-          
               incident_id=$(jq -r '.id' in-status-response.json)
               echo "InStatus incident identifier: '$incident_id'"
             else
                 echo "Incident already exists. Not creating another one."
-            fi
-            if [[ -z "$vgg_incident_lines" ]]; then
-              echo "No active 'Unexpected obtained detection VGG result' incident. Creating one..."
-              in_status_response=$(curl -s -o in-status-response.json -w "%{http_code}" \
-              -X POST https://api.instatus.com/v1/$IN_STATUS_PAGE_ID/incidents/$IN_STATUS_VGG_EXCEPTION_TMPL_ID \
-              -H "Authorization: Bearer $IN_STATUS_API_KEY")
-          
-              incident_id=$(jq -r '.id' in-status-response.json)
-              echo "InStatus incident identifier: '$incident_id'"
             fi
             exit 1
           else
@@ -185,16 +126,6 @@ jobs:
                 fi
               done <<< "$internal_incident_lines"
             fi
-            if [[ -n "$vgg_incident_lines" ]]; then
-              while IFS='|' read -r id incident_name incident_status; do
-                if [[ "$incident_name" == *"Unexpected obtained detection VGG result"* ]]; then
-                  echo "Resolving unexpected obtained detection VGG result incident: $id"
-                  curl -s -o /dev/null -X POST \
-                  https://api.instatus.com/v2/$IN_STATUS_PAGE_ID/incidents/"$id"/incident-updates/$IN_STATUS_RESOLVE_VGG_TMPL_ID \
-                  -H "Authorization: Bearer $IN_STATUS_API_KEY"
-                fi
-              done <<< "$vgg_incident_lines"
-            fi
             if [[ -n "$image_performance_incident_lines" ]]; then
               while IFS='|' read -r id incident_name incident_status; do
                 if [[ "$incident_name" == *"Image sources performance degradation"* ]]; then
@@ -205,4 +136,5 @@ jobs:
                 fi
               done <<< "$image_performance_incident_lines"
             fi
+            echo "Detection test passed: geoJsonUrl='$geoJsonUrl'"
           fi

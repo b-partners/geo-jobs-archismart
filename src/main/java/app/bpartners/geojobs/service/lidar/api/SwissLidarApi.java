@@ -1,5 +1,7 @@
 package app.bpartners.geojobs.service.lidar.api;
 
+import static java.util.Locale.ROOT;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.net.URI;
 import java.util.HashSet;
@@ -58,7 +60,17 @@ public class SwissLidarApi implements LidarApi {
     double maxY = envelope.getMaxY();
 
     return String.format(
+        ROOT,
         "{\"type\":\"Polygon\",\"coordinates\":[[[%f,%f],[%f,%f],[%f,%f],[%f,%f],[%f,%f]]]}",
-        minX, minY, maxX, minY, maxX, maxY, minX, maxY, minX, minY);
+        minX,
+        minY,
+        maxX,
+        minY,
+        maxX,
+        maxY,
+        minX,
+        maxY,
+        minX,
+        minY);
   }
 }

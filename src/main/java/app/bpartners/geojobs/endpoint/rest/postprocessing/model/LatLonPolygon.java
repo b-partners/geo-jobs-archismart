@@ -143,24 +143,26 @@ public record LatLonPolygon(Polygon polygon) {
   }
 
   public GeoJson.GeoFeature toGeoFeature() {
-    var coordinates = polygon.getCoordinates();
     var properties = (Map<String, Object>) polygon.getUserData();
-    List<List<List<List<BigDecimal>>>> multiPolygonCoordinates = new ArrayList<>();
-
-    var ring =
-        Arrays.stream(coordinates)
-            .map(
-                coord ->
-                    List.of(BigDecimal.valueOf(coord.getX()), BigDecimal.valueOf(coord.getY())))
-            .toList();
 
     List<List<List<BigDecimal>>> polygonCoords = new ArrayList<>();
-    polygonCoords.add(ring);
+    polygonCoords.add(ringCoordinates(polygon.getExteriorRing().getCoordinates()));
+    for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+      polygonCoords.add(ringCoordinates(polygon.getInteriorRingN(i).getCoordinates()));
+    }
+
+    List<List<List<List<BigDecimal>>>> multiPolygonCoordinates = new ArrayList<>();
     multiPolygonCoordinates.add(polygonCoords);
     app.bpartners.geojobs.endpoint.rest.model.MultiPolygon multiPolygon =
         new MultiPolygon().coordinates(multiPolygonCoordinates);
     multiPolygon.setType(MULTI_POLYGON);
     return new GeoJson.GeoFeature(properties, multiPolygon);
+  }
+
+  private static List<List<BigDecimal>> ringCoordinates(Coordinate[] ringCoordinates) {
+    return Arrays.stream(ringCoordinates)
+        .map(coord -> List.of(BigDecimal.valueOf(coord.getX()), BigDecimal.valueOf(coord.getY())))
+        .toList();
   }
 
   // Mostly ChatGPT-generated

@@ -129,7 +129,7 @@ class FeatureWithDetectionPropertiesRequestedServiceTest {
   }
 
   @Test
-  void do_not_compute_feature_with_detection_properties_requested_and_do_not_produce_vgg() {
+  void produces_feature_vgg_computing_event_for_non_toiture_model() {
     var detectionIdentifier = randomUUID().toString();
     var featureMock = mock(Feature.class);
     var detectionMock = mock(Detection.class);
@@ -146,7 +146,7 @@ class FeatureWithDetectionPropertiesRequestedServiceTest {
     verify(featureRoofResultPropertiesComputerMock, never()).apply(any(), any(), any(), any());
     verify(detectionRepositoryMock, never()).save(any());
     verify(machineDetectedTileRepositoryMock, never()).save(any());
-    verify(eventProducerMock, never()).accept(any());
+    verify(eventProducerMock, only()).accept(any());
     verify(geometryConverterMock, never()).apply(any());
   }
 }

@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.algorithm.MinimumDiameter;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
 
 @Slf4j
@@ -327,20 +328,30 @@ public class BoundaryMerger
     return noSuperpositionPolygons.stream()
         .map(
             p -> {
-              var coords =
-                  Arrays.stream(p.polygon().getCoordinates())
-                      .map(c -> new Coordinate(c.y, c.x))
-                      .toArray(Coordinate[]::new);
-              var initialLength = coords.length;
-              if (initialLength != 0 && !coords[0].equals(coords[initialLength - 1])) {
-                coords = Arrays.copyOf(coords, initialLength + 1);
-                coords[initialLength] = coords[0];
+              var source = p.polygon();
+              var shell = invertRing(source.getExteriorRing().getCoordinates());
+              var holes = new LinearRing[source.getNumInteriorRing()];
+              for (int i = 0; i < holes.length; i++) {
+                holes[i] = invertRing(source.getInteriorRingN(i).getCoordinates());
               }
-              var polygon = geometryFactory.createPolygon(coords);
-              polygon.setUserData(p.polygon().getUserData());
+              var polygon = geometryFactory.createPolygon(shell, holes);
+              polygon.setUserData(source.getUserData());
               return new LatLonPolygon(polygon);
             })
         .collect(toSet());
+  }
+
+  private static LinearRing invertRing(Coordinate[] ringCoordinates) {
+    var coords =
+        Arrays.stream(ringCoordinates)
+            .map(c -> new Coordinate(c.y, c.x))
+            .toArray(Coordinate[]::new);
+    var initialLength = coords.length;
+    if (initialLength != 0 && !coords[0].equals(coords[initialLength - 1])) {
+      coords = Arrays.copyOf(coords, initialLength + 1);
+      coords[initialLength] = coords[0];
+    }
+    return geometryFactory.createLinearRing(coords);
   }
 
   public Set<TiledPolygon> apply(VGG vgg) {

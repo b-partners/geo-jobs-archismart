@@ -165,6 +165,10 @@ public class Detection implements Serializable {
   @Getter(AccessLevel.NONE)
   private Boolean debugMode;
 
+  public boolean isAnnotationDeliveryEnable() {
+    return false;
+  }
+
   public boolean isDebugMode() {
     return debugMode != null && debugMode;
   }
@@ -379,7 +383,7 @@ public class Detection implements Serializable {
     return zoneDetectionJob.isFinished();
   }
 
-  public boolean isHumanDetectionStepProcessing(ZoneDetectionJob zoneDetectionJob) {
+  public boolean isPostProcessingStep(ZoneDetectionJob zoneDetectionJob) {
     return isMachineDetectionFinished(zoneDetectionJob) && geojsonS3FileKey == null;
   }
 

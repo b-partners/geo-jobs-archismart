@@ -72,7 +72,7 @@ public class GeoJsonConversionJobStatusChangedService
           detection == null ? failedJob.getEmailReceiver() : detection.getEmailReceiver();
       var emailBody = getEmailBody(detection);
 
-      mailer.accept(emailSubject, emailReceiver, emailBody);
+      mailer.accept(emailReceiver, emailSubject, emailBody);
     }
 
     private String getEmailSubject(Detection detection) {

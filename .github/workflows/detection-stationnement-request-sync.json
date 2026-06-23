@@ -1,0 +1,48 @@
+{
+  "emailReceiver": "tech@birdia.fr",
+  "zoneName": "github actions detection BP_STATIONNEMENT IT",
+  "needsImageOutput": false,
+  "geoJsonDelimitationType": "PARCEL_FREE_DELIMITATION",
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_STATIONNEMENT"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              3.0851513,
+              50.6497276
+            ],
+            [
+              3.0848292,
+              50.6495234
+            ],
+            [
+              3.0854004,
+              50.6491835
+            ],
+            [
+              3.0857225,
+              50.6494682
+            ],
+            [
+              3.085203,
+              50.6497604
+            ],
+            [
+              3.0851513,
+              50.6497276
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

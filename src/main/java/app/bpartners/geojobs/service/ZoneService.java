@@ -2,8 +2,7 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.*;
-import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
-import static app.bpartners.geojobs.job.model.Status.HealthStatus.UNKNOWN;
+import static app.bpartners.geojobs.job.model.Status.HealthStatus.*;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PENDING;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PROCESSING;
@@ -282,15 +281,23 @@ public class ZoneService {
     if (detection.isMachineDetectionStepProcessing(zoneDetectionJob)) {
       return detectionMachineDetectionStatisticsComputer.apply(detection, detection.getZdjId());
     }
-    if (detection.isHumanDetectionStepProcessing(zoneDetectionJob)) {
+    if (detection.isPostProcessingStep(zoneDetectionJob)) {
       var inDoubtDetectedTileToDelivery =
           zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(zoneDetectionJob.getId());
-      if (inDoubtDetectedTileToDelivery > 0) {
+      if (inDoubtDetectedTileToDelivery > 0 && detection.isAnnotationDeliveryEnable()) {
         return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
             detection, PROCESSING, UNKNOWN, POST_PROCESSING);
       }
       var geoJsonConversionJob = findActualGeoJsonConversionJob(zoneDetectionJob.getId());
+      if (geoJsonConversionJob == null && zoneDetectionJob.isSucceeded()) {
+        return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
+            detection, FINISHED, FAILED, POST_PROCESSING);
+      }
       if (geoJsonConversionJob != null) {
+        if (geoJsonConversionJob.isFailed()) {
+          return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
+              detection, FINISHED, FAILED, POST_PROCESSING);
+        }
         if (geoJsonConversionJob.isProcessing()
             || (geoJsonConversionJob.isSucceeded() && detection.getGeojsonS3FileKey() == null)) {
           return detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
@@ -403,7 +410,8 @@ public class ZoneService {
       machineDetectionCreation.apply(detection, zoneTilingJob);
     }
     if (machineZoneDetectionJob.isFinished()) {
-      if (zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(detectionJobId) == 0L) {
+      if (zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(detectionJobId) == 0L
+          && !detection.isAnnotationDeliveryEnable()) {
         processVerificationOrGenerateGeoJson(detection, machineZoneDetectionJob);
       } else {
         var humanZoneDetectionJob = zoneDetectionJobService.getByTilingJobId(tilingJobId, HUMAN);
@@ -535,13 +543,8 @@ public class ZoneService {
     var geoJsonConversionJobs =
         geoJsonConversionJobRepository.findByZoneDetectionJobId(zoneDetectionJobId);
     return geoJsonConversionJobs.stream()
-        .filter(Job::isSucceeded)
-        .findFirst()
-        .orElseGet(
-            () ->
-                geoJsonConversionJobs.stream()
-                    .max(Comparator.comparing(Job::getSubmissionInstant))
-                    .orElse(null));
+        .max(Comparator.comparing(Job::getSubmissionInstant))
+        .orElse(null);
   }
 
   public app.bpartners.geojobs.endpoint.rest.model.Detection sendMailAboutProspect(

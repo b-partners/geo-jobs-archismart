@@ -17,6 +17,7 @@ import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
 import app.bpartners.geojobs.service.geojson.GeoJsonMapper;
 import app.bpartners.geojobs.service.geojson.GeoJsonMultiPolygonCorrector;
+import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -25,20 +26,22 @@ import java.nio.file.Paths;
 import java.util.List;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.MultiPolygon;
 
 @Disabled("TODO: flaky test on CI")
 class GeoJsonConverterTest {
   private final GeoJsonMapper mapper = new GeoJsonMapper(new GeoJsonMultiPolygonCorrector());
   private final DetectionBoundaryMerger merger = new DetectionBoundaryMerger();
-  private final GeoJsonConverter subject = new GeoJsonConverter(mapper, merger);
+  GeometryConverter converter = new GeometryConverter();
+  private final GeoJsonConverter subject = new GeoJsonConverter(mapper, merger, converter);
 
   @Test
   void convert_detected_tile_to_geojson_without_feature_collections()
       throws IOException, URISyntaxException {
+    MultiPolygon providedGeometryMultiPolygon = null;
     var detectedTiles = List.of(detectedTile());
-
     var features =
-        subject.convert(detectedTiles).getGeoFeatures().stream()
+        subject.apply(detectedTiles, providedGeometryMultiPolygon).getGeoFeatures().stream()
             .map(LatLonPolygon::latLon)
             .map(LatLonPolygon::toGeoFeature)
             .toList();

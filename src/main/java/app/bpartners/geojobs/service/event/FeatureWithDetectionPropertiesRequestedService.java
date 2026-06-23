@@ -46,26 +46,30 @@ public class FeatureWithDetectionPropertiesRequestedService
     entityManager.clear();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
     var delimitations = detection.getDelimitationOf(feature);
-    var savedDetection = apply(detection, feature, delimitations);
-    if (savedDetection != null && !savedDetection.equals(detection)) {
-      var optionalProvidedUpdatedFeature =
-          savedDetection.getProvidedGeoJsonZone().stream()
-              .filter(
-                  providedGeoJsonZone -> {
-                    var idKey = "id";
-                    var featureIdKey = "feature_id";
-                    return isPropertyEquals(idKey, providedGeoJsonZone, feature)
-                        || isPropertyEquals(featureIdKey, providedGeoJsonZone, feature);
-                  })
-              .findFirst();
-      if (optionalProvidedUpdatedFeature.isPresent()) {
-        eventProducer.accept(
-            List.of(
-                new FeatureVggRequested(
-                    detectionIdentifier, optionalProvidedUpdatedFeature.get())));
-      } else {
-        eventProducer.accept(List.of(new FeatureVggRequested(detectionIdentifier, feature)));
+    if (detection.hasToitureModelName()) {
+      var savedDetection = apply(detection, feature, delimitations);
+      if (savedDetection != null && !savedDetection.equals(detection)) {
+        var optionalProvidedUpdatedFeature =
+            savedDetection.getProvidedGeoJsonZone().stream()
+                .filter(
+                    providedGeoJsonZone -> {
+                      var idKey = "id";
+                      var featureIdKey = "feature_id";
+                      return isPropertyEquals(idKey, providedGeoJsonZone, feature)
+                          || isPropertyEquals(featureIdKey, providedGeoJsonZone, feature);
+                    })
+                .findFirst();
+        if (optionalProvidedUpdatedFeature.isPresent()) {
+          eventProducer.accept(
+              List.of(
+                  new FeatureVggRequested(
+                      detectionIdentifier, optionalProvidedUpdatedFeature.get())));
+        } else {
+          eventProducer.accept(List.of(new FeatureVggRequested(detectionIdentifier, feature)));
+        }
       }
+    } else {
+      eventProducer.accept(List.of(new FeatureVggRequested(detectionIdentifier, feature)));
     }
   }
 

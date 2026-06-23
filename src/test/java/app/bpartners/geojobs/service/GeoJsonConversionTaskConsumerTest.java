@@ -15,6 +15,7 @@ import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.hash.FileHash;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.GeoJsonConversionJobRepository;
 import app.bpartners.geojobs.repository.HumanDetectedTileRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
@@ -30,6 +31,7 @@ import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -43,6 +45,7 @@ class GeoJsonConversionTaskConsumerTest {
   BucketComponent bucketComponentMock = mock();
   FileWriter fileWriterMock = mock();
   ZoneDetectionJobService zoneDetectionJobServiceMock = mock();
+  DetectionRepository detectionRepositoryMock = mock();
   GeoJsonConversionTaskConsumer subject =
       new GeoJsonConversionTaskConsumer(
           machineDetectedTileRepositoryMock,
@@ -51,7 +54,13 @@ class GeoJsonConversionTaskConsumerTest {
           geoJsonConverterMock,
           bucketComponentMock,
           fileWriterMock,
-          zoneDetectionJobServiceMock);
+          zoneDetectionJobServiceMock,
+          detectionRepositoryMock);
+
+  @BeforeEach
+  void setUp() {
+    when(detectionRepositoryMock.findByZdjId(any())).thenReturn(Optional.empty());
+  }
 
   @Test
   void consumes_human_detected_tiles_without_exceptions() {
@@ -68,7 +77,7 @@ class GeoJsonConversionTaskConsumerTest {
             ZoneDetectionJob.builder().id(ZONE_DETECTION_JOB_ID).zoneName("dummyZoneName").build());
     when(humanDetectedTileRepositoryMock.findAllByJobId(any(), any()))
         .thenReturn(List.of(humanDetectedTile()));
-    when(geoJsonConverterMock.convert(any())).thenReturn(new GeoJson(List.of()));
+    when(geoJsonConverterMock.apply(any(), any())).thenReturn(new GeoJson(List.of()));
     when(fileWriterMock.writeAsByte(any())).thenReturn(null);
     when(fileWriterMock.write(any(), any(), any())).thenReturn(mock(File.class));
     when(bucketComponentMock.upload(any(), any())).thenReturn(mock(FileHash.class));
@@ -84,7 +93,7 @@ class GeoJsonConversionTaskConsumerTest {
     var listCaptor = ArgumentCaptor.forClass(List.class);
     verify(humanDetectedTileRepositoryMock, only()).findAllByJobId(any(), any());
     verify(machineDetectedTileRepositoryMock, never()).findAllByZdjJobId(any(), any());
-    verify(geoJsonConverterMock, only()).convert(listCaptor.capture());
+    verify(geoJsonConverterMock, only()).apply(listCaptor.capture(), any());
     var detectedTile = (DetectedTile) listCaptor.getValue().getFirst();
     assertEquals(
         expectedDetectedTile(detectedTile.getDetectedObjects().getFirst().getId()), detectedTile);
@@ -106,7 +115,7 @@ class GeoJsonConversionTaskConsumerTest {
     when(machineDetectedTileRepositoryMock.findAllByZdjJobIdAndDetectableType(any(), any(), any()))
         .thenReturn(
             List.of(machineDetectedTile(HUMIDITE_INTENSE), machineDetectedTile(USURE_IMPORTANTE)));
-    when(geoJsonConverterMock.convert(any())).thenReturn(new GeoJson(List.of()));
+    when(geoJsonConverterMock.apply(any(), any())).thenReturn(new GeoJson(List.of()));
     when(fileWriterMock.writeAsByte(any())).thenReturn(null);
     when(fileWriterMock.write(any(), any(), any())).thenReturn(mock(File.class));
     when(bucketComponentMock.upload(any(), any())).thenReturn(mock(FileHash.class));
@@ -123,7 +132,7 @@ class GeoJsonConversionTaskConsumerTest {
     verify(humanDetectedTileRepositoryMock, never()).findAllByJobId(any(), any());
     verify(machineDetectedTileRepositoryMock, only())
         .findAllByZdjJobIdAndDetectableType(any(), any(), any());
-    verify(geoJsonConverterMock, only()).convert(listCaptor.capture());
+    verify(geoJsonConverterMock, only()).apply(listCaptor.capture(), any());
     var detectedTile = (DetectedTile) listCaptor.getValue().getFirst();
     assertEquals(
         expectedDetectedTile(detectedTile.getDetectedObjects().getFirst().getId()), detectedTile);
