@@ -89,6 +89,8 @@ class TileDetectionTaskConsumerIT {
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection =
       new TileCoordinatesPolygonIntersection(geometryPixelProjector, geometryConverter);
   FilePolygonDrawer filePolygonDrawer = new FilePolygonDrawer();
+  DetectedTileVggExtractor detectedTileVggExtractor = new DetectedTileVggExtractor();
+  VggImageAnnotator vggImageAnnotator = new VggImageAnnotator();
 
   TileDetectionTaskConsumer subject =
       new TileDetectionTaskConsumer(
@@ -102,7 +104,9 @@ class TileDetectionTaskConsumerIT {
           detectionObjectHistoryRepositoryMock,
           bucketComponentMock,
           tileCoordinatesPolygonIntersection,
-          filePolygonDrawer);
+          filePolygonDrawer,
+          detectedTileVggExtractor,
+          vggImageAnnotator);
 
   @SneakyThrows
   @Test

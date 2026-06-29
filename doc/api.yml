@@ -2501,6 +2501,11 @@ components:
         - TILE_MASK
         - TILE_DETECTION_RESULT_V1
         - TILE_DETECTION_RESULT_V2
+        - ASSEMBLE_VGG
+        - ASSEMBLE_IMAGE
+        - ANNOTATED_ASSEMBLE_IMAGE
+        - ANNOTATED_TILE_IMAGE
+        - GEOJSON
     Detection:
       allOf:
         - $ref: '#/components/schemas/CreateDetection'

@@ -1,14 +1,19 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.ASSEMBLE_IMAGE;
+import static java.time.Instant.now;
+import static java.util.UUID.randomUUID;
 import static javax.imageio.ImageIO.read;
 
 import app.bpartners.geojobs.endpoint.event.model.FeatureImageRequested;
 import app.bpartners.geojobs.file.WhiteImageDetector;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.TilingTaskRepository;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
@@ -38,6 +43,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
   private final EntityManager entityManager;
   private final TileDuplicationRemover tileDuplicationRemover;
   private final DetectionPolygonProcessedRetriever polygonProcessedRetriever;
+  private final DetectionFileObjectRepository detectionFileObjectRepository;
 
   @SneakyThrows
   @Override
@@ -96,14 +102,34 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
         && detection.getProvidedGeoJsonZone().size() == 1) {
       bucketComponent.upload(assembleImageFile, "zone_images/" + detection.getId() + ".jpg");
     }
-    bucketComponent.upload(
-        assembleImageFile,
+    var assembleImageBucketKey =
         "zone_images/"
             + detection.getId()
             + "/"
             + feature.getProperties().get("id")
             + "/"
             + detection.getZoneName()
-            + ".jpg");
+            + ".jpg";
+
+    bucketComponent.upload(assembleImageFile, assembleImageBucketKey);
+
+    if (detection.isDebugMode()) {
+      detectionFileObjectRepository.save(
+          DetectionFileObject.builder()
+              .id(randomUUID().toString())
+              .detectionIdentifier(detection.getId())
+              .bucketKey(assembleImageBucketKey)
+              .fileType(ASSEMBLE_IMAGE)
+              .fileName(replaceSeparator(assembleImageBucketKey))
+              .creationDatetime(now())
+              .build());
+    }
+  }
+
+  private static String replaceSeparator(String path) {
+    if (path == null) {
+      return null;
+    }
+    return path.replace('/', '_');
   }
 }

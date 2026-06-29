@@ -2,6 +2,7 @@ package app.bpartners.geojobs.unit;
 
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.retrieveMultiPolygonFromFeature;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -119,7 +120,7 @@ public class BuildingComparisonIT {
           try {
             var referenceMultiPolygon =
                 referenceFeature.stream()
-                    .map(GeometryConverter::retrieveMultiPolygonFromFeature)
+                    .map(feature -> retrieveMultiPolygonFromFeature(feature, null))
                     .reduce(unifyMultiPolygon())
                     .orElseThrow(
                         () ->

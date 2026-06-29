@@ -16,10 +16,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
 import app.bpartners.geojobs.repository.model.detection.RoofCoveringType;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
-import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
-import app.bpartners.geojobs.service.FilePolygonDrawer;
-import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
-import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.io.File;
@@ -42,6 +39,8 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
     BucketComponent bucketComponentMock = mock();
     TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersectionMock = mock();
     FilePolygonDrawer filePolygonDrawerMock = mock();
+    DetectedTileVggExtractor detectedTileVggExtractorMock = mock();
+    VggImageAnnotator vggImageAnnotatorMock = mock();
 
     when(roofCoveringDetectorMock.apply(any(Tile.class), any(File.class)))
         .thenReturn(
@@ -61,7 +60,9 @@ class TileParcelDetectionTaskConsumerWithMockedObjectsDetectorTest {
             detectionObjectHistoryRepositoryMock,
             bucketComponentMock,
             tileCoordinatesPolygonIntersectionMock,
-            filePolygonDrawerMock);
+            filePolygonDrawerMock,
+            detectedTileVggExtractorMock,
+            vggImageAnnotatorMock);
 
     var detectableObjectConfigurations = new ArrayList<DetectableObjectConfiguration>();
     var zdjId = "zdjId";

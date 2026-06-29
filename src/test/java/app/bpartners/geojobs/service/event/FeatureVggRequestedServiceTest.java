@@ -7,10 +7,13 @@ import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFacto
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.MOISISSURE_COULEUR;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.FeatureAnnotatedImageRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
@@ -39,6 +42,7 @@ import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.*;
+import org.mockito.ArgumentCaptor;
 
 class FeatureVggRequestedServiceTest {
   DetectionRepository detectionRepositoryMock = mock();
@@ -65,6 +69,7 @@ class FeatureVggRequestedServiceTest {
   FeaturePolygonRetriever featurePolygonRetrieverMock =
       new FeaturePolygonRetriever(
           geometryConverterMock, ignCadastreFeatureFetcherMock, buildingFinderMock);
+  EventProducer eventProducerMock = mock(EventProducer.class);
 
   FeatureVggRequestedService subject =
       new FeatureVggRequestedService(
@@ -75,7 +80,8 @@ class FeatureVggRequestedServiceTest {
           detectionVGGUpdateMock,
           tileCoordinatesServiceMock,
           tiledPixelPolygonComputerMock,
-          featurePolygonRetrieverMock);
+          featurePolygonRetrieverMock,
+          eventProducerMock);
 
   @Test
   void compute_vgg_for_zone_and_update_detection_vgg() {
@@ -107,6 +113,7 @@ class FeatureVggRequestedServiceTest {
     when(detectionMock.getZdjId()).thenReturn(zoneDetectionJobIdentifier);
     when(detectionMock.getZtjId()).thenReturn(zoneTilingJobIdentifier);
     when(detectionMock.getFeatureWithDelimitations()).thenReturn(List.of(featureWithDelimitation));
+    when(detectionMock.isDebugMode()).thenReturn(true);
     when(detectionMock.toBuilder()).thenReturn(detectionBuilder);
     when(detectionBuilder.imageWidth(anyInt())).thenReturn(detectionBuilder);
     when(detectionBuilder.imageHeight(anyInt())).thenReturn(detectionBuilder);
@@ -181,7 +188,14 @@ class FeatureVggRequestedServiceTest {
                 new FeatureVggRequested(
                     detectionIdentifier, toRestFeature(polygonGeoJsonZoneFeature))));
 
+    var annotatedImageRequestedArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock, times(1)).accept(annotatedImageRequestedArgumentCaptor.capture());
     verify(detectionVGGUpdateMock, times(1)).apply(vggCollectionMock, detectionMock, featureId);
+    var featureAnnotatedImageRequested =
+        (FeatureAnnotatedImageRequested)
+            annotatedImageRequestedArgumentCaptor.getValue().getFirst();
+    assertEquals(
+        new FeatureAnnotatedImageRequested(detectionIdentifier), featureAnnotatedImageRequested);
   }
 
   private static @NotNull FeatureWithDelimitation getFeatureWithDelimitation(

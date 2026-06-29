@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.model.page.BoundedPageSize.MAX_SIZE;
+import static app.bpartners.geojobs.service.geojson.GeometryConverter.retrieveMultiPolygonFromFeature;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 
 import app.bpartners.geojobs.file.FileWriter;
@@ -19,7 +20,6 @@ import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionTask;
 import app.bpartners.geojobs.service.TaskConsumer;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
-import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -65,15 +65,27 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
     var providedGeometryMultiPolygon = getProvidedGeometryMultiPolygon(zoneDetectionJobId);
     var zoneName = zoneDetectionJob.getZoneName();
     var fileName = zoneName + "_" + detectableType + "-part" + "-" + pageNumber;
-    var fileKey = GEO_JSON_BUCKET_FOLDER + zoneDetectionJobId + "/" + fileName + GEO_JSON_EXTENSION;
+    var cleanedFileName = cleanFileName(fileName);
+    var fileKey =
+        GEO_JSON_BUCKET_FOLDER + zoneDetectionJobId + "/" + cleanedFileName + GEO_JSON_EXTENSION;
     var geoJson = geoJsonConverter.apply(paginatedDetectedTiles, providedGeometryMultiPolygon);
     var geoJsonAsByte = geoJson.getStringValue().getBytes();
     var geoJsonAsFile =
-        writer.write(geoJsonAsByte, createTempDirectory(), fileName + GEO_JSON_EXTENSION);
+        writer.write(geoJsonAsByte, createTempDirectory(), cleanedFileName + GEO_JSON_EXTENSION);
 
     bucketComponent.upload(geoJsonAsFile, fileKey);
 
     geoJsonConversionTask.setFileKey(fileKey);
+  }
+
+  private String cleanFileName(String fileName) {
+    return fileName
+        .trim()
+        .replaceAll(",", " ")
+        .replaceAll("\\.", " ")
+        .replaceAll("\"", " ")
+        .replaceAll("'", " ")
+        .replaceAll(" ", "_");
   }
 
   private MultiPolygon getProvidedGeometryMultiPolygon(String zoneDetectionJobId) {
@@ -83,7 +95,9 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
     }
     var detection = optionalDetection.get();
     return detection.getProvidedGeoJsonZone().stream()
-        .map(GeometryConverter::retrieveMultiPolygonFromFeature)
+        .map(
+            feature ->
+                retrieveMultiPolygonFromFeature(feature, detection.getDelimitationOf(feature)))
         .filter(Objects::nonNull)
         .reduce(unifyMultiPolygon())
         .orElseThrow(

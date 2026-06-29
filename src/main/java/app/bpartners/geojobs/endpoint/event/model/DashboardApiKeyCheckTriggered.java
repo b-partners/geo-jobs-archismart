@@ -1,6 +1,5 @@
 package app.bpartners.geojobs.endpoint.event.model;
 
-import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import java.time.Duration;
 import lombok.*;
 
@@ -11,7 +10,9 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = false)
 @ToString
 public class DashboardApiKeyCheckTriggered extends PojaEvent {
-  private CommunityAuthorization communityAuthorization;
+  private String communityAuthorizationId;
+  private String email;
+  private String dashboardApiKey;
 
   @Override
   public Duration maxConsumerDuration() {

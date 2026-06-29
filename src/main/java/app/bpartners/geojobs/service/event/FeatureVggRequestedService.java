@@ -2,6 +2,8 @@ package app.bpartners.geojobs.service.event;
 
 import static java.time.Instant.now;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.FeatureAnnotatedImageRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.model.geometry.VGGFactory;
@@ -11,6 +13,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.service.*;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +32,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
   private final TileCoordinatesService tileCoordinatesService;
   private final TiledPixelPolygonComputer tiledPixelPolygonComputer;
   private final FeaturePolygonRetriever featurePolygonRetriever;
+  private final EventProducer eventProducer;
 
   @Override
   public void accept(FeatureVggRequested event) {
@@ -81,6 +85,9 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
         Duration.between(featureVggComputationStart, now()).toSeconds(),
         detection.getEndToEndId(),
         currentFeature.getGeometry());
+    if (detection.isDebugMode()) {
+      eventProducer.accept(List.of(new FeatureAnnotatedImageRequested(detectionIdentifier)));
+    }
   }
 
   private String retrieveId(Feature feature) {

@@ -1,4 +1,4 @@
-package app.bpartners.geojobs.service;
+package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.DASHBOARD;
 
@@ -47,15 +47,14 @@ public class DashboardApiKeyCheckTriggeredService
 
   @Override
   public void accept(DashboardApiKeyCheckTriggered event) {
-    var authorization = event.getCommunityAuthorization();
+    var email = event.getEmail();
 
-    var retrievedUsers =
-        userAccountsApi.getUsersByCriteria(authorization.getEmail(), null, null, adminApiKey);
+    var retrievedUsers = userAccountsApi.getUsersByCriteria(email, null, null, adminApiKey);
 
     var retrievedUserEmails = retrievedUsers.stream().map(User::email).toList();
 
     if (retrievedUsers.isEmpty()) {
-      log.info("Users with email {} not found in user accounts api.", authorization.getEmail());
+      log.info("Users with email {} not found in user accounts api.", email);
       return;
     }
 
@@ -63,7 +62,7 @@ public class DashboardApiKeyCheckTriggeredService
       log.warn(
           "Multiple ({}) account attached to the email : {} in user account api",
           retrievedUsers.size(),
-          authorization.getEmail());
+          email);
     }
 
     var userApiKeys =
@@ -103,7 +102,7 @@ public class DashboardApiKeyCheckTriggeredService
       return;
     }
 
-    String actualDashboardApiKey = authorization.getDashboardApiKey();
+    String actualDashboardApiKey = event.getDashboardApiKey();
     if (!dashboardApiKeys.contains(actualDashboardApiKey)) {
       var exceptionMessage =
           "Actual dashboard api "

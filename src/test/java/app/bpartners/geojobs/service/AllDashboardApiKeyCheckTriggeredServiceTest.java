@@ -7,6 +7,7 @@ import app.bpartners.geojobs.endpoint.event.model.AllDashboardApiKeyCheckTrigger
 import app.bpartners.geojobs.endpoint.event.model.DashboardApiKeyCheckTriggered;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
+import app.bpartners.geojobs.service.event.AllDashboardApiKeyCheckTriggeredService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,14 @@ class AllDashboardApiKeyCheckTriggeredServiceTest {
 
   private List<DashboardApiKeyCheckTriggered> toChildEvents(
       List<CommunityAuthorization> communityAuthorizations) {
-    return communityAuthorizations.stream().map(DashboardApiKeyCheckTriggered::new).toList();
+    return communityAuthorizations.stream()
+        .map(
+            ca ->
+                DashboardApiKeyCheckTriggered.builder()
+                    .communityAuthorizationId(ca.getId())
+                    .email(ca.getEmail())
+                    .dashboardApiKey(ca.getDashboardApiKey())
+                    .build())
+        .toList();
   }
 }

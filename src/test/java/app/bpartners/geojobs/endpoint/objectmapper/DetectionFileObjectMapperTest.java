@@ -1,6 +1,5 @@
 package app.bpartners.geojobs.endpoint.objectmapper;
 
-import static app.bpartners.geojobs.endpoint.rest.model.DetectionFileType.IMAGE;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
@@ -9,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionFileObjectMapper;
+import app.bpartners.geojobs.endpoint.rest.model.DetectionFileType;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class DetectionFileObjectMapperTest {
     assertEquals(
         new app.bpartners.geojobs.endpoint.rest.model.DetectionFileObject()
             .fileName(fileName)
-            .fileType(IMAGE)
+            .fileType(DetectionFileType.TILE_IMAGE)
             .fileUrl(presignedUrl),
         actual);
   }

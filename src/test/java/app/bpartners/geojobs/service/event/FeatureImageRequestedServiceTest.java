@@ -1,9 +1,11 @@
 package app.bpartners.geojobs.service.event;
 
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.ASSEMBLE_IMAGE;
 import static java.lang.System.currentTimeMillis;
 import static java.util.UUID.randomUUID;
 import static javax.imageio.ImageIO.read;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mockStatic;
@@ -16,11 +18,13 @@ import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.file.WhiteImageDetector;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.hash.FileHash;
+import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.TilingTaskRepository;
 import app.bpartners.geojobs.repository.model.Parcel;
 import app.bpartners.geojobs.repository.model.ParcelContent;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.*;
@@ -34,6 +38,7 @@ import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Geometry;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 class FeatureImageRequestedServiceTest {
@@ -49,6 +54,7 @@ class FeatureImageRequestedServiceTest {
   TileFinder tileFinderMock = mock();
   TileDuplicationRemover tileDuplicationRemoverMock = mock();
   DetectionPolygonProcessedRetriever detectionPolygonProcessedRetrieverMock = mock();
+  DetectionFileObjectRepository detectionFileObjectRepositoryMock = mock();
   FeatureImageRequestedService subject =
       new FeatureImageRequestedService(
           detectionRepositoryMock,
@@ -62,7 +68,8 @@ class FeatureImageRequestedServiceTest {
           tileFinderMock,
           mock(),
           tileDuplicationRemoverMock,
-          detectionPolygonProcessedRetrieverMock);
+          detectionPolygonProcessedRetrieverMock,
+          detectionFileObjectRepositoryMock);
 
   @BeforeEach
   void setUp() {
@@ -73,6 +80,8 @@ class FeatureImageRequestedServiceTest {
     when(tileCoordinatesMock.contains(any(TileCoordinates.class))).thenReturn(true);
     when(tileFinderMock.getFromGeoJsonPolygon(any(), anyInt())).thenReturn(tileCoordinatesMock);
     when(tileDuplicationRemoverMock.apply(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(detectionFileObjectRepositoryMock.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
   }
 
@@ -130,6 +139,7 @@ class FeatureImageRequestedServiceTest {
     when(detectionMock.getId()).thenReturn(detectionIdentifier);
     when(detectionMock.getZtjId()).thenReturn(tilingJobIdentifier);
     when(detectionMock.getZoneName()).thenReturn(randomZoneName);
+    when(detectionMock.isDebugMode()).thenReturn(true);
     when(detectionRepositoryMock.findById(detectionIdentifier))
         .thenReturn(Optional.of(detectionMock));
     var polygonGeometryMock = mock(org.locationtech.jts.geom.Polygon.class);
@@ -162,9 +172,9 @@ class FeatureImageRequestedServiceTest {
     when(bucketComponentMock.upload(
             assembleImageFileMock, "zone_images/" + detectionIdentifier + ".jpg"))
         .thenReturn(mock(FileHash.class));
-    when(bucketComponentMock.upload(
-            assembleImageFileMock,
-            "zone_images/" + detectionIdentifier + "/" + featureId + "/" + randomZoneName + ".jpg"))
+    var bucketKey =
+        "zone_images/" + detectionIdentifier + "/" + featureId + "/" + randomZoneName + ".jpg";
+    when(bucketComponentMock.upload(assembleImageFileMock, bucketKey))
         .thenReturn(mock(FileHash.class));
 
     assertDoesNotThrow(
@@ -176,10 +186,20 @@ class FeatureImageRequestedServiceTest {
     verify(tileImageAssemblerMock).apply(tilesWithImagesMock);
     verify(bucketComponentMock)
         .upload(assembleImageFileMock, "zone_images/" + detectionIdentifier + ".jpg");
-    verify(bucketComponentMock)
-        .upload(
-            assembleImageFileMock,
-            "zone_images/" + detectionIdentifier + "/" + featureId + "/" + randomZoneName + ".jpg");
+    verify(bucketComponentMock).upload(assembleImageFileMock, bucketKey);
+    var detectionFileObjectCaptor = ArgumentCaptor.forClass(DetectionFileObject.class);
+    verify(detectionFileObjectRepositoryMock, times(1)).save(detectionFileObjectCaptor.capture());
+    var savedDetectionFileObject = detectionFileObjectCaptor.getValue();
+    assertEquals(
+        DetectionFileObject.builder()
+            .id(savedDetectionFileObject.getId())
+            .detectionIdentifier(detectionIdentifier)
+            .bucketKey(bucketKey)
+            .fileType(ASSEMBLE_IMAGE)
+            .fileName(savedDetectionFileObject.getFileName())
+            .creationDatetime(savedDetectionFileObject.getCreationDatetime())
+            .build(),
+        savedDetectionFileObject);
     imageIOMockedStatic.close();
   }
 }

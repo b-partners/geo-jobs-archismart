@@ -19,6 +19,7 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.BinaryOperator;
+import javax.annotation.Nullable;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.geotools.geojson.geom.GeometryJSON;
@@ -380,7 +381,7 @@ public class GeometryConverter {
       app.bpartners.geojobs.endpoint.rest.model.Feature roofFeature,
       boolean isParcelDetection,
       DetectableType detectableType) {
-    var roofMultiPolygon = retrieveMultiPolygonFromFeature(roofFeature);
+    var roofMultiPolygon = retrieveMultiPolygonFromFeature(roofFeature, null);
     if (!List.of(
                 TOITURE_REVETEMENT,
                 PANNEAU_PHOTOVOLTAIQUE,
@@ -412,7 +413,8 @@ public class GeometryConverter {
   }
 
   public static MultiPolygon retrieveMultiPolygonFromFeature(
-      app.bpartners.geojobs.endpoint.rest.model.Feature feature) {
+      app.bpartners.geojobs.endpoint.rest.model.Feature feature,
+      @Nullable List<app.bpartners.geojobs.endpoint.rest.model.Feature> delimitations) {
     GeometryConverter geometryConverter = new GeometryConverter();
     var geometry = feature.getGeometry();
     if (geometry == null) {
@@ -421,6 +423,18 @@ public class GeometryConverter {
     var geometryInstance = geometry.getActualInstance();
     MultiPolygon multiPolygon;
     switch (geometryInstance) {
+      case app.bpartners.geojobs.endpoint.rest.model.Point ignored -> {
+        multiPolygon =
+            delimitations == null
+                ? null
+                : delimitations.stream()
+                    .map(
+                        featureDelimitation ->
+                            GeometryConverter.retrieveMultiPolygonFromFeature(
+                                featureDelimitation, null))
+                    .reduce(unifyMultiPolygon())
+                    .orElse(null);
+      }
       case app.bpartners.geojobs.endpoint.rest.model.Polygon restPolygon ->
           multiPolygon = geometryConverter.apply(List.of(restPolygon.getCoordinates()));
       case app.bpartners.geojobs.endpoint.rest.model.MultiPolygon restMultiPolygon ->

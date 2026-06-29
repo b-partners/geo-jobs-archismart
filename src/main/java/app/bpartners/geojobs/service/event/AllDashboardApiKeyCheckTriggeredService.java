@@ -1,4 +1,4 @@
-package app.bpartners.geojobs.service;
+package app.bpartners.geojobs.service.event;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.AllDashboardApiKeyCheckTriggered;
@@ -26,6 +26,10 @@ public class AllDashboardApiKeyCheckTriggeredService
   }
 
   private DashboardApiKeyCheckTriggered toTypedEvent(CommunityAuthorization authorization) {
-    return DashboardApiKeyCheckTriggered.builder().communityAuthorization(authorization).build();
+    return DashboardApiKeyCheckTriggered.builder()
+        .communityAuthorizationId(authorization.getId())
+        .email(authorization.getEmail())
+        .dashboardApiKey(authorization.getDashboardApiKey())
+        .build();
   }
 }

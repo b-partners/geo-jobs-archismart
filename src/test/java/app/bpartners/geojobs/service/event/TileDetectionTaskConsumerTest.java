@@ -1,8 +1,7 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
-import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_MASK;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.*;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,10 +19,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.DetectionFileObject;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
-import app.bpartners.geojobs.service.DetectionMaskFromTileRetriever;
-import app.bpartners.geojobs.service.FilePolygonDrawer;
-import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
-import app.bpartners.geojobs.service.TileDetectionTaskConsumer;
+import app.bpartners.geojobs.service.*;
 import app.bpartners.geojobs.service.detection.*;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.io.File;
@@ -45,6 +41,8 @@ class TileDetectionTaskConsumerTest {
   DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersectionMock = mock();
   FilePolygonDrawer filePolygonDrawerMock = mock();
+  DetectedTileVggExtractor detectedTileVggExtractorMock = mock();
+  VggImageAnnotator vggImageAnnotatorMock = mock();
 
   TileDetectionTaskConsumer subject =
       new TileDetectionTaskConsumer(
@@ -58,7 +56,9 @@ class TileDetectionTaskConsumerTest {
           detectionObjectHistoryRepositoryMock,
           bucketComponentMock,
           tileCoordinatesPolygonIntersectionMock,
-          filePolygonDrawerMock);
+          filePolygonDrawerMock,
+          detectedTileVggExtractorMock,
+          vggImageAnnotatorMock);
 
   @Test
   void persist_detection_file_object_when_detection_debug_mode() {
@@ -90,6 +90,7 @@ class TileDetectionTaskConsumerTest {
             .build();
     var tileImageBucketPath = "layer/20/0/10/tileBucketPath.jpg";
     var tileMaskBucketPath = "layer/20/0/10/tileBucketPath_mask.jpg";
+    var drawnTileBucketPath = "layer/20/0/10/tileBucketPath_drawn_tile.jpg";
     var tileDrawnMaskBucketPath = "layer/20/0/10/tileBucketPath_drawn_mask.jpg";
     var tileBuilderMock = mock(Tile.TileBuilder.class);
     when(tileBuilderMock.detectionE2Id(any())).thenReturn(tileBuilderMock);
@@ -137,16 +138,18 @@ class TileDetectionTaskConsumerTest {
                 new RoofCovering(RoofCoveringType.ROOF_ARDOISE, 1100L),
                 new RoofCovering(RoofCoveringType.ROOF_TUILES, 1000L)));
     when(bucketComponentMock.upload(any(), any())).thenReturn(mock());
+    when(bucketComponentMock.download(any())).thenReturn(mock());
 
     assertDoesNotThrow(() -> subject.accept(tileDetectionTask));
 
     var detectionFileObjectCaptor = ArgumentCaptor.forClass(DetectionFileObject.class);
-    verify(detectionObjectHistoryRepositoryMock, times(3))
+    verify(detectionObjectHistoryRepositoryMock, times(4))
         .save(detectionFileObjectCaptor.capture());
     var actualSavedFileObject = detectionFileObjectCaptor.getAllValues();
     var savedDrawnMaskFileObject = actualSavedFileObject.getFirst();
     var savedFileObjectTile = actualSavedFileObject.get(1);
-    var savedTileMaskFileObject = actualSavedFileObject.getLast();
+    var savedTileMaskFileObject = actualSavedFileObject.get(2);
+    var savedAnnotatedTileFileObject = actualSavedFileObject.getLast();
     assertEquals(
         DetectionFileObject.builder()
             .id(savedDrawnMaskFileObject.getId())
@@ -177,6 +180,16 @@ class TileDetectionTaskConsumerTest {
             .creationDatetime(savedTileMaskFileObject.getCreationDatetime())
             .build(),
         savedTileMaskFileObject);
+    assertEquals(
+        DetectionFileObject.builder()
+            .id(savedAnnotatedTileFileObject.getId())
+            .detectionIdentifier(detectionIdentifier)
+            .bucketKey(drawnTileBucketPath)
+            .fileName("layer_20_0_10_tileBucketPath_drawn_tile.jpg")
+            .fileType(ANNOTATED_TILE_IMAGE)
+            .creationDatetime(savedAnnotatedTileFileObject.getCreationDatetime())
+            .build(),
+        savedAnnotatedTileFileObject);
   }
 
   @Test

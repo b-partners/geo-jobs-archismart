@@ -15,6 +15,7 @@ import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.dashboard.UserAccountsApi;
 import app.bpartners.geojobs.service.dashboard.component.User;
 import app.bpartners.geojobs.service.dashboard.component.UserApiKey;
+import app.bpartners.geojobs.service.event.DashboardApiKeyCheckTriggeredService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -44,7 +45,8 @@ class DashboardApiKeyCheckTriggeredServiceTest {
             eq(authorizationMock.getEmail()), eq(null), eq(null), anyString()))
         .thenReturn(List.of());
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorizationMock);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder().email(authorizationMock.getEmail()).build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);
@@ -96,7 +98,8 @@ class DashboardApiKeyCheckTriggeredServiceTest {
         .thenReturn(List.of(user));
     when(userAccountsApiMock.getUserApiKey(eq(user.id()), eq(adminApiKey))).thenReturn(List.of());
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorization);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder().email(authorization.getEmail()).build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);
@@ -136,7 +139,8 @@ class DashboardApiKeyCheckTriggeredServiceTest {
     when(userAccountsApiMock.getUserApiKey(eq(user.id()), eq(adminApiKey)))
         .thenReturn(List.of(new UserApiKey(randomUUID().toString(), ANALYSIS)));
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorization);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder().email(authorization.getEmail()).build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);
@@ -178,7 +182,11 @@ class DashboardApiKeyCheckTriggeredServiceTest {
     when(userAccountsApiMock.getUserApiKey(eq(user.id()), eq(adminApiKey)))
         .thenReturn(List.of(new UserApiKey(randomUUID().toString(), DASHBOARD)));
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorization);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder()
+            .email(authorization.getEmail())
+            .dashboardApiKey(authorization.getDashboardApiKey())
+            .build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);
@@ -215,7 +223,8 @@ class DashboardApiKeyCheckTriggeredServiceTest {
         .thenReturn(List.of(user1, user2));
     when(userAccountsApiMock.getUserApiKey(anyString(), eq(adminApiKey))).thenReturn(List.of());
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorization);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder().email(authorization.getEmail()).build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);
@@ -264,7 +273,8 @@ class DashboardApiKeyCheckTriggeredServiceTest {
             new RestClientResponseException(
                 "Error", 500, "Internal Server Error", HttpHeaders.EMPTY, null, null));
 
-    DashboardApiKeyCheckTriggered event = new DashboardApiKeyCheckTriggered(authorization);
+    DashboardApiKeyCheckTriggered event =
+        DashboardApiKeyCheckTriggered.builder().email(authorization.getEmail()).build();
     subject =
         new DashboardApiKeyCheckTriggeredService(
             userAccountsApiMock, adminApiKey, mailerMock, htmlTemplateParser);

@@ -1,8 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
-import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_IMAGE;
-import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_MASK;
+import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.*;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
 import static java.awt.Color.MAGENTA;
 import static java.time.Instant.now;
@@ -10,6 +9,7 @@ import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.repository.DetectionFileObjectRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
@@ -49,6 +49,8 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
   private final BucketComponent bucketComponent;
   private final TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection;
   private final FilePolygonDrawer filePolygonDrawer;
+  private final DetectedTileVggExtractor detectedTileVggExtractor;
+  private final VggImageAnnotator vggImageAnnotator;
 
   @SneakyThrows
   @Override
@@ -66,7 +68,9 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
     tileDetectionTask.setDetectionIdentifier(detectionIdentifier);
     tileDetectionTask.setDebugMode(detection != null && detection.isDebugMode());
     var tileImageBucketPath = tile.getBucketPath();
+    File originalTileImageFile = null;
     if (detection != null) {
+      originalTileImageFile = bucketComponent.download(tileImageBucketPath);
       if (detection.hasToitureModelName()) {
         var multiPolygonFromTile =
             geometryConverter.getMultiPolygonFromTile(
@@ -108,7 +112,11 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
                   .orElse(null);
           if (detection.isDebugMode()) {
             saveDrawnMaskAndUpload(
-                maskMultiPolygon, tileCoordinates, tileImageBucketPath, detectionIdentifier);
+                originalTileImageFile,
+                maskMultiPolygon,
+                tileCoordinates,
+                tileImageBucketPath,
+                detectionIdentifier);
           }
           mask = maskRetriever.apply(tile, maskMultiPolygon);
         } else {
@@ -191,18 +199,47 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
                 }
               });
     }
-    machineDetectedTileRepository.save(machineDetectedTile);
+
+    var savedDetectedTile = machineDetectedTileRepository.save(machineDetectedTile);
+
+    if (detection != null && detection.isDebugMode() && originalTileImageFile != null) {
+      var detectedTileAsVggFile =
+          detectedTileVggExtractor.applyAsTempFile(
+              DetectedTile.builder()
+                  .tile(savedDetectedTile.getTile())
+                  .detectedObjects(savedDetectedTile.getDetectedObjects())
+                  .build());
+
+      var drawnTileBucketKey = toDrawnTilePath(tileImageBucketPath);
+
+      var annotatedImageFile =
+          vggImageAnnotator.annotate(
+              detectedTileAsVggFile,
+              originalTileImageFile,
+              File.createTempFile(randomUUID().toString(), ".png"));
+
+      bucketComponent.upload(annotatedImageFile, drawnTileBucketKey);
+
+      detectionObjectHistoryRepository.save(
+          DetectionFileObject.builder()
+              .id(randomUUID().toString())
+              .detectionIdentifier(detectionIdentifier)
+              .fileName(replaceSeparator(drawnTileBucketKey))
+              .bucketKey(drawnTileBucketKey)
+              .fileType(ANNOTATED_TILE_IMAGE)
+              .creationDatetime(now())
+              .build());
+    }
   }
 
   private void saveDrawnMaskAndUpload(
+      File originalTileImageFile,
       MultiPolygon maskMultiPolygon,
       TileCoordinates tileCoordinates,
       String tileImageBucketPath,
       String detectionIdentifier) {
     var convertedMaskPixelCoordinates =
         computeMaskPixelCoordinates(maskMultiPolygon, tileCoordinates);
-
-    var originalTileImageFile = bucketComponent.download(tileImageBucketPath);
 
     var drawnMaskFile =
         filePolygonDrawer.apply(convertedMaskPixelCoordinates, MAGENTA, originalTileImageFile);
@@ -240,6 +277,10 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
 
   private static String toMaskPath(String path) {
     return insertSuffix(path, "_mask");
+  }
+
+  private static String toDrawnTilePath(String path) {
+    return insertSuffix(path, "_drawn_tile");
   }
 
   private static String insertSuffix(String path, String suffix) {

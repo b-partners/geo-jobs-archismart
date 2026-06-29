@@ -63,8 +63,16 @@ public class BucketComponent {
 
   @SneakyThrows
   public File download(String bucketKey) {
-    var destination =
-        createTempFile(prefixFromBucketKey(bucketKey), suffixFromBucketKey(bucketKey));
+    var keyPath =
+        bucketKey
+            .replaceAll(",", " ")
+            .replaceAll("\\.", " ")
+            .replaceAll("\"", " ")
+            .replaceAll("'", " ")
+            .replaceAll(" ", "_");
+    var prefixFromBucketKey = prefixFromBucketKey(keyPath);
+    var suffix = suffixFromBucketKey(keyPath);
+    var destination = createTempFile(prefixFromBucketKey, suffix);
     FileDownload download =
         bucketConf
             .getS3TransferManager()
