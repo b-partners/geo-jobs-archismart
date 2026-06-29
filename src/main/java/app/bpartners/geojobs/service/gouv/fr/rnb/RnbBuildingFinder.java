@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.gouv.fr.rnb;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import app.bpartners.geojobs.endpoint.rest.model.Point;
+import app.bpartners.geojobs.model.exception.BuildingFootPrintSourceUnavailableException;
 import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.model.geometry.RoofDetails;
 import app.bpartners.geojobs.service.PolygonInsideCircleDistanceComputer;
@@ -123,8 +124,15 @@ public class RnbBuildingFinder {
               + " 1000, actual is "
               + minimumEnclosingRadius);
     }
-    return getBuildingsFromCentroid(
-        longitude, latitude, minimumEnclosingRadius.intValue(), jtsMultiPolygon);
+    try {
+      return getBuildingsFromCentroid(
+          longitude, latitude, minimumEnclosingRadius.intValue(), jtsMultiPolygon);
+    } catch (Exception e) {
+      log.error("Unable to retrieve roof polygons from provided multiPolygon zone", e);
+      throw new BuildingFootPrintSourceUnavailableException(
+          "Unable to retrieve building roof polygons inside provided polygon : "
+              + lonLatPolygonCoordinates);
+    }
   }
 
   private List<RoofDetails> getBuildingsFromCentroid(

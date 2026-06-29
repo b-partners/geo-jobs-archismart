@@ -15,6 +15,7 @@ import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.
 import static app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer.ZIP_BUCKET_FOLDER;
 import static java.time.Instant.now;
 import static java.time.Instant.parse;
+import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionExcelFileSaved;
@@ -347,7 +348,51 @@ public class ZoneService {
     detectionToSave.addFeatures(features, PROVIDED_FEATURE);
     var savedDetectionToBeProcessed = detectionRepository.save(detectionToSave);
 
-    return synchronousDetectionService.apply(savedDetectionToBeProcessed);
+    try {
+      return synchronousDetectionService.apply(savedDetectionToBeProcessed);
+    } catch (RuntimeException e) {
+      markSynchronousDetectionFailed(savedDetectionToBeProcessed.getId(), e);
+      throw e;
+    }
+  }
+
+  private void markSynchronousDetectionFailed(String detectionId, RuntimeException e) {
+    try {
+      var detection = detectionRepository.findById(detectionId).orElse(null);
+      if (detection == null) {
+        return;
+      }
+      var failedStepName = failedStepNameOf(detection);
+      detection.addStep(
+          app.bpartners.geojobs.repository.model.detection.DetectionStep.builder()
+              .id(randomUUID().toString())
+              .detectionId(detection.getId())
+              .name(failedStepName)
+              .progression(FINISHED)
+              .health(FAILED)
+              .creationDatetime(now())
+              .build());
+      detectionRepository.save(detection);
+      log.error(
+          "Synchronous detection(id={}) marked FAILED on step {}", detectionId, failedStepName, e);
+    } catch (RuntimeException persistenceException) {
+      // never mask the original failure because the FAILED step could not be persisted
+      log.error(
+          "Could not persist FAILED step for synchronous detection(id={})",
+          detectionId,
+          persistenceException);
+    }
+  }
+
+  /** Furthest pipeline step reached, inferred from the artifacts already persisted. */
+  private DetectionStepName failedStepNameOf(Detection detection) {
+    if (detection.getZdjId() != null) {
+      return MACHINE_DETECTION;
+    }
+    if (detection.getZtjId() != null) {
+      return TILING;
+    }
+    return REQUEST_ACCEPTED;
   }
 
   public app.bpartners.geojobs.endpoint.rest.model.Detection processDetection(

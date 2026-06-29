@@ -31,14 +31,13 @@ import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.client.RestTemplate;
 
-@Disabled("TODO: local use only")
+// @Disabled("TODO: local use only")
 @Slf4j
 public class BuildingComparisonIT {
   private static final String OUTPUT_PATH = "/tmp/output";

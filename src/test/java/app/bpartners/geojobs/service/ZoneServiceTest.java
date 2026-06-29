@@ -439,6 +439,90 @@ class ZoneServiceTest {
   }
 
   @Test
+  void process_synchronously_returns_pipeline_result_when_no_error() {
+    var detectionId = randomUUID().toString();
+    String communityOwnerId = null;
+    var existing =
+        detectionCreator.create(detectionId, randomUUID().toString(), randomUUID().toString());
+    var createDetection = new CreateDetection().geoJsonZone(featureCreator.defaultFeatures());
+    when(synchronousDetectionValidatorMock.apply(any())).thenReturn(createDetection);
+    when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(detectionId, communityOwnerId))
+        .thenReturn(Optional.of(existing));
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    var expected = new Detection().id(detectionId);
+    when(synchronousDetectionServiceMock.apply(any())).thenReturn(expected);
+
+    var actual =
+        subject.processDetectionSynchronously(
+            detectionId, createDetection, communityOwnerId, false);
+
+    assertEquals(expected, actual);
+    // failure path must not be triggered when the pipeline succeeds
+    verify(detectionRepositoryMock, never()).findById(any());
+  }
+
+  @Test
+  void process_synchronously_marks_failed_step_machine_detection_when_zdj_present() {
+    var thrown =
+        assertFailedStepPersistedOnPipelineError(
+            detectionCreator.create(
+                randomUUID().toString(), randomUUID().toString(), randomUUID().toString()),
+            MACHINE_DETECTION);
+    assertEquals("boom", thrown.getMessage());
+  }
+
+  @Test
+  void process_synchronously_marks_failed_step_tiling_when_only_ztj_present() {
+    assertFailedStepPersistedOnPipelineError(
+        detectionCreator.create(randomUUID().toString(), randomUUID().toString(), null), TILING);
+  }
+
+  @Test
+  void process_synchronously_marks_failed_step_request_accepted_when_no_job_yet() {
+    assertFailedStepPersistedOnPipelineError(
+        detectionCreator.create(randomUUID().toString(), null, null), REQUEST_ACCEPTED);
+  }
+
+  private ApiException assertFailedStepPersistedOnPipelineError(
+      app.bpartners.geojobs.repository.model.detection.Detection existing,
+      app.bpartners.geojobs.endpoint.rest.model.DetectionStepName expectedFailedStepName) {
+    var detectionId = existing.getId();
+    String communityOwnerId = null;
+    var createDetection = new CreateDetection().geoJsonZone(featureCreator.defaultFeatures());
+    when(synchronousDetectionValidatorMock.apply(any())).thenReturn(createDetection);
+    when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(detectionId, communityOwnerId))
+        .thenReturn(Optional.of(existing));
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(detectionRepositoryMock.findById(detectionId)).thenReturn(Optional.of(existing));
+    var pipelineError = new ApiException(ApiException.ExceptionType.SERVER_EXCEPTION, "boom");
+    when(synchronousDetectionServiceMock.apply(any())).thenThrow(pipelineError);
+
+    var thrown =
+        assertThrows(
+            ApiException.class,
+            () ->
+                subject.processDetectionSynchronously(
+                    detectionId, createDetection, communityOwnerId, false));
+
+    // the original error is rethrown unchanged so the synchronous caller still gets it
+    assertEquals(pipelineError, thrown);
+    var captor =
+        ArgumentCaptor.forClass(app.bpartners.geojobs.repository.model.detection.Detection.class);
+    verify(detectionRepositoryMock, atLeastOnce()).save(captor.capture());
+    var persistedStep = captor.getAllValues().getLast().getStep();
+    assertNotNull(persistedStep, "a terminal FAILED step must be persisted on pipeline error");
+    assertEquals(expectedFailedStepName, persistedStep.getName());
+    assertEquals(
+        app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED,
+        persistedStep.getProgression());
+    assertEquals(
+        app.bpartners.geojobs.job.model.Status.HealthStatus.FAILED, persistedStep.getHealth());
+    return thrown;
+  }
+
+  @Test
   void read_detection_ko() {
     var detectionId = "NonExistentDetectionId";
     setUpAuthorityRoleProcessingMock(null, null, ROLE_ADMIN);
