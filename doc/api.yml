@@ -585,6 +585,53 @@ paths:
           $ref: '#/components/responses/400'
         '500':
           $ref: '#/components/responses/500'
+  '/communities/{communityId}/detectionsExport/{exportId}':
+    put:
+      tags:
+        - Detection
+      operationId: exportDetections
+      parameters:
+        - in: path
+          name: communityId
+          description: Community owner identifier
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: exportId
+          description: Detection export request identifier
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: from
+          description: Interval begin
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          description: Interval end
+          schema:
+            type: string
+            format: date-time
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDetectionExportRequest'
+      responses:
+        '200':
+          description: Detection export requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionExportRequest'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
   '/detectionJobs/{id}/geojsonsUrl':
     get:
       tags:
@@ -2484,6 +2531,32 @@ components:
         email:
           type: string
         readmeProject:
+          type: string
+    DetectionExportAttribute:
+      type: string
+      enum:
+        - AREA
+        - ZONE_NAME
+    CreateDetectionExportRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        additionalExportedAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectionExportAttribute'
+    DetectionExportRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateDetectionExportRequest'
+      properties:
+        id:
+          type: string
+        fileUrl:
           type: string
     DetectionFileObject:
       type: object

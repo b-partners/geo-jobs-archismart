@@ -447,22 +447,25 @@ public class Detection implements Serializable {
 
   public List<app.bpartners.geojobs.endpoint.rest.model.Feature> getDelimitationOf(
       app.bpartners.geojobs.endpoint.rest.model.Feature feature) {
-    return getFeatureWithDelimitations().stream()
-        .filter(
-            featureWithDelimitation ->
-                Objects.equals(
-                    featureWithDelimitation.getRestFeature().getGeometry(), feature.getGeometry()))
-        .map(
-            featureWithDelimitation -> {
-              var featureProperties = featureWithDelimitation.feature().getProperties();
-              return featureWithDelimitation.getRestDelimitations().stream()
-                  .map(
-                      delimitationFeature ->
-                          copyFeatureProperties(delimitationFeature, featureProperties))
-                  .toList();
-            })
-        .flatMap(List::stream)
-        .toList();
+    return getFeatureWithDelimitations() == null
+        ? null
+        : getFeatureWithDelimitations().stream()
+            .filter(
+                featureWithDelimitation ->
+                    Objects.equals(
+                        featureWithDelimitation.getRestFeature().getGeometry(),
+                        feature.getGeometry()))
+            .map(
+                featureWithDelimitation -> {
+                  var featureProperties = featureWithDelimitation.feature().getProperties();
+                  return featureWithDelimitation.getRestDelimitations().stream()
+                      .map(
+                          delimitationFeature ->
+                              copyFeatureProperties(delimitationFeature, featureProperties))
+                      .toList();
+                })
+            .flatMap(List::stream)
+            .toList();
   }
 
   private app.bpartners.geojobs.endpoint.rest.model.Feature copyFeatureProperties(

@@ -176,6 +176,8 @@ public class SecurityConf {
                     .hasAnyAuthority(ROLE_ADMIN.name())
                     .requestMatchers(POST, "/communities/*/detections/*/fileResult")
                     .hasAnyAuthority(ROLE_ADMIN.name())
+                    .requestMatchers(PUT, "/communities/*/detectionsExport/*")
+                    .hasAnyAuthority(ROLE_ADMIN.name())
                     .requestMatchers(GET, "/detections")
                     .hasAnyAuthority(
                         ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())

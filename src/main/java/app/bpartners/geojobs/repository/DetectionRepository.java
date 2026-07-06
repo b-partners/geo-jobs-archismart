@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface DetectionRepository extends JpaRepository<Detection, String> {
   Optional<Detection> findByEndToEndId(String endToEndId);
@@ -16,6 +18,20 @@ public interface DetectionRepository extends JpaRepository<Detection, String> {
 
   List<Detection> findByCommunityOwnerIdAndCreationDatetimeBetweenOrderByCreationDatetimeDesc(
       String communityOwnerId, Instant from, Instant to, Pageable pageable);
+
+  @Query(
+      """
+    SELECT d FROM Detection d
+    WHERE d.communityOwnerId = :communityOwnerId
+      AND d.creationDatetime BETWEEN :from AND :to
+      AND (d.geojsonS3FileKey IS NOT NULL or d.vggFileKey IS NOT NULL)
+    ORDER BY d.creationDatetime DESC
+""")
+  List<Detection> findByCommunityOwnerIdAndCriteria(
+      @Param("communityOwnerId") String communityOwnerId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      Pageable pageable);
 
   List<Detection>
       findByCommunityOwnerIdAndCreationDatetimeBetweenAndZoneNameIsContainingIgnoreCaseOrderByCreationDatetimeDesc(

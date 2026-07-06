@@ -16,3 +16,5 @@ implementation 'org.jgrapht:jgrapht-core:1.5.2'
 implementation 'org.citygml4j:citygml4j-cityjson:3.2.6'
 implementation 'org.gdal:gdal:3.8.0'
 implementation "org.geotools:gt-geotiff"
+implementation 'org.apache.poi:poi:4.1.1'
+implementation 'org.apache.poi:poi-ooxml:4.1.1'
