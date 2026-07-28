@@ -2,6 +2,7 @@ package app.bpartners.geojobs.utils.detection;
 
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.MACHINE_DETECTION;
+import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.ZIP;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
@@ -27,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -90,10 +93,19 @@ class CsvBatchDetectionIT {
   private static final Path OUTPUT_ROOT =
       Path.of(envOrDefault("DETECTION_OUTPUT_DIR", "build/detections"));
   private static final int PARALLELISM =
-      Integer.parseInt(envOrDefault("DETECTION_PARALLELISM", "8"));
+      Integer.parseInt(envOrDefault("DETECTION_PARALLELISM", "20"));
 
   private static final Duration POLL_TIMEOUT = Duration.ofMinutes(5);
   private static final Duration POLL_INTERVAL = Duration.ofSeconds(30);
+
+  private static final Path DETECTION_LOG_PATH =
+      Path.of(envOrDefault("DETECTION_LOG_PATH", "detection-log.txt"));
+  private static final Path STATUS_REPORT_PATH =
+      Path.of(envOrDefault("DETECTION_STATUS_REPORT", "detection-status-report.csv"));
+
+  /** Matches log lines like {@code [<address>] launching detection (id=<uuid>)}. */
+  private static final Pattern LAUNCH_LINE =
+      Pattern.compile("\\[(?<address>[^\\]]*)] launching detection \\(id=(?<id>[0-9a-fA-F-]+)\\)");
 
   // shared, both are thread-safe (the generated ApiClient wraps a single java.net.http.HttpClient)
   private final HttpClient downloadClient = HttpClient.newHttpClient();
@@ -123,6 +135,252 @@ class CsvBatchDetectionIT {
     log.info("Done. Results under {}", OUTPUT_ROOT.toAbsolutePath());
   }
 
+  /**
+   * Reads the launched detections from {@link #DETECTION_LOG_PATH} (each {@code [<address>]
+   * launching detection (id=<uuid>)} line), calls {@code GET /detections/{id}} for every id and
+   * writes a CSV report with the current step, its progression/health status and message.
+   *
+   * <p>Output columns : {@code ID détection, Adresse, Étape (Step), ProgressionStatus,
+   * HealthStatus, Message}.
+   *
+   * <p>The download can be narrowed to detections matching a list of steps and/or a list of
+   * statuses through the two filters passed to {@link #reportDetectionStatuses(List, List)} (here
+   * read from the {@code DETECTION_DOWNLOAD_STEPS} and {@code DETECTION_DOWNLOAD_STATUSES} env
+   * vars). The CSV always holds <b>every</b> detection ; only the downloaded artifacts are
+   * filtered.
+   *
+   * <ul>
+   *   <li>{@code DETECTION_DOWNLOAD_STEPS} : comma-separated step names, e.g. {@code
+   *       TILING,MACHINE_DETECTION}.
+   *   <li>{@code DETECTION_DOWNLOAD_STATUSES} : comma-separated {@code progression:health} pairs,
+   *       either side optional (wildcard), e.g. {@code FINISHED:SUCCEEDED,PROCESSING:} .
+   * </ul>
+   */
+  @Test
+  void report_detection_statuses_from_log() throws Exception {
+    var stepFilters = List.of(MACHINE_DETECTION, POST_PROCESSING);
+    var statusFilters = List.of(new Status().progression(FINISHED).health(SUCCEEDED));
+    reportDetectionStatuses(stepFilters, statusFilters);
+  }
+
+  /**
+   * Same as {@link #report_detection_statuses_from_log()} but with explicit download filters :
+   *
+   * @param downloadStepFilters when non-empty, only detections whose current step is one of them
+   *     are downloaded.
+   * @param downloadStatusFilters when non-empty, only detections whose current status matches at
+   *     least one of them are downloaded (each filter's {@code null} {@code progression}/{@code
+   *     health} is a wildcard).
+   *     <p>When both lists are empty, the default behaviour applies : every detection's available
+   *     artifacts are downloaded.
+   */
+  void reportDetectionStatuses(
+      List<DetectionStepName> downloadStepFilters, List<Status> downloadStatusFilters)
+      throws Exception {
+    assertNotNull(BASE_URL, "BIRDIA_BASE_URL env var is required");
+    assertNotNull(API_KEY, "BIRDIA_API_KEY env var is required");
+
+    var launched = readLaunchedDetections(DETECTION_LOG_PATH);
+    log.info(
+        "Found {} launched detection(s) in {} (download step filters={}, status filters={})",
+        launched.size(),
+        DETECTION_LOG_PATH.toAbsolutePath(),
+        downloadStepFilters,
+        describeStatusFilters(downloadStatusFilters));
+
+    var lines = new ArrayList<String>();
+    lines.add("ID détection,Adresse,Étape (Step),ProgressionStatus,HealthStatus,Message");
+    for (var detection : launched) {
+      lines.add(toReportRow(detection, downloadStepFilters, downloadStatusFilters));
+    }
+
+    Files.write(STATUS_REPORT_PATH, lines, UTF_8);
+    log.info("Wrote status report -> {}", STATUS_REPORT_PATH.toAbsolutePath());
+  }
+
+  /**
+   * Parses {@link #DETECTION_LOG_PATH} into the detections that were launched, keyed by id to keep
+   * the first occurrence and drop duplicates while preserving log order.
+   */
+  private static List<LaunchedDetection> readLaunchedDetections(Path logPath) throws IOException {
+    var byId = new LinkedHashMap<String, LaunchedDetection>();
+    for (var line : Files.readAllLines(logPath, UTF_8)) {
+      var matcher = LAUNCH_LINE.matcher(line);
+      if (matcher.find()) {
+        var id = matcher.group("id");
+        byId.putIfAbsent(id, new LaunchedDetection(id, matcher.group("address").trim()));
+      }
+    }
+    return List.copyOf(byId.values());
+  }
+
+  /**
+   * Calls {@code GET /detections/{id}} and turns the current step into one CSV line, downloading
+   * the available artifacts only when the detection matches the given download filters.
+   */
+  private String toReportRow(
+      LaunchedDetection launched,
+      List<DetectionStepName> downloadStepFilters,
+      List<Status> downloadStatusFilters) {
+    var step = "";
+    var progression = "";
+    var health = "";
+    var message = "";
+    try {
+      var detection = detectionApi.getProcessedDetection(launched.id());
+      var currentStep = detection.getStep();
+      if (currentStep != null) {
+        step = currentStep.getName() == null ? "" : currentStep.getName().toString();
+        var status = currentStep.getStatus();
+        if (status != null) {
+          progression = status.getProgression() == null ? "" : status.getProgression().toString();
+          health = status.getHealth() == null ? "" : status.getHealth().toString();
+          message = status.getMessage() == null ? "" : status.getMessage();
+        }
+      }
+      if (matchesDownloadFilter(detection, downloadStepFilters, downloadStatusFilters)) {
+        downloadAvailableArtifacts(detection, launched.address());
+      } else {
+        log.info("[{}] skipped download (does not match filter)", launched.address());
+      }
+    } catch (Exception e) {
+      log.error("GET /detections/{} failed for '{}'", launched.id(), launched.address(), e);
+      message = "ERROR: " + e.getMessage();
+    }
+    return String.join(
+        ",",
+        csv(launched.id()),
+        csv(launched.address()),
+        csv(step),
+        csv(progression),
+        csv(health),
+        csv(message));
+  }
+
+  /**
+   * Tells whether a detection is eligible for download :
+   *
+   * <ul>
+   *   <li>no filter at all (both lists empty) -> always download (default behaviour),
+   *   <li>{@code stepFilters} non-empty -> the detection's current step name must be one of them,
+   *   <li>{@code statusFilters} non-empty -> the detection's current status must match at least one
+   *       of them (each filter's {@code null} {@code progression}/{@code health} is a wildcard).
+   * </ul>
+   */
+  private static boolean matchesDownloadFilter(
+      Detection detection, List<DetectionStepName> stepFilters, List<Status> statusFilters) {
+    if (stepFilters.isEmpty() && statusFilters.isEmpty()) {
+      return true;
+    }
+    var step = detection.getStep();
+    if (!stepFilters.isEmpty() && (step == null || !stepFilters.contains(step.getName()))) {
+      return false;
+    }
+    if (!statusFilters.isEmpty()) {
+      var status = step == null ? null : step.getStatus();
+      if (status == null
+          || statusFilters.stream().noneMatch(filter -> statusMatches(status, filter))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** A status matches a filter when each of the filter's non-null fields equals the actual one. */
+  private static boolean statusMatches(Status actual, Status filter) {
+    if (filter.getProgression() != null && actual.getProgression() != filter.getProgression()) {
+      return false;
+    }
+    return filter.getHealth() == null || actual.getHealth() == filter.getHealth();
+  }
+
+  /** Parses a comma-separated list of step names into {@link DetectionStepName}s. */
+  private static List<DetectionStepName> parseStepFilters(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+    return Arrays.stream(raw.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isBlank())
+        .map(DetectionStepName::fromValue)
+        .toList();
+  }
+
+  /**
+   * Parses a comma-separated list of {@code progression:health} pairs into {@link Status} filters,
+   * either side being optional (a blank side is a wildcard, kept {@code null}).
+   */
+  private static List<Status> parseStatusFilters(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+    return Arrays.stream(raw.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isBlank())
+        .map(CsvBatchDetectionIT::parseStatusFilter)
+        .toList();
+  }
+
+  private static Status parseStatusFilter(String pair) {
+    var parts = pair.split(":", 2);
+    var progression = parts[0].trim();
+    var health = parts.length > 1 ? parts[1].trim() : "";
+    var status = new Status();
+    if (!progression.isBlank()) {
+      status.setProgression(Status.ProgressionEnum.fromValue(progression));
+    }
+    if (!health.isBlank()) {
+      status.setHealth(Status.HealthEnum.fromValue(health));
+    }
+    return status;
+  }
+
+  private static String describeStatusFilters(List<Status> statusFilters) {
+    return statusFilters.stream()
+        .map(s -> s.getProgression() + ":" + s.getHealth())
+        .toList()
+        .toString();
+  }
+
+  /**
+   * Downloads whatever artifact URLs the detection already exposes ({@code vggUrl}, {@code
+   * imageUrl}, {@code geoJsonUrl}) into a folder named after the zone, and annotates the image when
+   * both the VGG and the image are available. Unlike {@link #processRow}, it does not poll : it
+   * only uses the URLs present on the given detection.
+   */
+  private void downloadAvailableArtifacts(Detection detection, String zoneName) throws Exception {
+    var zoneDir = OUTPUT_ROOT.resolve(sanitize(zoneName));
+    Files.createDirectories(zoneDir);
+
+    Path vggFile = null;
+    Path imageFile = null;
+    if (detection.getVggUrl() != null) {
+      vggFile = zoneDir.resolve(sanitize(zoneName) + ".json");
+      download(detection.getVggUrl(), vggFile);
+    }
+    if (detection.getImageUrl() != null) {
+      imageFile = zoneDir.resolve(sanitize(zoneName) + ".jpg");
+      download(detection.getImageUrl(), imageFile);
+    }
+    if (detection.getGeoJsonUrl() != null) {
+      download(detection.getGeoJsonUrl(), zoneDir.resolve(sanitize(zoneName) + ".geojson"));
+    }
+    if (vggFile != null && imageFile != null) {
+      annotator.annotate(
+          vggFile.toFile(),
+          imageFile.toFile(),
+          zoneDir.resolve(sanitize(zoneName) + "-annotated.png").toFile());
+    }
+  }
+
+  /** RFC4180 field escaping: always quote and double any embedded quote. */
+  private static String csv(String value) {
+    return '"' + (value == null ? "" : value.replace("\"", "\"\"")) + '"';
+  }
+
+  /** One detection launched in the log, with its id and human-readable address. */
+  record LaunchedDetection(String id, String address) {}
+
   private void processRowSafely(CsvRow row) {
     var zoneName = zoneNameOf(row);
     try {
@@ -137,9 +395,8 @@ class CsvBatchDetectionIT {
     enrichWithStaticFields(createDetection);
 
     var detectionId = randomUUID().toString();
-    log.info("[{}] launching sync detection (id={})", zoneName, detectionId);
-    var detection =
-        detectionApi.processDetectionSynchronously(detectionId, toDebugMode(createDetection));
+    log.info("[{}] launching detection (id={})", zoneName, detectionId);
+    var detection = detectionApi.processDetection(detectionId, toDebugMode(createDetection));
 
     var zoneDir = OUTPUT_ROOT.resolve(sanitize(zoneName));
     Files.createDirectories(zoneDir);

@@ -9,7 +9,7 @@ import static java.util.Comparator.naturalOrder;
 import static org.hibernate.type.SqlTypes.ARRAY;
 import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.repository.model.SurfaceUnit;

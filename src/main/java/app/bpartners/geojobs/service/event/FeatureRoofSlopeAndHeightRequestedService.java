@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.*;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
 import static java.util.stream.Collectors.toSet;
@@ -8,7 +8,7 @@ import static java.util.stream.Collectors.toSet;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.FeatureRoofSlopeAndHeightRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.model.lidar.planes.Plane3D;
 import app.bpartners.geojobs.repository.DetectionRepository;

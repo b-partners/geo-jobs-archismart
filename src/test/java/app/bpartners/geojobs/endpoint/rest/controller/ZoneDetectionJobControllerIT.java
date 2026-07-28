@@ -18,7 +18,8 @@ import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.AutoTaskStatisticRecomputingSubmitted;
 import app.bpartners.geojobs.endpoint.event.model.parcel.ParcelDetectionTaskCreated;
 import app.bpartners.geojobs.endpoint.event.model.status.ZDJStatusRecomputingSubmitted;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoneDetectionJobMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.ZoneDetectionController;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoneDetectionJobMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.DetectionAuthorizer;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
@@ -40,7 +41,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -310,26 +310,5 @@ class ZoneDetectionJobControllerIT extends FacadeIT {
     assertNotNull(actualParcel.getParcelId());
 
     parcelDetectionTaskRepository.delete(savedTask);
-  }
-
-  @Test
-  void process_detection_with_empty_geojson_zone() {
-    var detectionId = UUID.randomUUID().toString();
-    var detectionCreation =
-        new CreateDetectionDebugMode()
-            .detectableObjectModel(new DetectableObjectModel().modelName(ModelName.TOITURE))
-            .zoneName("emptyZoneName")
-            .emailReceiver("john@mail.com")
-            .geoJsonZone(null);
-
-    var actual = subject.processDetection(detectionId, detectionCreation);
-
-    assertEquals(detectionId, actual.getId());
-    assertEquals("emptyZoneName", actual.getZoneName());
-    assertEquals("john@mail.com", actual.getEmailReceiver());
-    assertEquals(DetectionStepName.REQUEST_ACCEPTED, actual.getStep().getName());
-    assertEquals(Status.ProgressionEnum.PENDING, actual.getStep().getStatus().getProgression());
-    assertEquals(Status.HealthEnum.UNKNOWN, actual.getStep().getStatus().getHealth());
-    assertTrue(actual.getGeoJsonZone() != null && actual.getGeoJsonZone().isEmpty());
   }
 }

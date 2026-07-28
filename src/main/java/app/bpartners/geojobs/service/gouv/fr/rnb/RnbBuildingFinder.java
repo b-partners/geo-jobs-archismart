@@ -227,7 +227,7 @@ public class RnbBuildingFinder {
     GeoPosition geoPosition;
     try {
       geoPosition = geoCodeApi.searchGeoPositionFromAddress(address);
-    } catch (IOException | InterruptedException | ApiException e) {
+    } catch (IOException | InterruptedException | ApiException | IllegalStateException e) {
       throw new RuntimeException(
           "Unable to geocode address " + address + " for RNB building finder", e);
     }

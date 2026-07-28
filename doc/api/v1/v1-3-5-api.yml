@@ -1,0 +1,1219 @@
+openapi: 3.0.3
+
+info:
+  title: Birdia API
+  description: |
+    Detect and qualify geo-referenced objects.
+    
+    # Versioning
+    This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+    - [v1.3.5 (2026-05-12)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-5-api.yml) *(current)*
+    - [v1.3.4 (2026-03-31)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-4-api.yml)
+    - [v1.3.3 (2026-03-11)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-3-api.yml)
+    - [v1.3.2 (2026-02-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-2-api.yml)
+    - [v1.3.1 (2026-02-20)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-1-api.yml)
+    - [v1.3.0 (2026-02-16)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-api.yml) 
+    - [v1.2.0 (2025-12-10)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-2-api.yml) 
+    - [v1.1.0 (2025-05-13)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-1-api.yml)
+    - [v1.0.0 (2024-10-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-0-api.yml) *(deprecated)*
+    
+    # Security
+    
+    Get your **API key** by emailing **contact@birdia.fr**.
+    All of your requests must embed your API key in the header named: **x-api-key**.
+    
+    # Glossary
+    - *Detection* : process that involves analyzing images of a geographic area using an AI model. 
+      Detection can be performed using a textual address, a GPS point, or a geographic zone.
+      Its output may include detected objects in GeoJSON format, annotated images with detected object coordinates, or both.
+    
+    - *Parcel free delimitation* a.k.a. *Zone* : geographical area provided by consumer, in which is processed and delimited detection.
+    
+    - *Parcel constrained delimitation* a.k.a. *Parcel* : geographical area representing cadastral parcel of a land property, retrieved by API from provided textual address, GPS point or zone.
+    
+    - *GeoJSON format* : standard JSON-based format for encoding geographic data structures, such as FeatureCollections, Features, and geometries (Point, Polygon, MultiPolygon), where coordinates are expressed as longitude–latitude pairs.
+    
+    - *Pre-signed URL* : link allowing consumers to download file resources, such as detection result. _Link expires one hour_ after its generation.
+    
+    - *CityJSON* : an open, JSON-based encoding for storing, exchanging, and processing 3D city models. It is commonly used to enable applications and end users to visualize buildings and urban environments in 3D.
+    
+    - *Delimitation* : a geographic representation of an object (such as a building roof or a land parcel) expressed using GeoJSON coordinates. It is modeled generically as a Feature to describe any area or surface of interest.
+    
+    # Usage
+    
+    Submit your detection request through `POST /detections/{id}`
+    where `{id}` is yours to be created.
+    
+    1. If your zone is described by a **GeoJson**, then just set accordingly the `geoJsonZone` field in the payload.
+    2. If your zone is described by a **Shape file**, then upload it in a second call `POST /detections/{id}/shape`.
+    3. If your zone is described by a list of addresses in an **Excel file**, then upload it in a second call `POST /detections/{id}/excel`.
+    
+    # Detection examples
+    
+    ### Detection on roof objects providing geojson multiPolygon
+    1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection_toiture_payload_example.json).
+    Note that `detectableObjectModel` property must be set to `BP_TOITURE` and `geoServerProperties` property to `null`.
+    To handle models through one detection, use `detectableObjectModelList` instead of detectableObjectModel.
+    2. Track the progress of your detection through `GET /detections/{id}`. 
+    Detection is finished when `geoJsonUrl` property containing your detection result is not null.
+    Expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/toiture_analysis_result_example.geojson)
+    
+    ### Detection on roof objects providing excel file containing textual addresses 
+    1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/detection_creation_using_toiture_model_example.json). 
+    Note that `detectableObjectModel` property must be set to `BP_TOITURE` and `geoServerProperties` property to `null`.
+    To handle models through one detection, use `detectableObjectModelList` instead of detectableObjectModel.
+    2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
+    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/excel/excel_addresses_example.xlsx)
+    3. Track the progress of your detection through `GET /detections/{id}`. 
+    Detection is finished when `geoJsonUrl` property containing your detection result is not null.
+    4. Processing time is variable due to address conversion, 
+    expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/toiture_analysis_result_example.geojson). 
+    
+    ### Detection on parcels including roof objects and trees providing excel file containing textual addresses
+    1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/detection_parcel_payload_example.json). 
+    Especially, note that both `BP_TOITURE` and `BP_VEGETATION` must be specified during creation through `detectableObjectModelList` property.
+    Also, `geoJsonDelimitationType` property must be set as `PARCEL` to consider the address's parcel.
+    In case you need to get images and its detections result for each address detected, set `needsImageOutput` property to `true`.
+    2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
+    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/excel/excel_addresses_example.xlsx)
+    3. Track the progress of your detection through `GET /detections/{id}`. 
+    Once detection is on step POST_PROCESSING with status progression FINISHED and status health SUCCEEDED : 
+    - Images result, if needed, can be obtained through each feature corresponding to each detected address inside `geoJsonZone` where `original_image_url` allow to retrieve address's image and `vgg_url` detection results to be displayed on obtained image. 
+      Expected result can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/toiture_and_vegetation_example_response.json).
+    - GeoJson result can be obtained through `geoJsonUrl` and can be displayed on a map as QGIS.
+    
+    # 3D request examples
+    
+    ### Request 3D city models from textual, human-readable, addresses
+    1. Submit a 3D request through `POST /3d/{id}/addresses` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_addresses_request_example.json).
+    2. Track the progress of your 3D request through `GET /3d/{id}`.
+    When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files.
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
+    3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
+    Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
+    
+    ### Request 3D city models on provided point
+    1. Submit a 3D request through `POST /3d/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_point_delimitation_request_v1_3_1_example.json).
+    2. Track the progress of your 3D request through `GET /3d/{id}`.
+    When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files. 
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
+    3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
+    Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
+    
+    ### Request 3D city models on provided polygon
+    1. Submit a 3D request through `POST /3d/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_delimitation_request_v1_3_1_example.json).
+    2. Track the progress of your 3D request through `GET /3d/{id}`.
+    When its status progression is `FINISHED` and status health `SUCCEEDED`, its attribute `cityJsonFileUrls` contains pre-signed URL to allow downloading cityJSON files. 
+    API response with result example can be found [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_response_status_1_3_2_example.json).
+    3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
+    Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
+
+  version: '1.3.5'
+
+servers:
+  - url: 'https://api.birdia.fr'
+tags:
+  - name: Usage
+  - name: Image
+  - name: Detection
+  - name: ThreeD
+    description: Refers to 3D resources such as roof/building 3D model
+paths:
+  '/usage':
+    get:
+      tags:
+        - Usage
+      operationId: getDetectionUsage
+      summary: Get detection usage
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: surfaceUnit
+          required: false
+          schema:
+            $ref: '#/components/schemas/DetectionSurfaceUnit'
+      responses:
+        200:
+          description: Statistics of detection usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionUsage'
+  '/detections':
+    get:
+      tags:
+        - Detection
+      operationId: getDetection
+      summary: Get detections launched
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            $ref: "#/components/schemas/Page"
+        - in: query
+          name: pageSize
+          schema:
+            $ref: "#/components/schemas/PageSize"
+      responses:
+        200:
+          description: List of detections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Detection'
+  '/image':
+    get:
+      tags:
+        - Image
+      summary: Retrieve an aerial image from a human-readable address or geographic coordinates.
+      description: |
+        Retrieve an aerial image by providing either a human-readable address
+        or a pair of geographic coordinates (longitude and latitude). 
+        
+        When `ROOF_DAMAGE_DETECTION` is provided, only images with 5cm precision is supported.
+      operationId: getImage
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: usage
+          schema:
+            $ref: '#/components/schemas/ImageUsage'
+          required: false
+        - in: query
+          name: address
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: longitude
+          schema:
+            type: number
+          required: false
+        - in: query
+          name: latitude
+          schema:
+            type: number
+          required: false
+        - in: query
+          name: zoom
+          schema:
+            $ref: '#/components/schemas/ImageZoomLevel'
+          required: false
+          description: Default value is BUILDING.
+        - in: query
+          name: isExtended
+          schema:
+            type: boolean
+            default: true
+          required: false
+          deprecated: true
+        - in: query
+          name: shiftNb
+          schema:
+            type: integer
+            default: 0
+          required: false
+      responses:
+        200:
+          description: Image details of provided address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDetails'
+  '/detections/{id}':
+    get:
+      tags:
+        - Detection
+      operationId: getProcessedDetection
+      summary: View recently processed detection actual status
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      responses:
+        200:
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+    post:
+      tags:
+        - Detection
+      operationId: processDetection
+      summary: Create or process detection
+      description: |
+        Create detection and launch it if `geoJsonZone` provided.
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDetection'
+            examples:
+              detectionForRoof:
+                $ref: '#/components/examples/DetectionUsingToitureModel'
+              detectionForRoofAndVegetation:
+                $ref: '#/components/examples/DetectionUsingToitureAndVegetationModel'
+      responses:
+        200:
+          description: Detection created or launched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+  '/detections/{id}/sync':
+    post:
+      tags:
+        - Detection
+      operationId: processDetectionSynchronously
+      summary: Process detection synchronously
+      description: |
+        Intended for small areas such as an address. Tasks are processed simultaneously, delivering results in less than 90 seconds. 
+        Results contains a image URL and vgg file URL, and can be requested through the GET /detections/{id} endpoint
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/IdentifierParameter'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDetection'
+      responses:
+        200:
+          description: Detection created or processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+  '/detections/{id}/addresses':
+    post:
+      tags:
+        - Detection
+      summary: Submit detection over a list of textual addresses
+      operationId: detectAddresses
+      description: |
+        Provide list of textual addresses to launch detection
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/IdentifierParameter'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Address'
+      responses:
+        200:
+          description: Detection launched with provided textual addresses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+  '/detections/{id}/shape':
+    post:
+      tags:
+        - Detection
+      operationId: detectShapeFile
+      summary: Submit detection over a shape file
+      description: |
+        Provide shape file to launch detection
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Detection launched with provided shape file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+  '/detections/{id}/excel':
+    post:
+      tags:
+        - Detection
+      operationId: detectExcelFile
+      summary: Submit detection over an excel file
+      description: |
+        Provide excel file containing textual addresses and launch detection.
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Detection with updated excel file uploaded url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+  '/city-jsons/{id}':
+    get:
+      deprecated: true
+      tags:
+        - ThreeD
+      operationId: getRequestedCityJSONById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: CityJSONRequest unique id
+          schema:
+            type: string
+      summary: Retrieve 3D city models request with its status
+      description: Obtained 3D models file are cityJSON format.
+      security:
+        - ApiKeyAuth: [ ]
+      responses:
+        200:
+          description: CityJSON files urls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityJSONRequest'
+  '/city-jsons/{id}/process':
+    put:
+      deprecated: true
+      tags:
+        - ThreeD
+      operationId: requestCityJSON
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: CityJSONRequest unique id
+          schema:
+            type: string
+      summary: Request 3D city models on provided roofs
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCityJSONRequest'
+      responses:
+        200:
+          description: CityJSON files urls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityJSONRequest'
+  '/3d/{id}':
+    get:
+      tags:
+        - ThreeD
+      operationId: getRequested3DFileById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: 3D requested identifier
+          schema:
+            type: string
+      summary: Retrieve 3D models request with its status
+      security:
+        - ApiKeyAuth: [ ]
+      responses:
+        200:
+          description: Retrieved 3D response with actual request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDResponseStatus'
+              examples:
+                3DResponseWithStatusSucceeded:
+                  $ref: '#/components/examples/ThreeDResponseWithSucceededStatusExample'
+    post:
+      tags:
+        - ThreeD
+      operationId: request3DFileOnDelimitations
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: 3D request identifier
+          schema:
+            type: string
+      summary: Request 3D models on provided feature
+      description: |
+        ## Overview
+        Request 3D models on provided Feature.
+        ## Point Geometry Usage
+        When `Point` geometry is provided, nearest `delimitationObjectType` such as BUILDING_ROOF is processed. Only PARCEL_FREE_DELIMITATION `delimitationType` is supported for now.
+        ## Polygon and MultiPolygon Geometry Usage
+        When `Polygon` or `MultiPolygon` geometry is provided, `delimitationObjectType` such as BUILDING_ROOF contained within the provided geometry is evaluated first. 
+        Then, its intersection is computed according to the selected `delimitationType`.
+        ### Case `delimitationType=USER_DEFINED_DELIMITATION`
+        Provided geometry is used *directly* as the delimitation for the specified `delimitationObjectType` (for example, a BUILDING_ROOF delimitation)
+        ### Case `delimitationType=PARCEL_CONSTRAINED_DELIMITATION`
+        Provided geometry is first constrained by the land parcel. Resulting area is then used to retrieve the corresponding `delimitationObjectType` (for example, BUILDING_ROOF).
+        ### Case `delimitationType=PARCEL_FREE_DELIMITATION`
+        Provided geometry is used as a delimitation without any parcel constraint. Corresponding `delimitationObjectType` (for example, BUILDING_ROOF) is then retrieved from this area.
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreeDRequest'
+            examples:
+              3DRequestUsingPoint:
+                $ref: '#/components/examples/ThreeDRequestUsingPointAndRoofTypeAndParcelFreeExample'
+              3DRequestUsingPolygon:
+                $ref: '#/components/examples/ThreeDRequestUsingPolygonAndRoofObjectTypeAndParcelFreeExample'
+      responses:
+        200:
+          description: 3D response with actual request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDResponseStatus'
+              examples:
+                3DResponseWithStatusSucceeded:
+                  $ref: '#/components/examples/ThreeDResponseWithSucceededStatusExample'
+  '/3d/{id}/addresses':
+    post:
+      tags:
+        - ThreeD
+      operationId: request3DFileOnAddresses
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: 3D request identifier
+          schema:
+            type: string
+      summary: Request 3D models from a textual, human-readable, address
+      description: |
+        ## Overview
+        Request 3D models from a textual, human-readable, address.
+        ## Usage
+        Its usage refers to Point geometry provided as Feature, as nearest `delimitationObjectType` such as BUILDING_ROOF is processed.
+        Delimitation type is optional as only  PARCEL_FREE_DELIMITATION `delimitationType`, excluding land parcel, is supported for now.
+        Delimitation object type is optional, as only BUILDING_ROOF `delimitationObjectType`, corresponding to building roof, is supported for now.
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ThreeDAddressesRequest'
+            example:
+              delimitationType: "PARCEL_FREE_DELIMITATION"
+              delimitationObjectType: "BUILDING_ROOF"
+              addresses:
+                - fullText: "1 Rue de la Vau Saint-Jacques, 79200 Parthenay, France"
+
+      responses:
+        200:
+          description: 3D response with actual request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDResponseStatus'
+              examples:
+                3DResponseWithStatusSucceeded:
+                  $ref: '#/components/examples/ThreeDResponseWithProcessingStatusExample'
+  '/keys':
+    delete:
+      tags:
+        - Security
+      operationId: revokeApiKey
+      summary: Revoke all apiKey accesses
+      security:
+        - ApiKeyAuth: [ ]
+      responses:
+        200:
+          description: Statistics of detection usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeApiKeyResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  examples:
+    DetectionUsingToitureModel:
+      summary: Detection using BP_TOITURE model
+      value:
+        emailReceiver: "<your-email-address>"
+        zoneName: "<your-zone-name>"
+        geoServerProperties: null
+        detectableObjectModel:
+          modelName: "BP_TOITURE"
+        detectableObjectModelList:
+          - modelName: "BP_TOITURE"
+        geoJsonZone:
+          - type: "Feature"
+            geometry:
+              type: "MultiPolygon"
+              coordinates:
+                - [ [ [ [ -0.24908199906349182, 46.651815670805505 ], [ -0.24908166378736496, 46.65181521051821 ], [ -0.24908166378736496, 46.65181452008728 ], [ -0.24908099323511124, 46.651813829656334 ], [ -0.24908099323511124, 46.65180807606479 ], [ -0.249084010720253, 46.65180807606479 ], [ -0.24908434599637985, 46.65180853635213 ], [ -0.2490846812725067, 46.651808996639474 ], [ -0.24908501654863358, 46.651809687070475 ], [ -0.24908535182476044, 46.65181037750147 ], [ -0.24908535182476044, 46.65181152821978 ], [ -0.2490856871008873, 46.651811988507106 ], [ -0.2490873634815216, 46.65181313922538 ], [ -0.2490873634815216, 46.65181521051821 ], [ -0.24908669292926788, 46.65181544066185 ], [ -0.2490856871008873, 46.651815670805505 ], [ -0.24908535182476044, 46.65181590094914 ], [ -0.24908199906349182, 46.651815670805505 ] ] ] ]
+    DetectionUsingToitureAndVegetationModel:
+      summary: Detection using BP_TOITURE and BP_VEGETATION model
+      value:
+        emailReceiver: "<your-email-address>"
+        zoneName: "<your-zone-name>"
+        geoServerProperties: null
+        detectableObjectModel: null
+        detectableObjectModelList:
+          - modelName: "BP_TOITURE"
+          - modelName: "BP_VEGETATION"
+        geoJsonZone:
+          - type: "Feature"
+            geometry:
+              type: "MultiPolygon"
+              coordinates:
+                - [ [ [ [ -0.24908199906349182, 46.651815670805505 ], [ -0.24908166378736496, 46.65181521051821 ], [ -0.24908166378736496, 46.65181452008728 ], [ -0.24908099323511124, 46.651813829656334 ], [ -0.24908099323511124, 46.65180807606479 ], [ -0.249084010720253, 46.65180807606479 ], [ -0.24908434599637985, 46.65180853635213 ], [ -0.2490846812725067, 46.651808996639474 ], [ -0.24908501654863358, 46.651809687070475 ], [ -0.24908535182476044, 46.65181037750147 ], [ -0.24908535182476044, 46.65181152821978 ], [ -0.2490856871008873, 46.651811988507106 ], [ -0.2490873634815216, 46.65181313922538 ], [ -0.2490873634815216, 46.65181521051821 ], [ -0.24908669292926788, 46.65181544066185 ], [ -0.2490856871008873, 46.651815670805505 ], [ -0.24908535182476044, 46.65181590094914 ], [ -0.24908199906349182, 46.651815670805505 ] ] ] ]
+    ThreeDRequestUsingPointAndRoofTypeAndParcelFreeExample:
+      summary: 3D request payload template using Point geometry
+      value:
+        delimitationObjectType: BUILDING_ROOF
+        delimitationType: PARCEL_FREE_DELIMITATION
+        delimitations:
+          - type: "Feature"
+            properties: { }
+            geometry:
+              type: "Point"
+              coordinates: [ 0.2492928974906442, 46.65193378162583 ]
+    ThreeDRequestUsingPolygonAndRoofObjectTypeAndParcelFreeExample:
+      summary: 3D request payload template in which BUILDING_ROOF are retrieved without parcel constrained inside provided Polygon geometry
+      value:
+        delimitationObjectType: BUILDING_ROOF
+        delimitationType: PARCEL_FREE_DELIMITATION
+        delimitations:
+          - type: "Feature"
+            properties: { }
+            geometry:
+              type: "Polygon"
+              coordinates: [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
+    ThreeDResponseWithSucceededStatusExample:
+      summary: 3D response template with SUCCEEDED status
+      value:
+        id: "<your-id>"
+        step: "POST_PROCESSING"
+        status:
+          progression: "FINISHED"
+          health: "SUCCEEDED"
+          creationDatetime: "2026-01-21T10:12:54Z"
+        delimitations:
+          - type: "Feature"
+            geometry:
+              type: "Polygon"
+              coordinates:
+                - [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ]
+        cityJsonFileUrls:
+          - id: "<random-id>"
+            url: "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json"
+        delimitationObjectType: "BUILDING_ROOF"
+        delimitationType: "PARCEL_FREE_DELIMITATION"
+    ThreeDResponseWithProcessingStatusExample:
+      summary: 3D response template with PROCESSING status
+      value:
+        id: "<your-id>"
+        step: "REQUEST_ACCEPTED"
+        status:
+          progression: "PROCESSING"
+          health: "UNKNOWN"
+          creationDatetime: "2026-02-12T10:12:54Z"
+        delimitations:
+          - type: "Feature"
+            geometry:
+              type: "MultiPolygon"
+              coordinates:
+                - [ [ [ -0.24944153697435922,46.65202795355856 ],[ -0.24949102208131535,46.65191413879569 ],[ -0.2494768834801846,46.651893405073054 ],[ -0.2494357530011655,46.651885905639375 ],[ -0.24939847850427554,46.651878406204645 ],[ -0.24930786291974982,46.65187664163176 ],[ -0.24924166855538488,46.6518647307621 ],[ -0.24923202860003357,46.651893846216154 ],[ -0.24930143628137102,46.65190708050787 ],[ -0.2492738017412819,46.651939283938276 ],[ -0.24926544711334486,46.65198825076146 ],[ -0.24944153697435922,46.65202795355856 ] ] ]
+        cityJsonFileUrls: null
+        delimitationObjectType: "BUILDING_ROOF"
+        delimitationType: "PARCEL_FREE_DELIMITATION"
+  parameters:
+    IdentifierParameter:
+      in: path
+      name: id
+      schema:
+        type: string
+      description: Detection identifier
+      required: true
+  schemas:
+    Page:
+      type: integer
+      description: Start at `1`
+    PageSize:
+      type: integer
+      description: Cannot exceed `500`
+    GeoServerProperties:
+      type: object
+      properties:
+        geoServerUrl:
+          type: string
+        geoServerParameter:
+          $ref: "#/components/schemas/GeoServerParameter"
+    RevokeApiKeyResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    DetectionSurfaceUnit:
+      type: string
+      enum:
+        - SQUARE_DEGREE
+        - SQUARE_METER
+    DetectionSurfaceValue:
+      type: object
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: double
+        unit:
+          $ref: '#/components/schemas/DetectionSurfaceUnit'
+    DetectionUsage:
+      type: object
+      required:
+        - totalUsedSurface
+        - remainingSurface
+        - lastDatetimeSurfaceUsage
+        - maxAuthorizedSurface
+      properties:
+        maxAuthorizedSurface:
+          $ref: '#/components/schemas/DetectionSurfaceValue'
+        totalUsedSurface:
+          $ref: '#/components/schemas/DetectionSurfaceValue'
+        remainingSurface:
+          $ref: '#/components/schemas/DetectionSurfaceValue'
+        lastDatetimeSurfaceUsage:
+          type: string
+          format: date-time
+    StatusStatistic:
+      type: object
+      properties:
+        progression:
+          $ref: '#/components/schemas/ProgressionStatus'
+        healthStatistics:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthStatusStatistic'
+    HealthStatusStatistic:
+      type: object
+      properties:
+        health:
+          $ref: '#/components/schemas/HealthStatus'
+        count:
+          type: number
+    ProgressionStatus:
+      type: string
+      enum:
+        - PENDING
+        - PROCESSING
+        - FINISHED
+    HealthStatus:
+      type: string
+      enum:
+        - SUCCEEDED
+        - FAILED
+        - UNKNOWN
+        - RETRYING
+    Status:
+      type: object
+      properties:
+        progression:
+          type: string
+          enum:
+            - PENDING
+            - PROCESSING
+            - FINISHED
+        health:
+          type: string
+          enum:
+            - SUCCEEDED
+            - FAILED
+            - UNKNOWN
+            - RETRYING
+        creationDatetime:
+          type: string
+          format: date-time
+
+    ###########################################################################################################
+    ###  GeoJSON objects. Modified from: https://gist.github.com/bubbobne/fe5f2db65acf039be6a9fd92fc9c7233  ###
+    ###########################################################################################################
+
+    GeoServerParameter:
+      type: object
+      properties:
+        service:
+          type: string
+        request:
+          type: string
+        layers:
+          type: string
+        styles:
+          type: string
+        format:
+          type: string
+        transparent:
+          type: boolean
+        version:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        srs:
+          type: string
+    Feature:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [ Feature ]
+        geometry:
+          oneOf:
+            - $ref: '#/components/schemas/Point'
+            - $ref: '#/components/schemas/Polygon'
+            - $ref: '#/components/schemas/MultiPolygon'
+        properties:
+          type: object
+          additionalProperties: true
+    Geometry:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - Point
+            - Polygon
+            - MultiPolygon
+    Point2D:
+      type: array
+      maxItems: 2
+      minItems: 2
+      items:
+        type: number
+    Point:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          $ref: '#/components/schemas/Point2D'
+    MultiPolygon:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Point2D'
+    Polygon:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Point2D'
+    GeoJsonsUrl:
+      type: object
+      properties:
+        url:
+          type: string
+        status:
+          $ref: "#/components/schemas/Status"
+
+    ###########################################################################################################
+    ###  Detection components ############################################################################################
+    ###########################################################################################################
+
+    CreateDetection:
+      type: object
+      properties:
+        emailReceiver:
+          type: string
+          description: |
+            Email address that will be notified about detection steps evolution
+        zoneName:
+          type: string
+          description: |
+            Name that consumers provide to identify the zone
+        geoServerProperties:
+          $ref: '#/components/schemas/GeoServerProperties'
+          description: Optional Configuration properties for the GeoServer.
+        detectableObjectModel:
+          $ref: '#/components/schemas/DetectableObjectModel'
+        detectableObjectModelList:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectableObjectModel'
+          description: |
+            List of model to be processed use for the detection. 
+            If empty or null, detection model will be retrieved from detectableObjectModel attribute.
+        geoJsonZone:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+          description: |
+            Optional. If so, must provide zone by shape or excel file through its specific endpoint.
+        GeoJsonOutput:
+          $ref: '#/components/schemas/GeoJsonOutput'
+        geoJsonDelimitationType:
+          $ref: '#/components/schemas/DelimitationType'
+    DelimitationType:
+      type: string
+      description: |
+        By default delimitation type is PARCEL_FREE_DELIMITATION, earlier known as *ZONE* delimitation type.
+        PARCEL_FREE_DELIMITATION, earlier known as *ZONE* delimitation, supported any BP models, permits consumer to provide either point/polygon/multi-polygon geometry
+        USER_DEFINED_DELIMITATION, earlier known as *ROOF* delimitation, only supported with BP_TOITURE model for now, allows consumer to provide define delimitation (eg. roof for BP_TOITURE model), so API does not have to search for its inside provided zone;
+        PARCEL_CONSTRAINED_DELIMITATION, earlier known as *PARCEL* delimitation, only supported with BP_TOITURE and BP_VEGETATION models for now, allows consumer to exclude parcels for each zone provided.
+      enum:
+        - USER_DEFINED_DELIMITATION
+        - PARCEL_FREE_DELIMITATION
+        - PARCEL_CONSTRAINED_DELIMITATION
+        - ROOF
+        - ZONE
+        - PARCEL
+    ImageZoomLevel:
+      type: string
+      enum:
+        - BUILDING
+        - NEIGHBORHOOD
+        - DISTRICT
+    Detection:
+      allOf:
+        - $ref: '#/components/schemas/CreateDetection'
+      properties:
+        id:
+          type: string
+        step:
+          $ref: '#/components/schemas/DetectionStep'
+        geoJsonUrl:
+          type: string
+        shapeUrl:
+          type: string
+        excelUrl:
+          type: string
+        imageUrl:
+          type: string
+        pdfUrl:
+          type: string
+        addresses:
+          type: array
+          items:
+            type: string
+        imageProperties:
+          $ref: '#/components/schemas/ImageProperties'
+        roofDelimiter:
+          $ref: '#/components/schemas/RoofDelimiter'
+        creationDatetime:
+          type: string
+          format: date-time
+    DetectionStepName:
+      type: string
+      enum:
+        - REQUEST_ACCEPTED
+        - TILING
+        - MACHINE_DETECTION
+        - POST_PROCESSING
+    DetectionStepStatistic:
+      allOf:
+        - $ref: '#/components/schemas/StatusStatistic'
+    DetectableObjectModel:
+      type: object
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+    ModelName:
+      type: string
+      description: |
+        Possible values and included objects :
+          - **BP_TOITURE** : Toiture, velux, panneau photovoltaique, moisissure, usure, fissure cassure, obstacle, cheminee, humidite, risque feu, ombre
+          - **BP_LOM** : Passage piéton
+          - **BP_ZAN** : Arbre, espace vert, toiture, voie carrossable, trottoir, parking
+          - **BP_CLIMAT_RESILIENCE** : Parking, panneau photovoltaique
+          - **BP_CONFIRMITE_PLU** : Bati, velux, panneau photovoltaique, Piscine
+          - **BP_VOIRIE_TROTTOIRS** : Trottoir, voie carrossable
+          - **BP_OLD** : Arbre, espace vert, toiture, voie carrossable, trottoir, parking, risquefeu
+          - **BP_CYCL** : Pistes cyclables, symboles cyclables 
+          - **BP_SIGN** : Marquages voiries
+          - **BP_VEGETATION** : Espace vert, Espace arboré, arbre individualisé, canopée
+          - **BP_TAMPONS** : Tampons de voiries, avaloirs, tampons hydroliques
+          - **BP_CIMETIERE** : Cimetière, espace arboré, espace vert, tombe simple, tombe double, tombe non géométrique
+          - **BP_STATIONNEMENT** : Parking
+      enum:
+        - BP_TOITURE
+        - BP_LOM
+        - BP_ZAN
+        - BP_CLIMAT_RESILIENCE
+        - BP_CONFIRMITE_PLU
+        - BP_VOIRIE_TROTTOIRS
+        - BP_OLD
+        - BP_CYCL
+        - BP_SIGN
+        - BP_VEGETATION
+        - BP_TAMPONS
+        - BP_CIMETIERE
+        - BP_STATIONNEMENT
+    DetectionStep:
+      properties:
+        name:
+          $ref: '#/components/schemas/DetectionStepName'
+        status:
+          $ref: '#/components/schemas/Status'
+        statistics:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectionStepStatistic'
+        updatedAt:
+          type: string
+          format: date-time
+    Address:
+      deprecated: true
+      description: Only AddressFullText must be used to migrate actual Address to its new specification
+      type: object
+      properties:
+        address:
+          type: string
+    AddressFullText:
+      type: object
+      properties:
+        fullText:
+          type: string
+    ImageOfAddress:
+      type: object
+      properties:
+        address:
+          type: string
+        imageBase64:
+          type: string
+    ImageProperties:
+      type: object
+      description: Image size properties are described in pixel.
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
+    RoofDelimiter:
+      type: object
+      description: |
+        Optional. Mandatory only when doing sync detection using BP_TOITURE model.
+      properties:
+        polygon:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point2D'
+    GeoJsonOutput:
+      type: string
+      description: |
+        By default, detection output is a single GEO_JSON file, which can be displayed on a map such as QGIS, representing a single layer.
+        If consumers want to separate result into multiple layers, a ZIP-compressed version is available, with each file representing a specific identified object and its corresponding map layer.
+      enum:
+        - GEO_JSON
+        - ZIP
+    ImageDetails:
+      allOf:
+        - $ref: '#/components/schemas/ImageOfAddress'
+      properties:
+        minTileCoordinates:
+          $ref: '#/components/schemas/TileCoordinates'
+        currentGeoPosition:
+          $ref: '#/components/schemas/GeoPosition'
+        zoomLevel:
+          $ref: '#/components/schemas/ImageZoomLevel'
+    GeoPosition:
+      type: object
+      properties:
+        longitude:
+          type: number
+        latitude:
+          type: number
+    TileCoordinates:
+      type: object
+      properties:
+        x:
+          type: integer
+        y:
+          type: integer
+        z:
+          type: integer
+    ThreeDRequest:
+      type: object
+      properties:
+        delimitations:
+          description: Refers to a list of delimitations, such as roofs, to be previewed in 3D models. Only `Polygon` geometry are supported for now.
+          type: array
+          items:
+            $ref: "#/components/schemas/Feature"
+        delimitationObjectType:
+          $ref: '#/components/schemas/DelimitationObjectType'
+        delimitationType:
+          $ref: '#/components/schemas/DelimitationType'
+        complexityFactor:
+          type: number
+          description: |
+            Number between 0 and 1. Actual default value is `0.66` when none provided. 
+            Permits consumer to define complexity factor in lidar processing.
+            More the given value approaches 1, more details will be provided in obtained preview 3D.
+            Therefore, more the complexity approaches, more hallucination can be created.
+        knn:
+          type: integer
+    DelimitationObjectType:
+      type: string
+      enum:
+        - BUILDING_ROOF
+    CreateCityJSONRequest:
+      deprecated: true
+      allOf:
+        - $ref: '#/components/schemas/ThreeDRequest'
+      properties:
+        id:
+          type: string
+    CityJSONRequestStatus:
+      deprecated: true
+      type: string
+      x-enum-varnames:
+        - FINISHED
+        - FAILED
+        - PROCESSING
+        - UNAVAILABLE
+      enum:
+        - FINISHED
+        - FAILED
+        - PROCESSING
+        - UNAVAILABLE
+    ThreeDAddressesRequest:
+      type: object
+      properties:
+        delimitationType:
+          $ref: '#/components/schemas/DelimitationType'
+        delimitationObjectType:
+          $ref: '#/components/schemas/DelimitationObjectType'
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressFullText'
+    ThreeDResponseStatus:
+      allOf:
+        - $ref: '#/components/schemas/ThreeDRequest'
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        step:
+          $ref: '#/components/schemas/ThreeDRequestStep'
+        cityJsonFileUrls:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityJsonFileUrl'
+    ThreeDRequestStep:
+      type: string
+      enum:
+        - REQUEST_ACCEPTED
+        - POINTS_CLOUD_PRE_PROCESSING
+        - GEOMETRY_CONSTRUCTION
+        - POST_PROCESSING
+    CityJSONRequest:
+      deprecated: true
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/CreateCityJSONRequest'
+      properties:
+        status:
+          $ref: '#/components/schemas/CityJSONRequestStatus'
+        cityJsons:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityJSON'
+    CityJsonFileUrl:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+    CityJSON:
+      deprecated: true
+      allOf:
+        - $ref: '#/components/schemas/CityJsonFileUrl'
+    ImageUsage:
+      type: string
+      enum:
+        - ROOF_DAMAGE_DETECTION
+        - UNKNOWN

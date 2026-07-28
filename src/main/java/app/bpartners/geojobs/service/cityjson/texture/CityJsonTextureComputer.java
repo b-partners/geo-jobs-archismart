@@ -6,8 +6,10 @@ import app.bpartners.geojobs.service.cityjson.texture.model.RasterInfo;
 import app.bpartners.geojobs.service.cityjson.texture.model.TextureInfo;
 import java.io.File;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CityJsonTextureComputer {

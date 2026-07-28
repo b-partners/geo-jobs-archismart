@@ -27,10 +27,11 @@ public class CityJsonFactory {
     this.outputDirectory = outputDirectory;
   }
 
-  public File make(String id, String title, List<BuildingData> data) throws CityJsonException {
+  public File make(String id, String title, List<BuildingData> data, String crs)
+      throws CityJsonException {
     var filename = cityJsonFileName(id);
     var path = Path.of(outputDirectory.toString(), filename);
-    var metadata = MetadataFactory.make(id, title);
+    var metadata = MetadataFactory.make(id, title, crs);
     var model = CityModelFactory.make(data);
 
     cityJsonWriter.write(path, model, metadata);

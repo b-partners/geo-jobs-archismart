@@ -8,8 +8,8 @@ import static java.util.stream.Collectors.*;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;

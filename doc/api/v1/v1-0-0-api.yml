@@ -1,0 +1,651 @@
+openapi: 3.0.3
+
+info:
+  title: Geo Detection API
+  description: |
+    Detect objects on large geographic zones.
+    
+     # Versioning
+    This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+    - [v1.3.3 (2026-03-11)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-3-api.yml)
+    - [v1.3.2 (2026-02-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-2-api.yml)
+    - [v1.3.1 (2026-02-20)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-1-api.yml)
+    - [v1.3.0 (2026-02-16)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-api.yml) 
+    - [v1.2.0 (2025-12-10)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-2-api.yml) 
+    - [v1.1.0 (2025-05-13)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-1-api.yml)
+    - [v1.0.0 (2024-10-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-0-api.yml) *(deprecated)*  *(current)*
+    
+    # Security
+    
+    Get your **API key** by emailing **contact@bpartners.app**.
+    All of your requests must embed your API key in the header named: **x-api-key**.
+    
+    # Usage
+    
+    Submit your detection request through `POST /detections/{id}`
+    where `{id}` is yours to be created.
+    
+    1. If your zone is described by a **GeoJson**, then just set accordingly the `geoJsonZone` field in the payload.
+    2. If your zone is described by a **Shape file**, then upload it in a second call `POST /detections/{id}/shape`.
+    3. If your zone is described by a list of addresses in an **Excel file**, then upload it in a second call `POST /detections/{id}/excel`.
+  version: '1.0.0'
+
+servers:
+  - url: 'https://detection.api.imagery.bpartners.app'
+
+paths:
+  '/v1/usage':
+    get:
+      tags:
+        - Detection
+      operationId: getDetectionUsage
+      summary: Get detection usage
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: surfaceUnit
+          required: false
+          schema:
+            $ref: '#/components/schemas/V1DetectionSurfaceUnit'
+      responses:
+        200:
+          description: Statistics of detection usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1DetectionUsage'
+  '/v1/detections':
+    get:
+      tags:
+        - Detection
+      operationId: getDetection
+      summary: Get detections launched
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            $ref: "#/components/schemas/Page"
+        - in: query
+          name: pageSize
+          schema:
+            $ref: "#/components/schemas/PageSize"
+      responses:
+        200:
+          description: List of detections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/V1Detection'
+  '/v1/detections/{id}':
+    get:
+      tags:
+        - Detection
+      operationId: getProcessedDetection
+      summary: View recently processed detection actual status
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      responses:
+        200:
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Detection'
+    post:
+      tags:
+        - Detection
+      operationId: processDetection
+      summary: Process detection
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1CreateDetection'
+      responses:
+        200:
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Detection'
+  '/v1/detections/{id}/shape':
+    post:
+      tags:
+        - Detection
+      operationId: configureDetectionShapeFile
+      summary: Upload shape file to configure detection zone
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Detection with updated shape file uploaded url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Detection'
+  '/v1/detections/{id}/excel':
+    post:
+      tags:
+        - Detection
+      operationId: configureDetectionExcelFile
+      summary: Upload excel file to configure detection zone
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Detection with updated excel file uploaded url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Detection'
+  '/v1/api/keys/revoke':
+    delete:
+      tags:
+        - Security
+      operationId: revokeApiKey
+      summary: Revoke apiKey access
+      security:
+        - ApiKeyAuth: [ ]
+      responses:
+        200:
+          description: Statistics of detection usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1RevokeApiKeyResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  schemas:
+    Page:
+      type: integer
+      description: Start at `1`
+    PageSize:
+      type: integer
+      description: Cannot exceed `500`
+    V1GeoServerProperties:
+      type: object
+      properties:
+        geoServerUrl:
+          type: string
+        geoServerParameter:
+          $ref: "#/components/schemas/V1GeoServerParameter"
+    V1RevokeApiKeyResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    V1DetectionSurfaceUnit:
+      type: string
+      enum:
+        - SQUARE_DEGREE
+    V1DetectionSurfaceValue:
+      type: object
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: double
+        unit:
+          $ref: '#/components/schemas/V1DetectionSurfaceUnit'
+    V1DetectionUsage:
+      type: object
+      required:
+        - totalUsedSurface
+        - remainingSurface
+        - lastDatetimeSurfaceUsage
+        - maxAuthorizedSurface
+      properties:
+        maxAuthorizedSurface:
+          $ref: '#/components/schemas/V1DetectionSurfaceValue'
+        totalUsedSurface:
+          $ref: '#/components/schemas/V1DetectionSurfaceValue'
+        remainingSurface:
+          $ref: '#/components/schemas/V1DetectionSurfaceValue'
+        lastDatetimeSurfaceUsage:
+          type: string
+          format: date-time
+    V1StatusStatistic:
+      type: object
+      properties:
+        progression:
+          $ref: '#/components/schemas/V1ProgressionStatus'
+        healthStatistics:
+          type: array
+          items:
+            $ref: '#/components/schemas/V1HealthStatusStatistic'
+    V1HealthStatusStatistic:
+      type: object
+      properties:
+        health:
+          $ref: '#/components/schemas/V1HealthStatus'
+        count:
+          type: number
+    V1ProgressionStatus:
+      type: string
+      enum:
+        - PENDING
+        - PROCESSING
+        - FINISHED
+    V1HealthStatus:
+      type: string
+      enum:
+        - SUCCEEDED
+        - FAILED
+        - UNKNOWN
+        - RETRYING
+    V1Status:
+      type: object
+      properties:
+        progression:
+          type: string
+          enum:
+            - PENDING
+            - PROCESSING
+            - FINISHED
+        health:
+          type: string
+          enum:
+            - SUCCEEDED
+            - FAILED
+            - UNKNOWN
+            - RETRYING
+        creationDatetime:
+          type: string
+          format: date-time
+
+    ###########################################################################################################
+    ###  GeoJSON objects. Modified from: https://gist.github.com/bubbobne/fe5f2db65acf039be6a9fd92fc9c7233  ###
+    ###########################################################################################################
+
+    V1GeoServerParameter:
+      type: object
+      properties:
+        service:
+          type: string
+        request:
+          type: string
+        layers:
+          type: string
+        styles:
+          type: string
+        format:
+          type: string
+        transparent:
+          type: boolean
+        version:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        srs:
+          type: string
+    Feature:
+      type: object
+      properties:
+        id:
+          type: string
+        zoom:
+          type: integer
+        geometry:
+          oneOf:
+            - $ref: '#/components/schemas/Point'
+            - $ref: '#/components/schemas/Polygon'
+            - $ref: '#/components/schemas/MultiPolygon'
+    Geometry:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - Point
+            - Polygon
+            - MultiPolygon
+    Point2D:
+      type: array
+      maxItems: 2
+      minItems: 2
+      items:
+        type: number
+    Point:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          $ref: '#/components/schemas/Point2D'
+    MultiPolygon:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Point2D'
+    Polygon:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Geometry"
+      properties:
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Point2D'
+    V1GeoJsonsUrl:
+      type: object
+      properties:
+        url:
+          type: string
+        status:
+          $ref: "#/components/schemas/V1Status"
+
+    ###########################################################################################################
+    ###  BP Models ############################################################################################
+    ###########################################################################################################
+
+    BPToitureModel:
+      type: object
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_TOITURE' ]
+          description: |
+            Détection du bâti (incluant typologies de revêtements) et des mutations entre 2 millésimes d'ortho 
+             - 
+             EVALUATION DE L'ETAT DU BATI
+        toitureRevetement:
+          type: boolean
+          default: true
+        arbre:
+          type: boolean
+          default: true
+        velux:
+          type: boolean
+          default: true
+        panneauPhotovoltaique:
+          type: boolean
+          default: true
+        moisissure:
+          type: boolean
+          default: true
+        usure:
+          type: boolean
+          default: true
+        fissureCassure:
+          type: boolean
+          default: true
+        obstacle:
+          type: boolean
+          default: true
+        cheminee:
+          type: boolean
+          default: true
+        humidite:
+          type: boolean
+          default: true
+        risqueFeu:
+          type: boolean
+          default: true
+    BPLomModel:
+      type: object
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_LOM' ]
+        passagePieton:
+          type: boolean
+          default: true
+        voieCarrosable:
+          type: boolean
+          default: true
+        trottoir:
+          type: boolean
+          default: true
+        parking:
+          type: boolean
+          default: true
+    BPZanModel:
+      type: object
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_ZAN' ]
+        arbre:
+          type: boolean
+          default: true
+        espaceVert:
+          type: boolean
+          default: true
+        toiture:
+          type: boolean
+          default: true
+        voieCarrossable:
+          type: boolean
+          default: true
+        trottoir:
+          type: boolean
+          default: true
+        parking:
+          type: boolean
+          default: true
+    BPClimatResilienceModel:
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_CLIMAT_RESILIENCE' ]
+        parking:
+          type: boolean
+          default: true
+        panneauPhotovoltaique:
+          type: boolean
+          default: true
+        arbre:
+          type: boolean
+          default: true
+        espaceVert:
+          type: boolean
+          default: true
+    BPConformitePluModel:
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_CONFORMITE_PLU' ]
+        toiture:
+          type: boolean
+          default: true
+        arbre:
+          type: boolean
+          default: true
+        velux:
+          type: boolean
+          default: true
+        panneauPhotovoltaique:
+          type: boolean
+          default: true
+        espaceVert:
+          type: boolean
+          default: true
+        piscine:
+          type: boolean
+          default: true
+    BPTrottoirsModel:
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_TROTTOIRS' ]
+        trottoir:
+          type: boolean
+          default: true
+        voieCarrossable:
+          type: boolean
+          default: true
+        arbre:
+          type: boolean
+          default: true
+        espaceVertParking:
+          type: boolean
+          default: true
+    BPOldModel:
+      properties:
+        modelName:
+          type: string
+          enum: [ 'BP_OLD' ]
+        arbre:
+          type: boolean
+          default: true
+        espaceVert:
+          type: boolean
+          default: true
+        toiture:
+          type: boolean
+          default: true
+        voieCarrossable:
+          type: boolean
+          default: true
+        trottoir:
+          type: boolean
+          default: true
+        parking:
+          type: boolean
+          default: true
+        risqueFeu:
+          type: boolean
+          default: true
+
+    ###########################################################################################################
+    ###  Detection components ############################################################################################
+    ###########################################################################################################
+
+    V1CreateDetection:
+      type: object
+      properties:
+        emailReceiver:
+          type: string
+          description: |
+            Email address that will be notified about detection steps evolution
+        zoneName:
+          type: string
+          description: |
+            Name that consumers provide to identify the zone
+        geoServerProperties:
+          $ref: '#/components/schemas/V1GeoServerProperties'
+          description: Optional Configuration properties for the GeoServer.
+        detectableObjectModel:
+          $ref: '#/components/schemas/V1DetectableObjectModel'
+        geoJsonZone:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+          description: |
+            Optional. If so, must provide zone by shape or excel file through its specific endpoint.
+    V1Detection:
+      allOf:
+        - $ref: '#/components/schemas/V1CreateDetection'
+      properties:
+        id:
+          type: string
+        step:
+          $ref: '#/components/schemas/V1DetectionStep'
+        geoJsonUrl:
+          type: string
+        shapeUrl:
+          type: string
+        excelUrl:
+          type: string
+    V1DetectionStepName:
+      enum:
+        - CONFIGURING
+        - TILING
+        - MACHINE_DETECTION
+        - HUMAN_DETECTION
+    V1DetectionStepStatistic:
+      allOf:
+        - $ref: '#/components/schemas/V1StatusStatistic'
+    V1DetectableObjectModel:
+      discriminator:
+        propertyName: modelName
+      oneOf:
+        - $ref: '#/components/schemas/BPToitureModel'
+        - $ref: '#/components/schemas/BPLomModel'
+        - $ref: '#/components/schemas/BPZanModel'
+    V1DetectionStep:
+      properties:
+        name:
+          $ref: '#/components/schemas/V1DetectionStepName'
+        status:
+          $ref: '#/components/schemas/V1Status'
+        statistics:
+          type: array
+          items:
+            $ref: '#/components/schemas/V1DetectionStepStatistic'
+        updatedAt:
+          type: string
+          format: date-time

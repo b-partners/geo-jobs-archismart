@@ -2,7 +2,7 @@ package app.bpartners.geojobs.model.geometry;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.postprocessing.DetectionBoundaryMerger;
 import app.bpartners.geojobs.service.GeometryPixelProjector;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.TileCoordinatesPolygonIntersection;

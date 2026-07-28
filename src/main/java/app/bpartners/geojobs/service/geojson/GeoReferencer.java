@@ -1,9 +1,9 @@
 package app.bpartners.geojobs.service.geojson;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon.toLatLon;
+import static app.bpartners.geojobs.postprocessing.model.TiledPolygon.toLatLon;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.IntXY;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.math.BigDecimal;
 import java.util.List;
 

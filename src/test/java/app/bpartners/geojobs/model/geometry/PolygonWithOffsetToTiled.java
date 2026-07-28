@@ -3,9 +3,9 @@ package app.bpartners.geojobs.model.geometry;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.model.geometry.route.ObjectType.routeTypeFrom;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.feature.FeatureListWithOffset;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;

@@ -1,15 +1,15 @@
 package app.bpartners.geojobs.service.geojson;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.BoundaryMerger.invert;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.postprocessing.BoundaryMerger.invert;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 import static app.bpartners.geojobs.service.geojson.GeoJson.fromFeatures;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.ConversionFormatType;
 import app.bpartners.geojobs.model.DetectedTile;
+import app.bpartners.geojobs.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.postprocessing.model.LatLonPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

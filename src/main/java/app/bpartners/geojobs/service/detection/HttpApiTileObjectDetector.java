@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.detection;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper.detectableObjectTypeForVegetationModel;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper.detectableObjectTypeForVegetationModel;
 import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_DETECTION_RESULT_V1;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.TILE_DETECTION_RESULT_V2;

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
@@ -19,6 +19,8 @@ import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CityJSON3DBagRooferProcessor;
+import app.bpartners.geojobs.service.CityJSONInternalProcessor;
+import app.bpartners.geojobs.service.CityJSONSafeModeProcessor;
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
 import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.event.CityJSONRequestCreatedService;
@@ -40,7 +42,11 @@ class CityJSONRequestCreatedServiceTest {
   EventProducer eventProducerMock = mock();
   CommunityAuthorizationRepository communityAuthorizationRepositoryMock = mock();
   CityJSON3DBagRooferProcessor cityJson3DBagRooferProcessorMock = mock();
+  CityJSONSafeModeProcessor cityJSONSafeModeProcessor = mock();
   CityJsonTextureComputer textureComputerMock = mock(CityJsonTextureComputer.class);
+  CityJSONInternalProcessor cityJSONInternalProcessorMock = mock();
+  CityJSONRequestCreatedService.CityJSONRequestCreatedServiceGenerator cityjsonGenerator =
+      new CityJSONRequestCreatedService.CityJSONRequestCreatedServiceGenerator("GEOJOBS");
 
   CityJSONRequestCreatedService subject =
       new CityJSONRequestCreatedService(
@@ -53,7 +59,10 @@ class CityJSONRequestCreatedServiceTest {
           eventProducerMock,
           communityAuthorizationRepositoryMock,
           cityJson3DBagRooferProcessorMock,
-          textureComputerMock);
+          cityJSONSafeModeProcessor,
+          textureComputerMock,
+          cityJSONInternalProcessorMock,
+          cityjsonGenerator);
 
   @BeforeEach
   void setUp() {

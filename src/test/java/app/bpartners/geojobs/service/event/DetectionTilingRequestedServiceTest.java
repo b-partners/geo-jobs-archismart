@@ -17,10 +17,12 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.DetectionStepRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.DetectionStep;
+import app.bpartners.geojobs.service.DetectionDelimitationRetriever;
 import app.bpartners.geojobs.service.DetectionSupportedAreaValidator;
 import app.bpartners.geojobs.service.DetectionSupportedModelValidator;
 import app.bpartners.geojobs.service.detection.DetectionTilingCreation;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -31,6 +33,7 @@ class DetectionTilingRequestedServiceTest {
   EventProducer eventProducerMock = mock();
   DetectionStepRepository detectionStepRepositoryMock = mock();
   DetectionSupportedModelValidator detectionSupportedModelValidatorMock = mock();
+  DetectionDelimitationRetriever detectionDelimitationRetrieverMock = mock();
   DetectionTilingRequestedService subject =
       new DetectionTilingRequestedService(
           detectionRepositoryMock,
@@ -38,7 +41,14 @@ class DetectionTilingRequestedServiceTest {
           detectionSupportedAreaValidatorMock,
           eventProducerMock,
           detectionStepRepositoryMock,
-          detectionSupportedModelValidatorMock);
+          detectionSupportedModelValidatorMock,
+          detectionDelimitationRetrieverMock);
+
+  @BeforeEach
+  void setUp() {
+    when(detectionDelimitationRetrieverMock.apply(any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+  }
 
   @Test
   void invokes_detection_tiling_creation() {

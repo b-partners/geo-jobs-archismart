@@ -6,7 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.model.entry.*;
+import app.bpartners.geojobs.readme.monitor.factory.ReadmeEntryFactory;
+import app.bpartners.geojobs.readme.monitor.model.entry.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;

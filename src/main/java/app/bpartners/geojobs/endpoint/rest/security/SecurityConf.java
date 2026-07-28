@@ -5,10 +5,10 @@ import static org.springframework.http.HttpMethod.*;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.ReadmeMonitorConf;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.ReadmeMonitorFilter;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.factory.ReadmeLogFactory;
 import app.bpartners.geojobs.model.exception.ForbiddenException;
+import app.bpartners.geojobs.readme.monitor.ReadmeMonitorConf;
+import app.bpartners.geojobs.readme.monitor.ReadmeMonitorFilter;
+import app.bpartners.geojobs.readme.monitor.factory.ReadmeLogFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -174,6 +174,8 @@ public class SecurityConf {
                         ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
                     .requestMatchers(GET, "/detections/*/fileObjects")
                     .hasAnyAuthority(ROLE_ADMIN.name())
+                    .requestMatchers(POST, "/detections/*/vgg")
+                    .authenticated()
                     .requestMatchers(POST, "/communities/*/detections/*/fileResult")
                     .hasAnyAuthority(ROLE_ADMIN.name())
                     .requestMatchers(PUT, "/communities/*/detectionsExport/*")
@@ -198,6 +200,8 @@ public class SecurityConf {
                     .authenticated()
                     .requestMatchers(POST, "/3d/*")
                     .authenticated()
+                    .requestMatchers(POST, "/3d/*/sync")
+                    .authenticated()
                     .requestMatchers(POST, "/3d/*/addresses")
                     .authenticated()
                     .requestMatchers(GET, "/geocode")
@@ -206,6 +210,42 @@ public class SecurityConf {
                     .authenticated() // TODO: change later
                     .requestMatchers(POST, "/geoCodingJobs/*/excel")
                     .authenticated() // TODO: change later
+                    .requestMatchers(GET, "/v1/image")
+                    .authenticated()
+                    .requestMatchers(POST, "/v1/detections/*")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(POST, "/v1/detections/*/sync")
+                    .authenticated()
+                    .requestMatchers(POST, "/v1/detections/*/addresses")
+                    .authenticated()
+                    .requestMatchers(GET, "/v1/detections/*")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(POST, "/v1/detections/*/shape")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(POST, "/v1/detections/*/excel")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(GET, "/v1/detections")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(GET, "/v1/usage")
+                    .hasAnyAuthority(
+                        ROLE_ADMIN.name(), ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(DELETE, "/v1/keys")
+                    .hasAnyAuthority(ROLE_COMMUNITY.name(), ROLE_INSURANCE.name())
+                    .requestMatchers(GET, "/v1/city-jsons/*")
+                    .authenticated()
+                    .requestMatchers(PUT, "/v1/city-jsons/*/process")
+                    .authenticated()
+                    .requestMatchers(GET, "/v1/3d/*")
+                    .authenticated()
+                    .requestMatchers(POST, "/v1/3d/*")
+                    .authenticated()
+                    .requestMatchers(POST, "/v1/3d/*/addresses")
+                    .authenticated()
                     .anyRequest()
                     .denyAll())
         .csrf(AbstractHttpConfigurer::disable)

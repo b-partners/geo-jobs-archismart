@@ -83,6 +83,26 @@ public class GeoJson implements Serializable {
     }
   }
 
+  public static String geoFeatureString(GeoFeature geoFeature) {
+    ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+
+    Map<String, Object> feature = new HashMap<>();
+    feature.put("type", "Feature");
+    feature.put("geometry", geoFeature.getGeometry());
+    feature.put("properties", geoFeature.getProperties());
+
+    try {
+      return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(feature);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public GeoJson(GeoFeature feature) {
+    this.geoFeatures = List.of(feature);
+    this.stringValue = geoFeatureString(feature);
+  }
+
   @AllArgsConstructor
   @Getter
   @Setter

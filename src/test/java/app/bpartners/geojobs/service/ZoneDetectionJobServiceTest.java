@@ -194,6 +194,81 @@ class ZoneDetectionJobServiceTest {
   }
 
   @Test
+  void recomputed_job_status_inherits_message_from_failed_task() {
+    var jobId = randomUUID().toString();
+    var pendingJobStatus =
+        JobStatus.builder()
+            .jobId(jobId)
+            .jobType(DETECTION)
+            .progression(PENDING)
+            .health(UNKNOWN)
+            .creationDatetime(java.time.Instant.now().minusSeconds(60))
+            .build();
+    var job = ZoneDetectionJob.builder().id(jobId).statusHistory(List.of(pendingJobStatus)).build();
+    var failedTask =
+        ParcelDetectionTask.builder()
+            .statusHistory(
+                List.of(
+                    TaskStatus.builder()
+                        .id(randomUUID().toString())
+                        .jobType(DETECTION)
+                        .progression(FINISHED)
+                        .health(FAILED)
+                        .message("tile detection failed: source timeout")
+                        .creationDatetime(java.time.Instant.now())
+                        .build()))
+            .build();
+    when(taskRepositoryMock.findAllByJobId(jobId)).thenReturn(List.of(failedTask));
+
+    var recomputed = subject.recomputeStatus(job);
+
+    assertEquals(FAILED, recomputed.getStatus().getHealth());
+    assertEquals("tile detection failed: source timeout", recomputed.getStatus().getMessage());
+  }
+
+  @Test
+  void recomputed_job_status_aggregates_distinct_failed_task_messages() {
+    var jobId = randomUUID().toString();
+    var pendingJobStatus =
+        JobStatus.builder()
+            .jobId(jobId)
+            .jobType(DETECTION)
+            .progression(PENDING)
+            .health(UNKNOWN)
+            .creationDatetime(java.time.Instant.now().minusSeconds(60))
+            .build();
+    var job = ZoneDetectionJob.builder().id(jobId).statusHistory(List.of(pendingJobStatus)).build();
+    when(taskRepositoryMock.findAllByJobId(jobId))
+        .thenReturn(
+            List.of(
+                failedTaskWithMessage("first failure", java.time.Instant.now().minusSeconds(3)),
+                failedTaskWithMessage("second failure", java.time.Instant.now().minusSeconds(2)),
+                // duplicate message must be deduplicated
+                failedTaskWithMessage("first failure", java.time.Instant.now().minusSeconds(1))));
+
+    var recomputed = subject.recomputeStatus(job);
+
+    assertEquals(FAILED, recomputed.getStatus().getHealth());
+    assertEquals("first failure; second failure", recomputed.getStatus().getMessage());
+  }
+
+  static ParcelDetectionTask failedTaskWithMessage(
+      String message, java.time.Instant creationDatetime) {
+    return ParcelDetectionTask.builder()
+        .statusHistory(
+            List.of(
+                TaskStatus.builder()
+                    .id(randomUUID().toString())
+                    .jobType(DETECTION)
+                    .progression(FINISHED)
+                    .health(FAILED)
+                    .message(message)
+                    .creationDatetime(creationDatetime)
+                    .build()))
+        .build();
+  }
+
+  @Test
   void count_in_doubt_machine_detected_tiles() {
     var jobId = randomUUID().toString();
     var minimumConfidenceForDelivery = 1.0;

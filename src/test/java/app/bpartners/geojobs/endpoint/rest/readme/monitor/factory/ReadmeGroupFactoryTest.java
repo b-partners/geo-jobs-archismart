@@ -6,8 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.model.ReadmeGroup;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
+import app.bpartners.geojobs.readme.monitor.factory.ReadmeGroupFactory;
+import app.bpartners.geojobs.readme.monitor.model.ReadmeGroup;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import java.util.Optional;

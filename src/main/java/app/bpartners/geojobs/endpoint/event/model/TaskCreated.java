@@ -19,7 +19,10 @@ public class TaskCreated<T extends Task> extends PojaEvent {
 
   @Override
   public Duration eventHandlerInitMaxDuration() {
-    return Duration.ofSeconds(0);
+    // Covers the Spring Boot cold start inside the handler (~25-40s observed on the workers)
+    // so the message stays invisible until init+consume finish. Kept as tight as possible:
+    // too low -> premature SQS redelivery mid-boot; too high -> failed messages retry slower.
+    return Duration.ofSeconds(45);
   }
 
   @Override

@@ -3,6 +3,7 @@ package app.bpartners.geojobs.endpoint.rest.controller;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
+import app.bpartners.geojobs.endpoint.rest.controller.v1.JobController;
 import app.bpartners.geojobs.endpoint.rest.model.ProcessJobAnnotation;
 import app.bpartners.geojobs.job.service.JobAnnotationService;
 import app.bpartners.geojobs.model.exception.BadRequestException;

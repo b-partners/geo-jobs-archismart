@@ -6,14 +6,15 @@ import static app.bpartners.geojobs.model.geometry.route.ObjectType.road;
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.model.geometry.quadrilateral.model.AlphaConf;
 import app.bpartners.geojobs.model.geometry.route.ContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.PrettyConf;
 import app.bpartners.geojobs.model.geometry.route.RoutesContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.UnionConf;
+import app.bpartners.geojobs.postprocessing.continuer.ParallelTiledLinesContinuer;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;

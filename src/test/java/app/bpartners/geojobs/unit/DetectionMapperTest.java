@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.unit;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.PISCINE;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.HUMAN;

@@ -4,6 +4,7 @@ import static jakarta.persistence.EnumType.STRING;
 import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
 import app.bpartners.geojobs.endpoint.rest.model.DetectionStepName;
+import app.bpartners.geojobs.job.model.statistic.TaskStatistic;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
@@ -38,4 +39,12 @@ public class DetectionStep {
 
   @Column(name = "detection_id")
   private String detectionId;
+
+  private String message;
+
+  /**
+   * Optional detailed task statistics backing this step when it is a request-time computed step
+   * (tiling / machine detection). Never persisted.
+   */
+  @Transient @EqualsAndHashCode.Exclude @ToString.Exclude private TaskStatistic statistic;
 }

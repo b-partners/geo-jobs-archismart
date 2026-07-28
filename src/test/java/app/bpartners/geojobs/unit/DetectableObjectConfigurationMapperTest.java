@@ -5,8 +5,8 @@ import static app.bpartners.geojobs.repository.model.detection.DetectableType.TO
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectConfigurationMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectTypeMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectConfigurationMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectType;
 import app.bpartners.geojobs.file.bucket.BucketConf;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;

@@ -3,7 +3,7 @@ package app.bpartners.geojobs.model.geometry.area;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.HUMIDITE_CLAIR;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.HUMIDITE_INTENSE;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;

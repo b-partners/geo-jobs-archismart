@@ -14,8 +14,8 @@ import app.bpartners.geojobs.concurrency.Workers;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.zone.ImportedZoneTilingJobSaved;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobWithoutTasksCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.TilingTaskMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoomMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.TilingTaskMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoomMapper;
 import app.bpartners.geojobs.endpoint.rest.model.BucketSeparatorType;
 import app.bpartners.geojobs.endpoint.rest.model.GeoServerParameter;
 import app.bpartners.geojobs.job.model.JobStatus;
@@ -66,6 +66,7 @@ public class ZoneTilingJobServiceTest {
   TilingTaskMapper tilingTaskMapper = mock();
   TilingTaskConsumer tilingTaskConsumerMock = mock();
   Workers workersMock = mock();
+  BuildingFinder buildingFinderMock = mock();
   ZoneTilingJobService subject =
       new ZoneTilingJobService(
           jobRepositoryMock,
@@ -79,7 +80,8 @@ public class ZoneTilingJobServiceTest {
           tilingTaskMapper,
           taskStatisticRepositoryMock,
           tilingTaskConsumerMock,
-          workersMock);
+          workersMock,
+          buildingFinderMock);
 
   @Test
   void duplicate_ok() {

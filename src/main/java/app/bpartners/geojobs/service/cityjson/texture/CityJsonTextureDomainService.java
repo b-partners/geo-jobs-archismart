@@ -9,6 +9,7 @@ import app.bpartners.geojobs.service.cityjson.texture.model.CityJsonWithVertices
 import app.bpartners.geojobs.service.cityjson.texture.model.RasterInfo;
 import app.bpartners.geojobs.service.cityjson.texture.model.TextureInfo;
 import app.bpartners.geojobs.service.cityjson.texture.model.TexturedCityJson;
+import app.bpartners.geojobs.service.cityjson.texture.model.Transform;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -16,7 +17,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.citygml4j.cityjson.model.geometry.Vertex;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.jetbrains.annotations.NotNull;
 import org.locationtech.jts.geom.Coordinate;
 import org.springframework.stereotype.Component;
 
@@ -99,6 +102,7 @@ public class CityJsonTextureDomainService {
     var cityJson = cityJsonWithVertices.json().deepCopy();
     var cityObjects = (ObjectNode) cityJson.get("CityObjects");
     var objects = cityObjects.elements();
+    var transform = getTransform(cityJson);
 
     List<Coordinate> vertexTexture = new ArrayList<>();
     ObjectNode appearance = initAppearance(textureInfo);
@@ -113,8 +117,15 @@ public class CityJsonTextureDomainService {
 
       var geometries = (ArrayNode) cityObject.get("geometry");
       for (var geometryNode : geometries) {
+
         texturizeGeometry(
-            (ObjectNode) geometryNode, vertices, crs, rasterInfo, vertexTexture, vertexTextureMap);
+            (ObjectNode) geometryNode,
+            vertices,
+            crs,
+            rasterInfo,
+            vertexTexture,
+            vertexTextureMap,
+            transform);
       }
     }
 
@@ -129,6 +140,19 @@ public class CityJsonTextureDomainService {
     appearance.set("vertices-texture", verticesTextureNode);
     cityJson.set("appearance", appearance);
     return new TexturedCityJson(cityJson);
+  }
+
+  @NotNull
+  private static Transform getTransform(ObjectNode cityJson) {
+    var jsonTransform = cityJson.get("transform");
+
+    var scale = jsonTransform.get("scale");
+    var translate = jsonTransform.get("translate");
+
+    return new Transform(
+        Vertex.of(scale.get(0).asDouble(), scale.get(1).asDouble(), scale.get(2).asDouble()),
+        Vertex.of(
+            translate.get(0).asDouble(), translate.get(1).asDouble(), translate.get(2).asDouble()));
   }
 
   private ObjectNode initAppearance(TextureInfo textureInfo) {
@@ -146,7 +170,8 @@ public class CityJsonTextureDomainService {
       org.geotools.api.referencing.crs.CoordinateReferenceSystem crs,
       RasterInfo rasterInfo,
       List<Coordinate> vertexTexture,
-      Map<String, Integer> vertexTextureMap) {
+      Map<String, Integer> vertexTextureMap,
+      Transform transform) {
     var geometryAppearance = initGeometryAppearance();
 
     geometry.set("appearance", geometryAppearance);
@@ -163,17 +188,20 @@ public class CityJsonTextureDomainService {
           rasterInfo,
           vertexTexture,
           vertexTextureMap,
-          geometryAppearance);
+          geometryAppearance,
+          transform);
     }
   }
 
   public List<Coordinate> getUV(
-      List<Coordinate> vertices,
+      List<Vertex> vertices,
       org.geotools.api.referencing.crs.CoordinateReferenceSystem crs,
-      RasterInfo info) {
+      RasterInfo info,
+      Transform transform) {
     var result = new ArrayList<Coordinate>();
 
     for (var vertex : vertices) {
+      var mappedVertex = transform.apply(vertex);
       var pixelVertex = getPixelCoordinate(info, vertex, crs);
       double u = pixelVertex.getX() / info.width();
       double v = 1.0 - (pixelVertex.getY() / info.height());
@@ -265,14 +293,15 @@ public class CityJsonTextureDomainService {
       RasterInfo rasterInfo,
       List<Coordinate> vertexTexture,
       Map<String, Integer> vertexTextureMap,
-      ObjectNode geometryAppearance) {
-    var coordinates = getFaceCoordinates(face, vertices);
-    if (coordinates.size() < 3) {
+      ObjectNode geometryAppearance,
+      Transform transform) {
+    var faceVertices = getFaceCoordinates(face, vertices);
+    if (faceVertices.size() < 3) {
       return;
     }
 
     var roof = isRoofSemantic(faceType);
-    var uv = getUV(coordinates, crs, rasterInfo);
+    var uv = getUV(faceVertices, crs, rasterInfo, transform);
     var vtIndices = deduplicateUvs(uv, vertexTexture, vertexTextureMap);
 
     var textureValues =
@@ -328,12 +357,13 @@ public class CityJsonTextureDomainService {
     return faces;
   }
 
-  public List<Coordinate> getFaceCoordinates(JsonNode face, List<Coordinate> vertices) {
+  public List<Vertex> getFaceCoordinates(JsonNode face, List<Coordinate> vertices) {
     var outerRing = face.get(0);
-    List<Coordinate> coordinates = new ArrayList<>();
+    List<Vertex> coordinates = new ArrayList<>();
     for (var vertexIndexNode : outerRing) {
       int vertexIndex = vertexIndexNode.asInt();
-      coordinates.add(vertices.get(vertexIndex));
+      var vertexCoord = vertices.get(vertexIndex);
+      coordinates.add(Vertex.of(vertexCoord.getX(), vertexCoord.getY(), vertexCoord.getZ()));
     }
 
     return coordinates;
@@ -384,7 +414,7 @@ public class CityJsonTextureDomainService {
 
   public Coordinate getPixelCoordinate(
       RasterInfo info,
-      Coordinate vertex,
+      Vertex vertex,
       org.geotools.api.referencing.crs.CoordinateReferenceSystem crs) {
     var coordinate = new Coordinate(vertex.getX(), vertex.getY(), vertex.getZ());
     var vertexAsPoint = geometryFactory.createPoint(coordinate);

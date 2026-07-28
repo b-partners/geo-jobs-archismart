@@ -4,7 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.CityJSONRequestStatus.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson.CityJSONRequestStatusMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.cityjson.CityJSONRequestStatusMapper;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus;
 import org.junit.jupiter.api.Test;
 

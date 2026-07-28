@@ -6,9 +6,9 @@ import static java.net.http.HttpRequest.BodyPublishers;
 import static java.net.http.HttpResponse.BodyHandlers;
 
 import app.bpartners.geojobs.endpoint.event.model.readme.ReadmeLogCreated;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.ReadmeMonitorConf;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.model.ReadmeLog;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.readme.monitor.ReadmeMonitorConf;
+import app.bpartners.geojobs.readme.monitor.model.ReadmeLog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;

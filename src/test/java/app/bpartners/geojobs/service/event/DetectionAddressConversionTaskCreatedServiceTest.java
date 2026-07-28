@@ -146,7 +146,7 @@ class DetectionAddressConversionTaskCreatedServiceTest {
 
     verify(taskStatusServiceMock, never()).process(taskMock);
     verify(taskConsumerMock, never()).accept(taskMock);
-    verify(taskStatusServiceMock, only()).fail(taskMock);
+    verify(taskStatusServiceMock, only()).fail(eq(taskMock), any());
     verify(taskRepositoryMock, only()).save(taskMock);
   }
 }

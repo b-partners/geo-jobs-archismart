@@ -37,7 +37,7 @@ class DetectionExcelFileSavedServiceTest {
     var excelFileKey = "excelFileKey";
     var detection = Detection.builder().excelFileKey(excelFileKey).build();
     when(bucketComponentMock.download(excelFileKey)).thenReturn(excelFileMock);
-    when(excelAddressConverterMock.apply(excelFileMock)).thenReturn(retrievedAddresses);
+    when(excelAddressConverterMock.apply(excelFileMock, null)).thenReturn(retrievedAddresses);
     when(detectionRepositoryMock.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 

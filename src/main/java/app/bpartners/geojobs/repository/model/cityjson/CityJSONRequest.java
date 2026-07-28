@@ -7,7 +7,7 @@ import static java.time.Instant.now;
 import static org.hibernate.type.SqlTypes.JSON;
 import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DelimitationType;
 import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.model.Feature;

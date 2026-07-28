@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ZONE;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.MULTI_POLYGON;
@@ -48,7 +48,7 @@ class DetectionDelimitationRetrieverTest {
 
     when(detectionRepositoryMock.save(any())).thenReturn(detection);
 
-    subject.accept(detection);
+    subject.apply(detection);
 
     var featureWithDelimitationAsString = featureWithGeometryAsString(providedGeoJson);
     var expectedDetectionToBeSaved =
@@ -75,7 +75,7 @@ class DetectionDelimitationRetrieverTest {
     when(detectionRepositoryMock.save(any())).thenReturn(detection);
     when(buildingFinderMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
 
-    subject.accept(detection);
+    subject.apply(detection);
 
     verify(buildingFinderMock, times(1)).retrieveRoofPolygonsFrom(any());
   }
@@ -88,7 +88,7 @@ class DetectionDelimitationRetrieverTest {
     when(detectionRepositoryMock.save(any())).thenReturn(detection);
     when(buildingFinderMock.retrieveRoofPolygonsFrom(any())).thenReturn(List.of());
 
-    subject.accept(detection);
+    subject.apply(detection);
 
     verify(buildingFinderMock, times(1)).retrieveRoofPolygonsFrom(any());
   }
@@ -100,7 +100,7 @@ class DetectionDelimitationRetrieverTest {
 
     when(detectionRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    subject.accept(detection);
+    subject.apply(detection);
 
     verify(detectionRepositoryMock)
         .save(

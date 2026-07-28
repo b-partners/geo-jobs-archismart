@@ -10,6 +10,7 @@ import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.ZoneDetectionJobRepository;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
+import app.bpartners.geojobs.validator.ZoneDetectionJobValidator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.POLYGON;
 import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.*;
@@ -16,7 +16,7 @@ import static org.mockito.Mockito.never;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.FeatureRoofSlopeAndHeightRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.model.lidar.planes.Plane3DSlopeInDegrees;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.Feature;

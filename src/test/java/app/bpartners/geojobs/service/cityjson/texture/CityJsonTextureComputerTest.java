@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service.cityjson.texture;
 
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONTexture;
@@ -17,8 +18,7 @@ import org.junit.jupiter.api.Test;
 class CityJsonTextureComputerTest {
   private static final GeometrySquareMeterArea projector = new GeometrySquareMeterArea();
   private static final ObjectMapper objectMapper = new ObjectMapper();
-  private static final CityJsonIOService ioService =
-      new CityJsonIOService(new ObjectMapper(), projector);
+  private static final CityJsonIOService ioService = new CityJsonIOService(objectMapper, projector);
   private static final CityJsonTextureDomainService domainService =
       new CityJsonTextureDomainService(objectMapper, projector);
   private static final CityJsonTextureComputer subject =
@@ -28,23 +28,8 @@ class CityJsonTextureComputerTest {
   void test2() {
     var cityjson = getFile("cityjson/texture/inputs/test2/test2.json");
     var actual = subject.applyTexture(test2Request(), cityjson);
-    log.info("CityJSON with texture = {}", actual.getAbsolutePath());
 
-    assertNotSame(actual, cityjson);
-  }
-
-  private static CityJSONRequest test2Request() {
-    var texture =
-        CityJSONTexture.builder()
-            .zoom(19)
-            .tileX(265541)
-            .tileY(180308)
-            .imageWidth(3072)
-            .imageUri(getFile("cityjson/texture/inputs/test2/test2.jpeg").getAbsolutePath())
-            .imageHeight(3072)
-            .tileImageSizePx(1024)
-            .build();
-    return CityJSONRequest.builder().textures(List.of(texture)).build();
+    assertCityJson(actual, cityjson);
   }
 
   @Test
@@ -52,8 +37,7 @@ class CityJsonTextureComputerTest {
     var cityjson = getFile("cityjson/texture/inputs/roof7/roof7.json");
     var actual = subject.applyTexture(roof7Request(), cityjson);
 
-    assertNotSame(actual, cityjson);
-    log.info("CityJSON with texture = {}", actual.getAbsolutePath());
+    assertCityJson(actual, cityjson);
   }
 
   @Test
@@ -61,8 +45,7 @@ class CityJsonTextureComputerTest {
     var cityjson = getFile("cityjson/texture/inputs/roof7/roof7_roofer.json");
     var actual = subject.applyTexture(roof7Request(), cityjson);
 
-    assertNotSame(actual, cityjson);
-    log.info("CityJSON with texture = {}", actual.getAbsolutePath());
+    assertCityJson(actual, cityjson);
   }
 
   @Test
@@ -72,8 +55,38 @@ class CityJsonTextureComputerTest {
             "cityjson/texture/inputs/switzerland/Chem. de Conches 44, 1321 Conches, Suisse.json");
     var actual = subject.applyTexture(switzerlandRequest(), cityjson);
 
+    assertCityJson(actual, cityjson);
+  }
+
+  private static void assertCityJson(File actual, File cityjson) {
     assertNotSame(actual, cityjson);
+    assertTrue(hasValidTextureCoordinates(actual));
     log.info("CityJSON with texture = {}", actual.getAbsolutePath());
+  }
+
+  private static boolean hasValidTextureCoordinates(File cityJsonFile) {
+    var cityJson = ioService.loadCityJson(cityJsonFile);
+
+    var appearance = cityJson.get("appearance");
+    if (appearance == null) {
+      return false;
+    }
+
+    var verticesTexture = appearance.get("vertices-texture");
+    if (verticesTexture == null || !verticesTexture.isArray()) {
+      return false;
+    }
+
+    for (var uv : verticesTexture) {
+      double u = uv.get(0).asDouble();
+      double v = uv.get(1).asDouble();
+
+      if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private static CityJSONRequest switzerlandRequest() {
@@ -103,6 +116,20 @@ class CityJsonTextureComputerTest {
             .imageWidth(3072)
             .imageHeight(3072)
             .imageUri(getFile("cityjson/texture/inputs/roof7/roof7.jpg").getAbsolutePath())
+            .tileImageSizePx(1024)
+            .build();
+    return CityJSONRequest.builder().textures(List.of(texture)).build();
+  }
+
+  private static CityJSONRequest test2Request() {
+    var texture =
+        CityJSONTexture.builder()
+            .zoom(19)
+            .tileX(265541)
+            .tileY(180308)
+            .imageWidth(3072)
+            .imageUri(getFile("cityjson/texture/inputs/test2/test2.jpeg").getAbsolutePath())
+            .imageHeight(3072)
             .tileImageSizePx(1024)
             .build();
     return CityJSONRequest.builder().textures(List.of(texture)).build();

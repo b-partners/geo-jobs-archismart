@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.validator.GetUsageValidator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 

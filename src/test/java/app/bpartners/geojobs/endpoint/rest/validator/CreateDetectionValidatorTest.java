@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.validator.CreateDetectionValidator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

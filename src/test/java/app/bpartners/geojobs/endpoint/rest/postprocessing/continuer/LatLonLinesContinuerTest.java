@@ -2,12 +2,13 @@ package app.bpartners.geojobs.endpoint.rest.postprocessing.continuer;
 
 import static java.lang.Math.PI;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.quadrilateral.model.AlphaConf;
 import app.bpartners.geojobs.model.geometry.route.ContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.PrettyConf;
 import app.bpartners.geojobs.model.geometry.route.RoutesContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.UnionConf;
+import app.bpartners.geojobs.postprocessing.continuer.LatLonLinesContinuer;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;

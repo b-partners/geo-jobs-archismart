@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.repository.model.SurfaceUnit.SQUARE_METER;
 import static java.util.UUID.randomUUID;
@@ -17,7 +17,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.Detection;
-import app.bpartners.geojobs.service.ZoneService;
+import app.bpartners.geojobs.service.DetectionService;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureDetails;
 import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
@@ -48,7 +48,7 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
   @Autowired LocalEventQueue localEventQueue;
   @Autowired GeoServerConfiguration geoServerConfiguration;
   @Autowired CommunityAuthorizationRepository communityAuthorizationRepository;
-  @MockBean ZoneService zoneService;
+  @MockBean DetectionService detectionService;
   EventProducerInvocationMock eventProducerInvocationMock = new EventProducerInvocationMock();
   private final String detectionId = randomUUID().toString();
   private final String communityAuthorizationId = randomUUID().toString();
@@ -98,7 +98,7 @@ class DetectionExcelFileAddressConvertedIT extends DetectionIT {
     if (localEventQueue != null) localEventQueue.attemptSchedulerShutDown();
 
     var actualDetection = detectionRepository.findById(detection.getId()).orElseThrow();
-    verify(zoneService, only()).processDetectionSteps(actualDetection);
+    verify(detectionService, only()).processDetectionSteps(actualDetection);
     assertNotNull(actualDetection.getMultiPolygonGeoJsonZone());
     assertTrue(
         actualDetection.getMultiPolygonGeoJsonZone().stream()

@@ -13,7 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.conf.FacadeIT;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionSurfaceValueMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionSurfaceValueMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectionUsage;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;

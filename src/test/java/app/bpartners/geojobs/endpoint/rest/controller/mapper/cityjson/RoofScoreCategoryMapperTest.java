@@ -2,6 +2,7 @@ package app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.cityjson.RoofScoreCategoryMapper;
 import app.bpartners.geojobs.model.geometry.area.Rate;
 import java.util.Arrays;
 import java.util.List;

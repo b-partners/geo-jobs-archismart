@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import app.bpartners.geojobs.endpoint.rest.model.CreateApiKey;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.validator.CreateApiKeyValidator;
 import org.junit.jupiter.api.Test;
 
 class CreateApiKeyValidatorTest {

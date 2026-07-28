@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionAssemblyInitiated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionAssemblySucceeded;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.file.ExtensionGuesser;
 import app.bpartners.geojobs.file.FileWriter;
@@ -69,15 +69,31 @@ class GeoJsonConversionAssemblyInitiatedServiceTest {
   BuildingFinder buildingFinderMock = mock();
   GeometryConverter geometryConverter = new GeometryConverter();
   FeatureMapper featureMapper = new FeatureMapper(geometryConverter, buildingFinderMock);
-  ZoneService zoneServiceMock = mock();
-  DetectionRoofSlopeValidator detectionRoofSlopeValidatorMock = mock();
   DetectionService detectionServiceMock =
       new DetectionService(
           zoneDetectionJobServiceMock,
-          detectionRepositoryMock,
+          mock(),
           eventProducerMock,
-          zoneServiceMock,
-          detectionRoofSlopeValidatorMock);
+          detectionRepositoryMock,
+          mock(),
+          bucketComponentMock,
+          mock(),
+          objectMapper,
+          mock(),
+          mock(),
+          mock(),
+          mock(),
+          mock(),
+          geoJsonConversionJobRepositoryMock,
+          mock(),
+          mock(),
+          mock(),
+          mock(),
+          mock(),
+          mock(),
+          fileWriter,
+          mock(),
+          mock());
   ZipGeoJsonAssembler zipGeoJsonAssemblerMock = mock();
   GeoJsonConversionAssemblyInitiatedService subject =
       new GeoJsonConversionAssemblyInitiatedService(

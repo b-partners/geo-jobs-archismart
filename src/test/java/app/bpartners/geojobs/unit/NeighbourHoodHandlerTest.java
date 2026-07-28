@@ -2,11 +2,11 @@ package app.bpartners.geojobs.unit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.NeighbourHoodHandler;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.model.geometry.route.ObjectType;
+import app.bpartners.geojobs.postprocessing.NeighbourHoodHandler;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;

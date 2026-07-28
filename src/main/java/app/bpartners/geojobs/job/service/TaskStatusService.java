@@ -22,25 +22,31 @@ public class TaskStatusService<T extends Task> {
 
   @Transactional
   public T process(T task) {
-    return update(task, PROCESSING, UNKNOWN);
+    return update(task, PROCESSING, UNKNOWN, null);
   }
 
   @Transactional
   public T succeed(T task) {
-    return update(task, FINISHED, SUCCEEDED);
+    return update(task, FINISHED, SUCCEEDED, null);
   }
 
   @Transactional
   public T fail(T task) {
-    return update(task, FINISHED, FAILED);
+    return fail(task, null);
   }
 
-  private T update(T task, ProgressionStatus progression, HealthStatus health) {
+  @Transactional
+  public T fail(T task, String message) {
+    return update(task, FINISHED, FAILED, message);
+  }
+
+  private T update(T task, ProgressionStatus progression, HealthStatus health, String message) {
     var taskStatus =
         TaskStatus.builder()
             .creationDatetime(now())
             .progression(progression)
             .health(health)
+            .message(message)
             .taskId(task.getId())
             .build();
     task.hasNewStatus(taskStatus);

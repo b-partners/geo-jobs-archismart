@@ -93,7 +93,7 @@ public class ZoneTilingJobStatusChangedService implements Consumer<ZoneTilingJob
         eventProducer.accept(
             List.of(ZoneDetectionJobCreated.builder().zoneDetectionJob(zdj).build()));
 
-        detectionDelimitationRetriever.accept(savedDetection);
+        detectionDelimitationRetriever.apply(savedDetection);
 
         if (savedDetection.needsImageOutput()) {
           var detectionIdentifier = savedDetection.getId();

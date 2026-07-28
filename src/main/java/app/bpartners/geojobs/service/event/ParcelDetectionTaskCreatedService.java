@@ -32,12 +32,14 @@ public class ParcelDetectionTaskCreatedService
 
     try {
       parcelDetectionTaskConsumer.accept(task);
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
+      // catches Exception (not only RuntimeException): the consumer is @SneakyThrows, so a checked
+      // exception can escape here and must still mark the task FAILED with a message
       log.error(
           "ParcelDetectionTask [id={}] failed, marking it as FAILED without retry",
           task.getId(),
           e);
-      fail(task);
+      fail(task, messageOf(e));
     }
   }
 }

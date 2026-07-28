@@ -17,7 +17,8 @@ public class ImageValidator implements Consumer<BufferedImage> {
   public void accept(BufferedImage img) {
     if (whiteImageDetector.apply(img)) {
       log.error("Invalid white image detected");
-      throw new ImageSourcesTimeoutException("Unable to retrieve image as image sources timed out");
+      throw new ImageSourcesTimeoutException(
+          "Unable to retrieve usable imagery: image sources returned a blank/white image");
     }
   }
 }

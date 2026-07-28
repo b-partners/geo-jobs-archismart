@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.detection;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoneTilingJobMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoneTilingJobMapper;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;

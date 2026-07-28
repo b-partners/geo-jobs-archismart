@@ -12,7 +12,8 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoneTilingJobMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.ZoneTilingController;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoneTilingJobMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.GeoServerParameter;

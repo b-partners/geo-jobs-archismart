@@ -9,6 +9,7 @@ import app.bpartners.geojobs.endpoint.rest.model.AddressFullText;
 import app.bpartners.geojobs.endpoint.rest.model.ThreeDAddressesRequest;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
+import app.bpartners.geojobs.validator.ThreeDAddressesRequestValidator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

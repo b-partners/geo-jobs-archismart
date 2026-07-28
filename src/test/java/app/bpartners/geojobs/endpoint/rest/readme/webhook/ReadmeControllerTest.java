@@ -5,7 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.rest.controller.ReadmeController;
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.model.SingleUserInfo;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookConf;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookService;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookValidator;
+import app.bpartners.geojobs.readme.webhook.model.SingleUserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

@@ -21,9 +21,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
+import javax.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GeoCodeService {
@@ -35,7 +38,11 @@ public class GeoCodeService {
   private final BuildingFinder buildingFinder;
 
   public GeoCodingJob submitGeoCodingJobThroughExcel(
-      String endToEndId, String communityOwnerId, File excelFile) {
+      String endToEndId, String communityOwnerId, File excelFile, Integer sheetIndex) {
+    if (sheetIndex != null && sheetIndex < 1) {
+      throw new BadRequestException(
+          "Sheet index must be greater than or equal to 1. Actual value: " + sheetIndex);
+    }
     var optionalGeoCodingJob =
         repository.findByEndToEndIdAndCommunityOwnerId(endToEndId, communityOwnerId);
     if (optionalGeoCodingJob.isPresent()) {
@@ -54,6 +61,7 @@ public class GeoCodeService {
             .communityOwnerId(communityOwnerId)
             .fileKey(bucketKey)
             .geoJsonKey(null)
+            .sheetIndex(sheetIndex)
             .status(PROCESSING)
             .creationDatetime(now())
             .build();
@@ -79,6 +87,9 @@ public class GeoCodeService {
     }
     try {
       var nearestRoofMultiPolygon = buildingFinder.getBuildingMultiPolygon(address);
+      if (nearestRoofMultiPolygon == null) {
+        throw new BadRequestException("No building found for address : " + address);
+      }
 
       var properties = new HashMap<String, Object>();
       properties.put("address", address);
@@ -86,21 +97,44 @@ public class GeoCodeService {
       return geometryConverter.toFeature(
           null, HOUSES_0.getZoomLevel(), properties, nearestRoofMultiPolygon);
     } catch (RuntimeException e) {
+      log.info(
+          "Unable to geocode address={} from BuildingFinder, falling back on GeoCodeApi : {}",
+          address,
+          e.getMessage());
       try {
         var geoPosition = geoCodeApi.searchGeoPositionFromAddress(address);
         var longitude = BigDecimal.valueOf(geoPosition.longitude());
         var latitude = BigDecimal.valueOf(geoPosition.latitude());
-        var nearestRoofMultiPolygon =
-            buildingFinder.getBuildingMultiPolygon(List.of(longitude, latitude));
-
-        var properties = new HashMap<String, Object>();
-        properties.put("address", address);
-
-        return geometryConverter.toFeature(
-            null, HOUSES_0.getZoomLevel(), properties, nearestRoofMultiPolygon);
+        return geocode(address, longitude, latitude);
       } catch (IOException | InterruptedException | ApiException exception) {
         throw new BadRequestException("Unable to geocode address : " + address);
       }
     }
+  }
+
+  public Feature geocode(@Nullable String address, BigDecimal longitude, BigDecimal latitude) {
+    var nearestRoofMultiPolygon =
+        buildingFinder.getBuildingMultiPolygon(List.of(longitude, latitude));
+    if (nearestRoofMultiPolygon == null) {
+      var addressPrefix = address == null ? "" : "address : " + address + " at ";
+      var exceptionMessage =
+          "No building found for "
+              + addressPrefix
+              + "coordinates (longitude="
+              + longitude
+              + ", latitude="
+              + latitude
+              + ")";
+      log.warn(exceptionMessage);
+      throw new BadRequestException(exceptionMessage);
+    }
+
+    var properties = new HashMap<String, Object>();
+    if (address != null) {
+      properties.put("address", address);
+    }
+
+    return geometryConverter.toFeature(
+        null, HOUSES_0.getZoomLevel(), properties, nearestRoofMultiPolygon);
   }
 }

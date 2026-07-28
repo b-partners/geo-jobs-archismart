@@ -15,8 +15,8 @@ import app.bpartners.geojobs.endpoint.event.model.zone.ImportedZoneTilingJobSave
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobStatusChanged;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobWithoutTasksCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.TilingTaskMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.ZoomMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.TilingTaskMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoomMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.job.model.Task;
@@ -29,6 +29,7 @@ import app.bpartners.geojobs.repository.model.ArcgisImageZoom;
 import app.bpartners.geojobs.repository.model.FilteredTilingJob;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
+import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.JobFilteredMailer;
 import app.bpartners.geojobs.service.NotFinishedTaskRetriever;
 import app.bpartners.geojobs.service.TilePolygonRetriever;
@@ -57,6 +58,7 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   private final TilingTaskMapper tilingTaskMapper;
   private final TilingTaskConsumer tilingTaskConsumer;
   private final Workers workers;
+  private final BuildingFinder buildingFinder;
 
   public ZoneTilingJobService(
       JpaRepository<ZoneTilingJob, String> repository,
@@ -70,7 +72,8 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
       TilingTaskMapper tilingTaskMapper,
       TaskStatisticRepository taskStatisticRepository,
       TilingTaskConsumer tilingTaskConsumer,
-      Workers workers) {
+      Workers workers,
+      BuildingFinder buildingFinder) {
     super(
         repository,
         jobStatusRepository,
@@ -85,6 +88,7 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
     this.tilingTaskMapper = tilingTaskMapper;
     this.tilingTaskConsumer = tilingTaskConsumer;
     this.workers = workers;
+    this.buildingFinder = buildingFinder;
   }
 
   public ZoneTilingJob importFromBucket(
@@ -206,8 +210,12 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
   }
 
   @Transactional
-  public void fireTasks(ZoneTilingJob job) {
-    getTasks(job).forEach(task -> eventProducer.accept(List.of(new ParcelTilingTaskCreated(task))));
+  public List<ParcelTilingTask> fireTasks(ZoneTilingJob job) {
+    var tasks = getTasks(job);
+
+    tasks.forEach(task -> eventProducer.accept(List.of(new ParcelTilingTaskCreated(task))));
+
+    return tasks;
   }
 
   public List<ParcelTilingTask> consumeTasks(String jobId) {
@@ -294,10 +302,11 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
     var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
     var providedFeatures = Objects.requireNonNull(job.getFeatures());
     var geometryConverter = new GeometryConverter();
+    var featuresToBeTiled = getFeaturesToBeTiled(providedFeatures, geometryConverter);
     var imageZoom = computeSupportedImageZoom(job);
     var tilePolygonRetriever = new TilePolygonRetriever(new TileFinder(), geometryConverter);
     var featuresSplitByTiles =
-        splitFeaturesByTiles(providedFeatures, geometryConverter, tilePolygonRetriever, imageZoom);
+        splitFeaturesByTiles(featuresToBeTiled, geometryConverter, tilePolygonRetriever, imageZoom);
 
     return featuresSplitByTiles.stream()
         .map(
@@ -312,6 +321,27 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
               return tilingTaskMapper.from(feature, serverUrl, job.getGeoServerParameter(), jobId);
             })
         .collect(toList());
+  }
+
+  @NotNull
+  private List<Feature> getFeaturesToBeTiled(
+      List<Feature> providedFeatures, GeometryConverter geometryConverter) {
+    return providedFeatures.stream()
+        .map(
+            feature -> {
+              if (feature.getGeometry() != null
+                  && feature.getGeometry().getActualInstance() instanceof Point point) {
+                var multiPolygon = buildingFinder.getBuildingMultiPolygon(point);
+                for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+                  var polygonGeometry = multiPolygon.getGeometryN(i);
+                  if (polygonGeometry instanceof org.locationtech.jts.geom.Polygon polygon) {
+                    return geometryConverter.toRestFeature(polygon);
+                  }
+                }
+              }
+              return feature;
+            })
+        .toList();
   }
 
   @NotNull

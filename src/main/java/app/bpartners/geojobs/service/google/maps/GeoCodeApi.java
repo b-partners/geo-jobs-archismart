@@ -26,6 +26,9 @@ public class GeoCodeApi {
       throws IOException, InterruptedException, ApiException {
     addressValidator.accept(address);
     GeocodingResult[] geocodingResults = GeocodingApi.geocode(this.geoApiContext, address).await();
+    if (geocodingResults.length == 0) {
+      throw new IllegalStateException("No geocoding result for address " + address);
+    }
     GeocodingResult response = geocodingResults[0];
     LatLng location = response.geometry.location;
     GeoPosition position = new GeoPosition(location.lat, location.lng);

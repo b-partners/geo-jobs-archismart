@@ -7,7 +7,6 @@ import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
-import app.bpartners.geojobs.endpoint.rest.validator.ZoneDetectionJobValidator;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.Detection;
@@ -15,6 +14,7 @@ import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.TileDuplicationRemover;
+import app.bpartners.geojobs.validator.ZoneDetectionJobValidator;
 import java.util.*;
 import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;

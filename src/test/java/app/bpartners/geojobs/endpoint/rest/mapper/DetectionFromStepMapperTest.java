@@ -3,7 +3,9 @@ package app.bpartners.geojobs.endpoint.rest.mapper;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionFromStepMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionStepMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.RoofDelimiterMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectionStepName;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.Feature;

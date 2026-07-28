@@ -6,11 +6,14 @@ import static app.bpartners.geojobs.model.geometry.route.ObjectType.bati_autres;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.*;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.model.geometry.VGG;
+import app.bpartners.geojobs.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.postprocessing.GeoJsonLoader;
+import app.bpartners.geojobs.postprocessing.Geojson;
+import app.bpartners.geojobs.postprocessing.model.LatLonPolygon;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

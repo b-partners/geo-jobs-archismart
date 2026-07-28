@@ -2,8 +2,8 @@ package app.bpartners.geojobs.unit;
 
 import app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob;
 import app.bpartners.geojobs.endpoint.rest.model.ImportZoneTilingJob;
-import app.bpartners.geojobs.endpoint.rest.validator.ZoneTilingJobValidator;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.validator.ZoneTilingJobValidator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

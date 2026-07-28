@@ -10,6 +10,7 @@ import app.bpartners.geojobs.model.geometry.VGGFactory;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
+import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.*;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
@@ -36,19 +37,26 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
 
   @Override
   public void accept(FeatureVggRequested event) {
-    var featureVggComputationStart = now();
     entityManager.clear();
     var detectionIdentifier = event.getDetectionIdentifier();
     var currentFeature = event.getFeature();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
+
+    apply(detection, currentFeature);
+  }
+
+  public Detection apply(Detection detection, Feature currentFeature) {
+    var featureVggComputationStart = now();
     if (!detection.hasToitureModelName()) {
       log.error("Only BP_TOITURE model is supported to generated VGG from now");
-      return;
+      return null;
     }
     var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
     var currentFeaturePolygonGeoJson =
         featurePolygonRetriever.apply(currentFeature, geoJsonDelimitationType);
-    if (currentFeaturePolygonGeoJson == null) return;
+    if (currentFeaturePolygonGeoJson == null) {
+      return null;
+    }
     var detectableTypes =
         detection.getDetectableObjectConfigurations().stream()
             .map(DetectableObjectConfiguration::getObjectType)
@@ -77,8 +85,9 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
     var imageWidth = tilesColNumbers * DEFAULT_TILE_SIZE;
     var imageHeight = tileRowNumbers * DEFAULT_TILE_SIZE;
 
-    detectionRepository.save(
-        newDetection.toBuilder().imageWidth(imageWidth).imageHeight(imageHeight).build());
+    var savedDetection =
+        detectionRepository.save(
+            newDetection.toBuilder().imageWidth(imageWidth).imageHeight(imageHeight).build());
 
     log.info(
         "VGG computation finished in {} seconds for detection(e2Id={}) and feature(geometry={})",
@@ -86,8 +95,9 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
         detection.getEndToEndId(),
         currentFeature.getGeometry());
     if (detection.isDebugMode()) {
-      eventProducer.accept(List.of(new FeatureAnnotatedImageRequested(detectionIdentifier)));
+      eventProducer.accept(List.of(new FeatureAnnotatedImageRequested(savedDetection.getId())));
     }
+    return savedDetection;
   }
 
   private String retrieveId(Feature feature) {

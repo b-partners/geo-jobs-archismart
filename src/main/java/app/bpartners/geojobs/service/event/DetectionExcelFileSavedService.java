@@ -23,7 +23,7 @@ public class DetectionExcelFileSavedService implements Consumer<DetectionExcelFi
   public void accept(DetectionExcelFileSaved event) {
     var detection = event.getDetection();
     var excelFile = bucketComponent.download(detection.getExcelFileKey());
-    var retrievedAddresses = excelAddressConverter.apply(excelFile);
+    var retrievedAddresses = excelAddressConverter.apply(excelFile, null);
     var savedDetection =
         detectionRepository.save(
             detection.toBuilder().convertedAddresses(retrievedAddresses).build());

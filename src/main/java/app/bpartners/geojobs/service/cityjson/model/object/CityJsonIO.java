@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
@@ -69,7 +68,7 @@ public class CityJsonIO {
     ArrayNode globalVertices = MAPPER.createArrayNode();
     ObjectNode globalCityObjects = MAPPER.createObjectNode();
 
-    try (BufferedReader reader = Files.newBufferedReader(inputPath)) {
+    try (var reader = Files.newBufferedReader(inputPath)) {
       String line;
       boolean firstLine = true;
 

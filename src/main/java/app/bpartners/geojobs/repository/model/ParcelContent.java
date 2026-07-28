@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.repository.model;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static java.util.UUID.randomUUID;
 import static org.hibernate.type.SqlTypes.JSON;
 

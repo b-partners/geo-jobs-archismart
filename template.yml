@@ -61,6 +61,10 @@ Globals:
         ROOFER_3D_BAG_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/api-key}}'
         ROOFER_3D_BAG_COMPLEXITY_FACTOR: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/complexity-factor}}'
         LIDAR_INDEX_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/lidar/index/api/url}}'
+        CITY_JSON_PROCESSOR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/city-json-processor/api/url}}'
+        CACHER_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/cacher/api/key}}'
+        CACHER_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/cacher/api/url}}'
+        CITYJSONS_GENERATOR: !Sub '{{resolve:ssm:/geo-jobs/${Env}/cityjsons/generator}}'
 Parameters:
   Env:
     Type: String

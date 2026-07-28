@@ -1,12 +1,12 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.file.FileWriter.createTempDirectory;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.UUID.randomUUID;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
 import app.bpartners.geojobs.file.FileWriter;
@@ -23,6 +23,7 @@ import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import app.bpartners.geojobs.service.roofer3dbag.Roofer3DBagApiClient;
 import app.bpartners.geojobs.service.roofer3dbag.model.CityJsonGenerationRequest;
+import app.bpartners.geojobs.service.roofer3dbag.validator.Roofer3DBagCityJSONValidator;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,6 +60,7 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
   private final GeometryConverter geometryConverter;
   private final CityJsonTextureComputer textureComputer;
   private final SwissBoundaryChecker swissBoundaryChecker;
+  private final Roofer3DBagCityJSONValidator cityJSONValidator;
 
   @Override
   public List<CityJSON> apply(CityJSONRequest request) {
@@ -112,6 +114,8 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
               } catch (URISyntaxException | IOException e) {
                 throw new RuntimeException(e);
               }
+
+              cityJSONValidator.accept(cityJSONConvertedInJsonExtension);
 
               var texturedCityJSON =
                   textureComputer.applyTexture(request, cityJSONConvertedInJsonExtension);

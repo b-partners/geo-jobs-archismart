@@ -1,0 +1,1 @@
+alter type lidar_processor_type add value if not exists 'SAFE_MODE';

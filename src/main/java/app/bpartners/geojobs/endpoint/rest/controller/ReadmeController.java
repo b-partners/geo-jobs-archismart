@@ -1,10 +1,10 @@
 package app.bpartners.geojobs.endpoint.rest.controller;
 
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.ReadmeWebhookConf;
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.ReadmeWebhookService;
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.ReadmeWebhookValidator;
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.model.CreateWebhook;
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.model.SingleUserInfo;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookConf;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookService;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookValidator;
+import app.bpartners.geojobs.readme.webhook.model.CreateWebhook;
+import app.bpartners.geojobs.readme.webhook.model.SingleUserInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;

@@ -3,11 +3,12 @@ package app.bpartners.geojobs.endpoint.rest.controller;
 import static app.bpartners.geojobs.endpoint.rest.model.RoofScoreCategory.E;
 import static org.junit.jupiter.api.Assertions.*;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofScoreMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson.RoofScoreCategoryMapper;
-import app.bpartners.geojobs.endpoint.rest.validator.RoofDamageRateValidator;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.RoofController;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.RoofScoreMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.cityjson.RoofScoreCategoryMapper;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.geometry.area.RoofScoreComputer;
+import app.bpartners.geojobs.validator.RoofDamageRateValidator;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 

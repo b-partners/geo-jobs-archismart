@@ -1,10 +1,12 @@
 package app.bpartners.geojobs.endpoint.rest.postprocessing.model;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon.originTile;
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon.toPixel;
+import static app.bpartners.geojobs.postprocessing.model.LatLonPolygon.originTile;
+import static app.bpartners.geojobs.postprocessing.model.LatLonPolygon.toPixel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.model.geometry.IntXY;
+import app.bpartners.geojobs.postprocessing.model.LatLon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 

@@ -1,8 +1,8 @@
 package app.bpartners.geojobs.endpoint.event.model.readme;
 
 import app.bpartners.geojobs.endpoint.event.model.PojaEvent;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.ReadmeMonitorConf;
-import app.bpartners.geojobs.endpoint.rest.readme.monitor.model.ReadmeLog;
+import app.bpartners.geojobs.readme.monitor.ReadmeMonitorConf;
+import app.bpartners.geojobs.readme.monitor.model.ReadmeLog;
 import java.time.Duration;
 import lombok.*;
 

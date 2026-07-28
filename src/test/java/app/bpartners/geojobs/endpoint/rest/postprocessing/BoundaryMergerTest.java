@@ -1,15 +1,17 @@
 package app.bpartners.geojobs.endpoint.rest.postprocessing;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.BoundaryMerger.invert;
+import static app.bpartners.geojobs.postprocessing.BoundaryMerger.invert;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.BATI_BETON;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.PolygonProvider;
+import app.bpartners.geojobs.postprocessing.BoundaryMerger;
+import app.bpartners.geojobs.postprocessing.GeoJsonLoader;
+import app.bpartners.geojobs.postprocessing.model.LatLonPolygon;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.File;
 import java.util.Set;
 import org.junit.jupiter.api.Test;

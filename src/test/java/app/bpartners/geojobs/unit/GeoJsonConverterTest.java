@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.endpoint.rest.model.TileInfoSize;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.DetectionBoundaryMerger;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon;
 import app.bpartners.geojobs.model.DetectedTile;
+import app.bpartners.geojobs.postprocessing.DetectionBoundaryMerger;
+import app.bpartners.geojobs.postprocessing.model.LatLonPolygon;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectType;
 import app.bpartners.geojobs.repository.model.detection.DetectedObject;

@@ -7,7 +7,7 @@ import static app.bpartners.geojobs.endpoint.rest.model.Polygon.TypeEnum.POLYGON
 import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.*;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.model.Feature;

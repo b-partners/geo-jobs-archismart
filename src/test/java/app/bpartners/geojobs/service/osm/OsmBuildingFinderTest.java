@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.osm;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
 

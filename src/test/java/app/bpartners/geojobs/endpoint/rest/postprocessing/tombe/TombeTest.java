@@ -1,17 +1,16 @@
 package app.bpartners.geojobs.endpoint.rest.postprocessing.tombe;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.BoundaryMerger.*;
+import static app.bpartners.geojobs.postprocessing.BoundaryMerger.*;
 import static java.util.stream.Collectors.toSet;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.GeoJsonLoader;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.LatLonPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.MinimumBoundingRectangle;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.PolygonProvider;
 import app.bpartners.geojobs.model.geometry.route.UnifiedRoute;
 import app.bpartners.geojobs.model.geometry.route.UnionConf;
-import java.awt.*;
+import app.bpartners.geojobs.postprocessing.GeoJsonLoader;
+import app.bpartners.geojobs.postprocessing.model.LatLonPolygon;
+import app.bpartners.geojobs.postprocessing.model.MinimumBoundingRectangle;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.File;
 import java.util.Comparator;
 import java.util.HashSet;

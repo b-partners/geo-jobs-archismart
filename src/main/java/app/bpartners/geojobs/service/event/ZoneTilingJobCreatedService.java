@@ -21,7 +21,14 @@ public class ZoneTilingJobCreatedService implements Consumer<ZoneTilingJobCreate
   public void accept(ZoneTilingJobCreated zoneTilingJobCreated) {
     ZoneTilingJob ztj = zoneTilingJobCreated.getZoneTilingJob();
 
-    zoneTilingJobService.fireTasks(ztj);
+    var tilingTasks = zoneTilingJobService.fireTasks(ztj);
+
+    if (tilingTasks.isEmpty()) {
+      zoneTilingJobService.fail(
+          ztj,
+          "Unable to fire tiling tasks as no tiles could be computed using provided coordinates");
+      return;
+    }
 
     eventProducer.accept(List.of(new ZTJStatusRecomputingSubmitted(ztj.getId())));
     eventProducer.accept(List.of(new AutoTaskStatisticRecomputingSubmitted(ztj.getId())));

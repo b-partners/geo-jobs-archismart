@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.RoofDelimiterMapper;
 import app.bpartners.geojobs.endpoint.rest.model.RoofDelimiter;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.service.BuildingFinder;

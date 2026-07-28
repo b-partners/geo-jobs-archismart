@@ -11,14 +11,18 @@ import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.OK;
 
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
+import app.bpartners.geojobs.service.cacher.CacherApiClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -30,6 +34,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 class LidarApiFacadeTest {
   RestTemplate restTemplateMock = mock();
+  CacherApiClient cacherApiClientMock = mock();
   LidarApiFacade subject =
       new LidarApiFacade(
           new IgnLidarApi(new IgnLidarApiConf(IGN_LIDAR_API_URL), restTemplateMock),
@@ -39,7 +44,8 @@ class LidarApiFacadeTest {
           new SwissBoundaryChecker(),
           new SwissLidarApi(restTemplateMock),
           new GeometrySquareMeterArea(),
-          restTemplateMock);
+          restTemplateMock,
+          cacherApiClientMock);
 
   private static final String UPDATED_FILE_URL = "https://data.geopf.fr/dummy.laz";
   private static final String DEPRECATED_FILE_URL = "https://storage.sbg.cloud.ovh.net/dummy.laz";
@@ -54,6 +60,12 @@ class LidarApiFacadeTest {
           new Coordinate(6.220857751344101, 46.218330151666642)
         };
     return geometryFactory.createPolygon(swissCoordinates);
+  }
+
+  @SneakyThrows
+  @BeforeEach
+  void setUp() {
+    when(cacherApiClientMock.getWithCache(any())).thenReturn(new URL(UPDATED_FILE_URL));
   }
 
   @Test
@@ -119,7 +131,7 @@ class LidarApiFacadeTest {
 
   @Test
   void download_should_return_correct_file() {
-    when(restTemplateMock.getForObject(any(String.class), eq(byte[].class)))
+    when(restTemplateMock.getForObject(any(URI.class), eq(byte[].class)))
         .thenReturn(new byte[] {1, 2, 3});
 
     var actual = subject.download(UPDATED_FILE_URL);
@@ -129,7 +141,7 @@ class LidarApiFacadeTest {
 
   @Test
   void download_should_return_empty_if_not_found() {
-    when(restTemplateMock.getForObject(any(String.class), eq(byte[].class)))
+    when(restTemplateMock.getForObject(any(URI.class), eq(byte[].class)))
         .thenThrow(mock(HttpClientErrorException.NotFound.class));
 
     var actual = subject.download(UPDATED_FILE_URL);

@@ -20,6 +20,7 @@ import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Consumer;
@@ -59,19 +60,36 @@ public class ThreeDMultipleAddressRequestedService
     if (addresses == null) {
       return;
     }
-    List<Feature> convertedFeatures;
-    try {
-      convertedFeatures =
-          addresses.stream()
-              .map(addressValue -> featureAddressConverter.apply(addressValue, BUILDING))
-              .toList();
-    } catch (ApiException e) {
+    var convertedFeatures = new ArrayList<Feature>();
+    var skippedAddresses = new ArrayList<String>();
+    for (var addressValue : addresses) {
+      try {
+        convertedFeatures.add(featureAddressConverter.apply(addressValue, BUILDING));
+      } catch (ApiException e) {
+        log.warn(
+            "Skipping address={} of CityJSONRequest(id={}) as its conversion to feature failed",
+            addressValue,
+            persistedRequest.getId(),
+            e);
+        skippedAddresses.add(addressValue);
+      }
+    }
+    if (convertedFeatures.isEmpty() && !skippedAddresses.isEmpty()) {
       log.error(
-          "Conversion of addresses to features failed with API exception from dashboard {}",
-          e.getMessage());
+          "Conversion of all {} address(es) of CityJSONRequest(id={}) failed",
+          addresses.size(),
+          persistedRequest.getId());
       cityJSONRequestRepository.save(
           persistedRequest.toBuilder().step(REQUEST_ACCEPTED).status(FAILED).build());
       return;
+    }
+    if (!skippedAddresses.isEmpty()) {
+      log.warn(
+          "Processing CityJSONRequest(id={}) with {} skipped address(es) out of {} : {}",
+          persistedRequest.getId(),
+          skippedAddresses.size(),
+          addresses.size(),
+          skippedAddresses);
     }
 
     var saved =
@@ -95,38 +113,53 @@ public class ThreeDMultipleAddressRequestedService
     if (points == null) {
       return;
     }
-    List<FeatureWithDelimitation> convertedFeatureDelimitations;
-    try {
-      convertedFeatureDelimitations =
-          points.stream()
-              .map(
-                  point -> {
-                    var longitude = point.getCoordinates().getFirst().doubleValue();
-                    var latitude = point.getCoordinates().getLast().doubleValue();
-                    Feature pointFeature;
-                    try {
-                      pointFeature =
-                          new Feature(
-                              null,
-                              HOUSES_0.getZoomLevel(),
-                              new HashMap<>(),
-                              new Feature.FeatureGeometry(
-                                  POINT, new ObjectMapper().writeValueAsString(point)));
-                    } catch (JsonProcessingException e) {
-                      throw new RuntimeException(e);
-                    }
-                    var retrievedObjectTypeDelimitations =
-                        List.of(featureAddressConverter.apply(null, longitude, latitude));
-                    return new FeatureWithDelimitation(
-                        pointFeature, retrievedObjectTypeDelimitations);
-                  })
-              .toList();
-    } catch (ApiException e) {
+    var convertedFeatureDelimitations = new ArrayList<FeatureWithDelimitation>();
+    var skippedPoints = new ArrayList<Point>();
+    for (var point : points) {
+      var longitude = point.getCoordinates().getFirst().doubleValue();
+      var latitude = point.getCoordinates().getLast().doubleValue();
+      Feature pointFeature;
+      try {
+        pointFeature =
+            new Feature(
+                null,
+                HOUSES_0.getZoomLevel(),
+                new HashMap<>(),
+                new Feature.FeatureGeometry(POINT, new ObjectMapper().writeValueAsString(point)));
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+      try {
+        var retrievedObjectTypeDelimitations =
+            List.of(featureAddressConverter.apply(null, longitude, latitude));
+        convertedFeatureDelimitations.add(
+            new FeatureWithDelimitation(pointFeature, retrievedObjectTypeDelimitations));
+      } catch (ApiException e) {
+        log.warn(
+            "Skipping point (longitude={}, latitude={}) of CityJSONRequest(id={}) as its"
+                + " conversion to feature failed",
+            longitude,
+            latitude,
+            persistedRequest.getId(),
+            e);
+        skippedPoints.add(point);
+      }
+    }
+    if (convertedFeatureDelimitations.isEmpty() && !skippedPoints.isEmpty()) {
       log.error(
-          "Conversion of addresses to features failed with API exception from dashboard {}",
-          e.getMessage());
+          "Conversion of all {} point(s) of CityJSONRequest(id={}) failed",
+          points.size(),
+          persistedRequest.getId());
       cityJSONRequestRepository.save(persistedRequest.toBuilder().status(FAILED).build());
       return;
+    }
+    if (!skippedPoints.isEmpty()) {
+      log.warn(
+          "Processing CityJSONRequest(id={}) with {} skipped point(s) out of {} : {}",
+          persistedRequest.getId(),
+          skippedPoints.size(),
+          points.size(),
+          skippedPoints);
     }
 
     var saved =

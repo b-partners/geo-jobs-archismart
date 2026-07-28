@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.repository.model.detection;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING;
@@ -16,12 +16,12 @@ import static java.util.UUID.randomUUID;
 import static org.hibernate.type.SqlTypes.JSON;
 import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
-import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.feature.FeatureDelimitationComputing;
+import app.bpartners.geojobs.validator.FeatureTypeChecker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
@@ -145,6 +145,8 @@ public class Detection implements Serializable {
   @JoinColumn(name = "detection_id")
   private List<DetectionStep> detectionSteps = new ArrayList<>();
 
+  @Transient private DetectionStep computedStep;
+
   @Column(nullable = true, updatable = false)
   private Instant creationDatetime;
 
@@ -243,6 +245,11 @@ public class Detection implements Serializable {
         : detectionSteps.stream()
             .max(Comparator.comparing(DetectionStep::getCreationDatetime))
             .orElse(null);
+  }
+
+  public DetectionStep getCurrentStep() {
+    var persistedStep = getStep();
+    return persistedStep != null ? persistedStep : computedStep;
   }
 
   public boolean isOnStepPostProcessingSucceeded() {

@@ -8,26 +8,17 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static software.amazon.awssdk.http.HttpStatusCode.*;
 
+import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.model.Feature;
-import app.bpartners.geojobs.service.BuildingFinder;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
 import app.bpartners.geojobs.service.GeoCodeService;
-import app.bpartners.geojobs.service.dashboard.component.AreaPictureDetails;
-import app.bpartners.geojobs.service.dashboard.component.GeoPosition;
-import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.MultiPolygon;
 
 class FeatureAddressConverterTest {
-  GeometryConverter geometryConverterMock = mock();
-  BuildingFinder buildingFinderMock = mock();
   GeoCodeService geoCodeServiceMock = mock();
-  FeatureAddressConverter subject =
-      new FeatureAddressConverter(geometryConverterMock, buildingFinderMock, geoCodeServiceMock);
+  FeatureAddressConverter subject = new FeatureAddressConverter(geoCodeServiceMock);
 
   @Test
   void throws_exception_when_delimitation_object_type_not_building() {
@@ -43,24 +34,62 @@ class FeatureAddressConverterTest {
   @Test
   void return_converted_feature_when_address_is_converted_to_point_geometry() {
     var randomAddress = "address " + randomUUID();
-    var longitudeDoubleValue = 1.0;
-    var latitudeDoubleValue = 2.0;
     Feature convertedFeatureMock = mock();
-    MultiPolygon nearestRoofMultiPolygonMock = mock();
-    AreaPictureDetails areaPictureDetailsMock = mock();
-    GeoPosition geoPositionMock = mock();
-    when(geoPositionMock.longitude()).thenReturn(longitudeDoubleValue);
-    when(geoPositionMock.latitude()).thenReturn(latitudeDoubleValue);
-    when(areaPictureDetailsMock.currentGeoPosition()).thenReturn(geoPositionMock);
     when(geoCodeServiceMock.geocode(randomAddress)).thenReturn(convertedFeatureMock);
-    when(buildingFinderMock.getBuildingMultiPolygon(
-            List.of(
-                BigDecimal.valueOf(longitudeDoubleValue), BigDecimal.valueOf(latitudeDoubleValue))))
-        .thenReturn(nearestRoofMultiPolygonMock);
-    when(geometryConverterMock.toFeature(
-            anyString(), anyInt(), any(HashMap.class), any(MultiPolygon.class)))
+
+    var actual = subject.apply(randomAddress, BUILDING);
+
+    assertEquals(convertedFeatureMock, actual);
+  }
+
+  @Test
+  void return_converted_feature_from_coordinates() {
+    var randomAddress = "address " + randomUUID();
+    var longitude = 1.0;
+    var latitude = 2.0;
+    Feature convertedFeatureMock = mock();
+    when(geoCodeServiceMock.geocode(
+            randomAddress, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)))
         .thenReturn(convertedFeatureMock);
 
-    assertDoesNotThrow(() -> subject.apply(randomAddress, BUILDING));
+    var actual = subject.apply(randomAddress, longitude, latitude);
+
+    assertEquals(convertedFeatureMock, actual);
+    verify(geoCodeServiceMock)
+        .geocode(randomAddress, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude));
+  }
+
+  @Test
+  void return_converted_feature_from_coordinates_without_address() {
+    var longitude = 1.0;
+    var latitude = 2.0;
+    Feature convertedFeatureMock = mock();
+    when(geoCodeServiceMock.geocode(
+            null, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)))
+        .thenReturn(convertedFeatureMock);
+
+    var actual = subject.apply(null, longitude, latitude);
+
+    assertEquals(convertedFeatureMock, actual);
+  }
+
+  @Test
+  void throws_exception_when_no_building_found_from_coordinates() {
+    var longitude = 1.0;
+    var latitude = 2.0;
+    var exceptionMessage =
+        "No building found for coordinates (longitude="
+            + BigDecimal.valueOf(longitude)
+            + ", latitude="
+            + BigDecimal.valueOf(latitude)
+            + ")";
+    when(geoCodeServiceMock.geocode(
+            null, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)))
+        .thenThrow(new BadRequestException(exceptionMessage));
+
+    var actual =
+        assertThrows(BadRequestException.class, () -> subject.apply(null, longitude, latitude));
+
+    assertEquals(exceptionMessage, actual.getMessage());
   }
 }

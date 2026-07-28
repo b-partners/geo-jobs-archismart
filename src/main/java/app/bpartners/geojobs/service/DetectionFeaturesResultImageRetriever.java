@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.getCentroidRestPointFromPolygon;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.getCentroidRestPointFromPolygon;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;

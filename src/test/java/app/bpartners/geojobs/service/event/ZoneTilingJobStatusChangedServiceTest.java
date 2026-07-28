@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.endpoint.event.EventStack.EVENT_STACK_2;
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.*;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.*;
@@ -167,7 +167,7 @@ class ZoneTilingJobStatusChangedServiceTest {
     when(detectionRepositoryMock.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(objectConfigurationRepositoryMock.saveAll(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    doNothing().when(detectionDelimitationRetrieverMock).accept(detection);
+    when(detectionDelimitationRetrieverMock.apply(detection)).thenReturn(detection);
     doNothing().when(mailerMock).accept(any());
     when(tilingTaskRepositoryMock.findAllByJobId(any())).thenReturn(List.of());
 

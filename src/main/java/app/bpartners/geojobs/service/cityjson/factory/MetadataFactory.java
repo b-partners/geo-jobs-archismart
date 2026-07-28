@@ -5,17 +5,15 @@ import org.citygml4j.cityjson.model.metadata.Metadata;
 import org.citygml4j.cityjson.model.metadata.ReferenceSystem;
 
 public class MetadataFactory {
-  private static final String LAMBERT_93 = "EPSG:2154";
-
   private MetadataFactory() {}
 
-  public static Metadata make(String id, String title) {
+  public static Metadata make(String id, String title, String crs) {
     var metadata = new Metadata();
 
     metadata.setIdentifier(id);
     metadata.setTitle(title);
     metadata.setPointOfContact(new BirdiaPointOfContact());
-    metadata.setReferenceSystem(ReferenceSystem.parse(LAMBERT_93));
+    metadata.setReferenceSystem(ReferenceSystem.parse(crs));
 
     return metadata;
   }

@@ -3,14 +3,15 @@ package app.bpartners.geojobs.endpoint.rest.postprocessing.density;
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.continuer.VGGLinesContinuer;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.PolygonProvider;
 import app.bpartners.geojobs.model.geometry.quadrilateral.model.AlphaConf;
 import app.bpartners.geojobs.model.geometry.route.ContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.PrettyConf;
 import app.bpartners.geojobs.model.geometry.route.RoutesContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.UnionConf;
+import app.bpartners.geojobs.postprocessing.continuer.VGGLinesContinuer;
+import app.bpartners.geojobs.postprocessing.density.LineDensityEliminator;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;

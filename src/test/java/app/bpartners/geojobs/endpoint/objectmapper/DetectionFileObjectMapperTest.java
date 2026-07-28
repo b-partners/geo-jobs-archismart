@@ -44,4 +44,30 @@ class DetectionFileObjectMapperTest {
             .fileUrl(presignedUrl),
         actual);
   }
+
+  @Test
+  void apply_detection_file_object_to_rest_with_null_file_type() {
+    var bucketKey = "bucketKey";
+    var fileName = "fileName";
+    var presignedUrl = "presignedUrl";
+    when(bucketComponentMock.presign(bucketKey)).thenReturn(presignedUrl);
+
+    var actual =
+        subject.toRest(
+            DetectionFileObject.builder()
+                .id(randomUUID().toString())
+                .detectionIdentifier(randomUUID().toString())
+                .bucketKey(bucketKey)
+                .fileName(fileName)
+                .fileType(null)
+                .creationDatetime(now())
+                .build());
+
+    assertEquals(
+        new app.bpartners.geojobs.endpoint.rest.model.DetectionFileObject()
+            .fileName(fileName)
+            .fileType(null)
+            .fileUrl(presignedUrl),
+        actual);
+  }
 }

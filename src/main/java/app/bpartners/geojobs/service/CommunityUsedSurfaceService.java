@@ -5,7 +5,7 @@ import static app.bpartners.geojobs.repository.model.SurfaceUnit.SQUARE_METER;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionSurfaceValueMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionSurfaceValueMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectionUsage;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;

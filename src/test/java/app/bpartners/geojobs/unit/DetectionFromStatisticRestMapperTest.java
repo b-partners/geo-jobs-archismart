@@ -9,11 +9,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionStepStatisticMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.RoofDelimiterMapper;
-import app.bpartners.geojobs.endpoint.rest.mapper.DetectionFromStatisticRestMapper;
-import app.bpartners.geojobs.endpoint.rest.mapper.DetectionFromStepMapper;
-import app.bpartners.geojobs.endpoint.rest.mapper.DetectionStepMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionFromStatisticRestMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionFromStepMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionStepMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionStepStatisticMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.RoofDelimiterMapper;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;

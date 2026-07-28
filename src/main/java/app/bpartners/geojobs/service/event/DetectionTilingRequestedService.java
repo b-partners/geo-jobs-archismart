@@ -15,6 +15,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.DetectionStepRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.DetectionStep;
+import app.bpartners.geojobs.service.DetectionDelimitationRetriever;
 import app.bpartners.geojobs.service.DetectionSupportedAreaValidator;
 import app.bpartners.geojobs.service.DetectionSupportedModelValidator;
 import app.bpartners.geojobs.service.detection.DetectionTilingCreation;
@@ -34,14 +35,20 @@ public class DetectionTilingRequestedService implements Consumer<DetectionTiling
   private final EventProducer eventProducer;
   private final DetectionStepRepository detectionStepRepository;
   private final DetectionSupportedModelValidator detectionSupportedModelValidator;
+  private final DetectionDelimitationRetriever detectionDelimitationRetriever;
 
   @Override
   public void accept(DetectionTilingRequested detectionTilingRequested) {
     var detectionIdentifier = detectionTilingRequested.getDetectionIdentifier();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
-    if (hasUnsupportedArea(detection)) return;
-    if (hasUnsupportedModel(detection)) return;
-    detectionTilingCreation.apply(detection);
+
+    // TODO: move into pre-tiling job
+    var detectionWithDelimitation = detectionDelimitationRetriever.apply(detection);
+
+    if (hasUnsupportedArea(detectionWithDelimitation)) return;
+    if (hasUnsupportedModel(detectionWithDelimitation)) return;
+
+    detectionTilingCreation.apply(detectionWithDelimitation);
   }
 
   private boolean hasUnsupportedModel(Detection detection) {

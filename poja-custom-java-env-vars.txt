@@ -23,3 +23,4 @@ GOOGLE_GEOCODE_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/google/geocode/api-
 ROOFER_3D_BAG_BASE_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/base-url}}'
 ROOFER_3D_BAG_API_KEY: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/api-key}}'
 ROOFER_3D_BAG_COMPLEXITY_FACTOR: !Sub '{{resolve:ssm:/geo-jobs/${Env}/roofer/3d-bag/complexity-factor}}'
+CITY_JSON_PROCESSOR_API_URL: !Sub '{{resolve:ssm:/geo-jobs/${Env}/city-json-processor/api/url}}'

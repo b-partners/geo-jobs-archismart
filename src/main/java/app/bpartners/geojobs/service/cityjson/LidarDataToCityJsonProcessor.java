@@ -15,6 +15,7 @@ import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
 import app.bpartners.geojobs.service.cityjson.model.BuildingData;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.PointsExtractionResult;
+import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.RoofPlane3D;
@@ -35,15 +36,18 @@ public class LidarDataToCityJsonProcessor
     implements BiFunction<String, PointsExtractionResult, File> {
   private final CityJsonFactory cityJsonFactory;
   private final Plane3DExtractionStepExporter exporter;
+  private final SwissBoundaryChecker swissBoundaryChecker;
 
   private static final String AREA_KEY = "area_in_square_meters";
   private static final String PLANE_SLOPE_KEY = "slope_in_degrees";
   private static final String DISTANCE_2D_SCALE = "distance_2d_scale";
 
   @Autowired
-  public LidarDataToCityJsonProcessor(CityJsonFactory cityJsonFactory) {
+  public LidarDataToCityJsonProcessor(
+      CityJsonFactory cityJsonFactory, SwissBoundaryChecker swissBoundaryChecker) {
     this.exporter = null;
     this.cityJsonFactory = cityJsonFactory;
+    this.swissBoundaryChecker = swissBoundaryChecker;
   }
 
   @Deprecated
@@ -62,8 +66,10 @@ public class LidarDataToCityJsonProcessor
     var buildingsData =
         result.data().values().stream().map(roof -> toBuildingData(roof, conf)).toList();
 
+    var crs = getCrs(result);
+
     try {
-      var cityJsonFile = cityJsonFactory.make(id, id, buildingsData);
+      var cityJsonFile = cityJsonFactory.make(id, id, buildingsData, crs);
       log.info("CityJSON file saved at {}", cityJsonFile.getAbsolutePath());
       return cityJsonFile;
     } catch (CityJsonException e) {
@@ -139,5 +145,15 @@ public class LidarDataToCityJsonProcessor
     var delimitation2DArea = roof.getArea();
     var planes2DArea = planes.stream().mapToDouble(RoofPlane3D::get2DArea).sum();
     return delimitation2DArea / planes2DArea;
+  }
+
+  private String getCrs(PointsExtractionResult result) {
+    var firstRoof = result.data().values().stream().findFirst();
+    if (firstRoof.isPresent()
+        && swissBoundaryChecker.isGeometryInSwiss(
+            firstRoof.get().getOriginalInEPSG4336())) { // TODO: EPSG4326 ?
+      return "EPSG:2056";
+    }
+    return "EPSG:2154";
   }
 }

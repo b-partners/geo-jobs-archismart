@@ -12,8 +12,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.conf.FacadeIT;
-import app.bpartners.geojobs.endpoint.rest.controller.SecurityController;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.RevokedApiKeyMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.SecurityController;
 import app.bpartners.geojobs.endpoint.rest.model.CreateApiKey;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.RevokeApiKey;

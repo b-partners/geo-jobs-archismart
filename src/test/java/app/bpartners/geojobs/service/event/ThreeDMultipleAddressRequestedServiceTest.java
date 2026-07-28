@@ -17,6 +17,7 @@ import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
 import app.bpartners.geojobs.endpoint.event.model.ThreeDMultipleAddressRequested;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.model.exception.ApiException;
+import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
@@ -70,6 +71,108 @@ class ThreeDMultipleAddressRequestedServiceTest {
     assertEquals(
         CityJSONRequest.builder().status(FAILED).step(REQUEST_ACCEPTED).build(),
         savedFailedRequestCaptor.getValue());
+  }
+
+  @Test
+  void skips_failing_address_and_produces_event_computing_with_remaining_ones() {
+    var requestIdentifier = randomUUID().toString();
+    var communityOwnerId = randomUUID().toString();
+    var geocodableAddress = "geocodable " + randomUUID();
+    var ungeocodableAddress = "ungeocodable " + randomUUID();
+    var request =
+        CityJSONRequest.builder().id(requestIdentifier).communityOwnerId(communityOwnerId).build();
+    var convertedAddressFeature = mock(Feature.class);
+    when(cityJSONRequestRepositoryMock.findByIdAndCommunityOwnerId(
+            requestIdentifier, communityOwnerId))
+        .thenReturn(Optional.of(request));
+    when(featureAddressConverterMock.apply(geocodableAddress, BUILDING))
+        .thenReturn(convertedAddressFeature);
+    when(featureAddressConverterMock.apply(ungeocodableAddress, BUILDING))
+        .thenThrow(
+            new BadRequestException("No building found for address : " + ungeocodableAddress));
+    when(cityJSONRequestRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+
+    assertDoesNotThrow(
+        () ->
+            subject.accept(
+                ThreeDMultipleAddressRequested.builder()
+                    .requestIdentifier(requestIdentifier)
+                    .communityOwnerId(communityOwnerId)
+                    .addresses(List.of(ungeocodableAddress, geocodableAddress))
+                    .build()));
+
+    var savedRequestCaptor = ArgumentCaptor.forClass(CityJSONRequest.class);
+    verify(cityJSONRequestRepositoryMock, times(1)).save(savedRequestCaptor.capture());
+    var savedRequest = savedRequestCaptor.getValue();
+    assertEquals(List.of(convertedAddressFeature), savedRequest.getDelimitations());
+    assertEquals(POINTS_CLOUD_PRE_PROCESSING, savedRequest.getStep());
+    assertNotEquals(FAILED, savedRequest.getStatus());
+    verify(eventProducerMock, times(1)).accept(any());
+  }
+
+  @SneakyThrows
+  @Test
+  void skips_failing_point_and_produces_event_computing_with_remaining_ones() {
+    var requestIdentifier = randomUUID().toString();
+    var communityOwnerId = randomUUID().toString();
+    var request =
+        CityJSONRequest.builder().id(requestIdentifier).communityOwnerId(communityOwnerId).build();
+    var convertibleLongitude = 0.2492928974906442;
+    var convertibleLatitude = 46.65193378162583;
+    var unconvertibleLongitude = 1.0;
+    var unconvertibleLatitude = 2.0;
+    var convertiblePoint =
+        new Point()
+            .coordinates(
+                List.of(
+                    BigDecimal.valueOf(convertibleLongitude),
+                    BigDecimal.valueOf(convertibleLatitude)));
+    var unconvertiblePoint =
+        new Point()
+            .coordinates(
+                List.of(
+                    BigDecimal.valueOf(unconvertibleLongitude),
+                    BigDecimal.valueOf(unconvertibleLatitude)));
+    var convertedFeatureFromPoints = mock(Feature.class);
+    when(cityJSONRequestRepositoryMock.findByIdAndCommunityOwnerId(
+            requestIdentifier, communityOwnerId))
+        .thenReturn(Optional.of(request));
+    when(featureAddressConverterMock.apply(null, convertibleLongitude, convertibleLatitude))
+        .thenReturn(convertedFeatureFromPoints);
+    when(featureAddressConverterMock.apply(null, unconvertibleLongitude, unconvertibleLatitude))
+        .thenThrow(new BadRequestException("No building found for coordinates"));
+    when(cityJSONRequestRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+
+    assertDoesNotThrow(
+        () ->
+            subject.accept(
+                ThreeDMultipleAddressRequested.builder()
+                    .requestIdentifier(requestIdentifier)
+                    .communityOwnerId(communityOwnerId)
+                    .addresses(null)
+                    .points(List.of(unconvertiblePoint, convertiblePoint))
+                    .build()));
+
+    var savedRequestCaptor = ArgumentCaptor.forClass(CityJSONRequest.class);
+    verify(cityJSONRequestRepositoryMock, times(1)).save(savedRequestCaptor.capture());
+    var savedRequest = savedRequestCaptor.getValue();
+    var expectedPointFeature =
+        new Feature(
+            null,
+            HOUSES_0.getZoomLevel(),
+            new HashMap<>(),
+            Feature.FeatureGeometry.builder()
+                .geometryType(POINT)
+                .actualInstanceStringValue(new ObjectMapper().writeValueAsString(convertiblePoint))
+                .build());
+    assertEquals(
+        List.of(
+            new FeatureWithDelimitation(expectedPointFeature, List.of(convertedFeatureFromPoints))),
+        savedRequest.getFeaturesWithDelimitation());
+    assertNotEquals(FAILED, savedRequest.getStatus());
+    verify(eventProducerMock, times(1)).accept(any());
   }
 
   @Test

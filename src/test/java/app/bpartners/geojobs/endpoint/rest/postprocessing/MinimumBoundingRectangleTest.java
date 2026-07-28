@@ -6,13 +6,13 @@ import static java.awt.Color.BLACK;
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.MinimumBoundingRectangle;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.MinimumBoundingRectangleEq;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.IntXY;
 import app.bpartners.geojobs.model.geometry.plot.PlotablePlane;
 import app.bpartners.geojobs.model.geometry.polygon.PolygonOrientation;
+import app.bpartners.geojobs.postprocessing.model.MinimumBoundingRectangle;
+import app.bpartners.geojobs.postprocessing.model.MinimumBoundingRectangleEq;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;

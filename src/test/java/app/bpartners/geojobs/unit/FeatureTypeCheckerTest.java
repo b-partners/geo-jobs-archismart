@@ -11,7 +11,7 @@ import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
-import app.bpartners.geojobs.endpoint.rest.validator.FeatureTypeChecker;
+import app.bpartners.geojobs.validator.FeatureTypeChecker;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;

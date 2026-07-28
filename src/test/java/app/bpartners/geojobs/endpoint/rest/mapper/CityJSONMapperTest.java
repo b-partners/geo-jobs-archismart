@@ -3,7 +3,7 @@ package app.bpartners.geojobs.endpoint.rest.mapper;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson.CityJSONMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.cityjson.CityJSONMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CityJSON;
 import org.junit.jupiter.api.Test;
 

@@ -21,6 +21,7 @@ import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
+import app.bpartners.geojobs.service.event.CityJSONRequestCreatedService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -35,10 +36,14 @@ class CityJSONRequestServiceTest {
   CityJSONRequestRepository cityJSONRequestRepositoryMock = mock();
   EventProducer eventProducerMock = mock();
   FeatureAddressConverter featureAddressConverterMock = mock();
+  CityJSONRequestCreatedService requestCreatedServiceMock = mock();
 
   CityJSONRequestService subject =
       new CityJSONRequestService(
-          cityJSONRequestRepositoryMock, eventProducerMock, featureAddressConverterMock);
+          cityJSONRequestRepositoryMock,
+          eventProducerMock,
+          featureAddressConverterMock,
+          requestCreatedServiceMock);
 
   @SneakyThrows
   @Test

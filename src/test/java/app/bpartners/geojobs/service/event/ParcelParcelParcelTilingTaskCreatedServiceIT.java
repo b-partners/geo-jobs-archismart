@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.tile.ParcelTilingTaskCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.ZoneTilingController;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.ZoneTilingController;
 import app.bpartners.geojobs.endpoint.rest.model.GeoServerParameter;
 import app.bpartners.geojobs.endpoint.rest.model.TiledParcel;
 import app.bpartners.geojobs.file.bucket.BucketComponent;

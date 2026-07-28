@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
 
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;

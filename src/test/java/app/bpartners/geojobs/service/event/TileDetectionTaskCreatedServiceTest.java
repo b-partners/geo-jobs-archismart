@@ -80,7 +80,7 @@ class TileDetectionTaskCreatedServiceTest {
     // fail-fast: the exception is swallowed (no rethrow) so the message is acked, not retried
     assertDoesNotThrow(() -> subject.accept(expectedTileDetectionTaskCreated));
     verify(tileDetectionTaskStatusServiceMock, never()).succeed(any());
-    verify(tileDetectionTaskStatusServiceMock).fail(any());
+    verify(tileDetectionTaskStatusServiceMock).fail(any(), any());
     verify(tileDetectionTaskRepositoryMock).save(any());
   }
 }

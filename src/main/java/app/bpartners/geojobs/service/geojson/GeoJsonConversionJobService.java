@@ -11,7 +11,7 @@ import static java.util.UUID.randomUUID;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionJobStatusChanged;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.StatusMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.StatusMapper;
 import app.bpartners.geojobs.endpoint.rest.model.GeoJsonsUrl;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.job.model.JobStatus;

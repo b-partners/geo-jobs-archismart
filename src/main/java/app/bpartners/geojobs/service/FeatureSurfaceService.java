@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.model.geometry.area.AreaComputer;
 import java.util.List;

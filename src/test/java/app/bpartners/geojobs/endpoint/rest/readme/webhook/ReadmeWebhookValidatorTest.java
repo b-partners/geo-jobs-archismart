@@ -1,14 +1,16 @@
 package app.bpartners.geojobs.endpoint.rest.readme.webhook;
 
-import static app.bpartners.geojobs.endpoint.rest.readme.webhook.ReadmeWebhookValidator.calculateHmacSHA256;
+import static app.bpartners.geojobs.readme.webhook.ReadmeWebhookValidator.calculateHmacSHA256;
 import static java.time.Instant.now;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.model.CreateWebhook;
 import app.bpartners.geojobs.model.exception.ForbiddenException;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookConf;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookValidator;
+import app.bpartners.geojobs.readme.webhook.model.CreateWebhook;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

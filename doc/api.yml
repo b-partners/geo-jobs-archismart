@@ -7,6 +7,9 @@ info:
     
     # Versioning
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
+    - [v1.3.5 (2026-05-12)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-5-api.yml)
+    - [v1.3.4 (2026-03-31)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-4-api.yml)
+    - [v1.3.3 (2026-03-11)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-3-api.yml)
     - [v1.3.2 (2026-02-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-2-api.yml)
     - [v1.3.1 (2026-02-20)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-1-api.yml) *(current)*
     - [v1.3.0 (2026-02-16)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-api.yml) 
@@ -75,10 +78,11 @@ info:
     Also, `geoJsonDelimitationType` property must be set as `PARCEL` to consider the address's parcel.
     In case you need to get images and its detections result for each address detected, set `needsImageOutput` property to `true`.
     2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
-    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/excel/excel_addresses_example.xlsx)
+    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/excel/excel_addresses_example.xlsx)
     3. Track the progress of your detection through `GET /detections/{id}`. 
     Once detection is on step POST_PROCESSING with status progression FINISHED and status health SUCCEEDED : 
-    - Images result, if needed, can be obtained through each feature corresponding to each detected address inside `geoJsonZone` where `original_image_url` allow to retrieve address's image and `vgg_url` detection results to be displayed on obtained image.
+    - Images result, if needed, can be obtained through each feature corresponding to each detected address inside `geoJsonZone` where `original_image_url` allow to retrieve address's image and `vgg_url` detection results to be displayed on obtained image. 
+      Expected result can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/toiture_and_vegetation_example_response.json).
     - GeoJson result can be obtained through `geoJsonUrl` and can be displayed on a map as QGIS.
     
     # 3D request examples
@@ -856,6 +860,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detection'
+  '/detections/{id}/vgg':
+    post:
+      tags:
+        - Detection
+      operationId: computeDetectionVgg
+      summary: Compute detection VGG
+      description: >
+        Attempts to compute the VGG detection.
+        Once the VGG has been computed, it becomes immutable:
+        any further computation or modification attempt is rejected.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Detection identifier
+          required: true
+      responses:
+        200:
+          description: Detection with VGG computation in progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+        400:
+          description: Malformed request or already computed VGG.
   '/detections/{id}/fileObjects':
     get:
       tags:
@@ -1434,6 +1464,56 @@ paths:
               examples:
                 3DResponseWithStatusSucceeded:
                   $ref: '#/components/examples/ThreeDResponseWithSucceededStatusExample'
+  '/3d/{id}/sync':
+    post:
+      tags:
+        - ThreeD
+      operationId: request3DFileOnDelimitationsSync
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: 3D request identifier
+          schema:
+            type: string
+      summary: Request 3D models on provided feature
+      description: |
+        ## Overview
+        Request 3D models for the provided Features synchronously.
+        ## Point Geometry Usage
+        When `Point` geometry is provided, nearest `delimitationObjectType` such as BUILDING_ROOF is processed. Only PARCEL_FREE_DELIMITATION `delimitationType` is supported for now.
+        ## Polygon and MultiPolygon Geometry Usage
+        When `Polygon` or `MultiPolygon` geometry is provided, `delimitationObjectType` such as BUILDING_ROOF contained within the provided geometry is evaluated first. 
+        Then, its intersection is computed according to the selected `delimitationType`.
+        ### Case `delimitationType=USER_DEFINED_DELIMITATION`
+        Provided geometry is used *directly* as the delimitation for the specified `delimitationObjectType` (for example, a BUILDING_ROOF delimitation)
+        ### Case `delimitationType=PARCEL_CONSTRAINED_DELIMITATION`
+        Provided geometry is first constrained by the land parcel. Resulting area is then used to retrieve the corresponding `delimitationObjectType` (for example, BUILDING_ROOF).
+        ### Case `delimitationType=PARCEL_FREE_DELIMITATION`
+        Provided geometry is used as a delimitation without any parcel constraint. Corresponding `delimitationObjectType` (for example, BUILDING_ROOF) is then retrieved from this area.
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreeDRequest'
+            examples:
+              3DRequestUsingPoint:
+                $ref: '#/components/examples/ThreeDRequestUsingPointAndRoofTypeAndParcelFreeExample'
+              3DRequestUsingPolygon:
+                $ref: '#/components/examples/ThreeDRequestUsingPolygonAndRoofObjectTypeAndParcelFreeExample'
+      responses:
+        200:
+          description: 3D response with actual request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDResponseStatus'
+              examples:
+                3DResponseWithStatusSucceeded:
+                  $ref: '#/components/examples/ThreeDResponseWithSucceededStatusExample'
   '/3d/{id}/addresses':
     post:
       tags:
@@ -1487,18 +1567,28 @@ paths:
       operationId: geocodeAddress
       summary: Resolve an address into a GeoJSON Feature
       description: |
-        Converts a textual address into a geographic location and returns the result as a GeoJSON Feature.
+        Converts a textual address or point coordinates (longitude, latitude) into a geographic location and returns the result as a GeoJSON Feature.
         The service performs forward geocoding by querying external geocoding providers and transforms the response into a standardized GeoJSON Feature object.
       parameters:
         - in: query
           name: address
-          required: true
+          required: false
           description: Address to geocode
           schema:
             type: string
+        - in: query
+          name: longitude
+          required: false
+          schema:
+            type: number
+        - in: query
+          name: latitude
+          required: false
+          schema:
+            type: number
       responses:
         200:
-          description: GeoJSON Feature corresponding to address
+          description: GeoJSON Feature corresponding to address or point coordinates
           content:
             application/json:
               schema:
@@ -1545,6 +1635,9 @@ paths:
                 file:
                   type: string
                   format: binary
+                sheetIndex:
+                  type: integer
+                  description: Minimum value and default value is 1.
       responses:
         200:
           description: Created GeoCodingJob
@@ -2310,6 +2403,8 @@ components:
             - FAILED
             - UNKNOWN
             - RETRYING
+        message:
+          type: string
         creationDatetime:
           type: string
           format: date-time
@@ -2768,6 +2863,7 @@ components:
       type: string
       enum:
         - DEFAULT
+        - SAFE_MODE
         - THREE_D_BAG_ROOFER
     ThreeDAddressesRequest:
       type: object

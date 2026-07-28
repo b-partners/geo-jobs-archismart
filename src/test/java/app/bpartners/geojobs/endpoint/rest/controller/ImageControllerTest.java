@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.endpoint.rest.controller.v1.ImageController;
 import app.bpartners.geojobs.endpoint.rest.model.ImageDetails;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.BadRequestException;

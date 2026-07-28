@@ -1,15 +1,15 @@
 package app.bpartners.geojobs.model.geometry;
 
-import static app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon.toTiledPolygons;
+import static app.bpartners.geojobs.postprocessing.model.TiledPolygon.toTiledPolygons;
 import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toSet;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TiledPolygon;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.feature.Feature;
 import app.bpartners.geojobs.model.geometry.feature.FeatureListWithOffset;
 import app.bpartners.geojobs.model.geometry.feature.FeatureListWithoutOffset;
+import app.bpartners.geojobs.postprocessing.model.TiledPolygon;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;

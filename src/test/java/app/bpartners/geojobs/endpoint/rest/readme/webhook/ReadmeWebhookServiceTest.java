@@ -1,12 +1,13 @@
 package app.bpartners.geojobs.endpoint.rest.readme.webhook;
 
-import static app.bpartners.geojobs.endpoint.rest.readme.monitor.factory.ReadmeGroupFactory.ADMIN_LABEL_NAME;
+import static app.bpartners.geojobs.readme.monitor.factory.ReadmeGroupFactory.ADMIN_LABEL_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.readme.webhook.model.SingleUserInfo;
+import app.bpartners.geojobs.readme.webhook.ReadmeWebhookService;
+import app.bpartners.geojobs.readme.webhook.model.SingleUserInfo;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import java.util.Optional;

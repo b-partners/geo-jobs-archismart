@@ -11,7 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionTaskMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionTaskMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectedObject;
 import app.bpartners.geojobs.endpoint.rest.model.DetectedParcel;
 import app.bpartners.geojobs.endpoint.rest.model.DetectedTile;

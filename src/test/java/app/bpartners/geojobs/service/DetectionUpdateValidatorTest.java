@@ -3,7 +3,7 @@ package app.bpartners.geojobs.service;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.utils.FeatureCreator;

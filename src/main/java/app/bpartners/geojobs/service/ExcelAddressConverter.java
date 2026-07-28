@@ -9,20 +9,20 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ExcelAddressConverter implements Function<File, List<String>> {
+public class ExcelAddressConverter implements BiFunction<File, Integer, List<String>> {
 
   @Override
-  public List<String> apply(File file) {
+  public List<String> apply(File file, Integer sheetIndex) {
     var addresses = new HashSet<String>();
     try (FileInputStream fis = new FileInputStream(file);
         Workbook workbook = new XSSFWorkbook(fis)) {
-      Sheet sheet = workbook.getSheetAt(0);
+      Sheet sheet = workbook.getSheetAt(sheetIndex == null ? 0 : sheetIndex - 1);
       for (Row row : sheet) {
         Cell cell = row.getCell(0);
         if (Objects.requireNonNull(cell.getCellType()) == CellType.STRING) {

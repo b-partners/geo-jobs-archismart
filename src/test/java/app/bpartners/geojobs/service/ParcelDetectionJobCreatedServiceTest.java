@@ -7,7 +7,7 @@ import static org.mockito.Mockito.*;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.parcel.ParcelDetectionJobCreated;
 import app.bpartners.geojobs.endpoint.event.model.tile.TileDetectionTaskCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectableObjectConfigurationMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectConfigurationMapper;
 import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.TileDetectionTaskRepository;

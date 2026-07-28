@@ -3,10 +3,10 @@ package app.bpartners.geojobs.model.geometry.route;
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import app.bpartners.geojobs.endpoint.rest.postprocessing.continuer.VGGLinesContinuer;
-import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import app.bpartners.geojobs.model.geometry.PolygonProvider;
 import app.bpartners.geojobs.model.geometry.quadrilateral.model.AlphaConf;
+import app.bpartners.geojobs.postprocessing.continuer.VGGLinesContinuer;
+import app.bpartners.geojobs.postprocessing.model.TilingConf;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;

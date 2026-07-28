@@ -1,6 +1,6 @@
 package app.bpartners.geojobs.service;
 
-import static app.bpartners.geojobs.endpoint.rest.controller.mapper.FeatureMapper.*;
+import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.*;
 import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static java.util.UUID.randomUUID;
 
@@ -14,7 +14,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -23,19 +23,19 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DetectionDelimitationRetriever implements Consumer<Detection> {
+public class DetectionDelimitationRetriever implements Function<Detection, Detection> {
   private final GeometryConverter geometryConverter;
   private final DetectionRepository detectionRepository;
   private final ObjectMapper objectMapper;
   private final IgnCadastreFeatureFetcher ignCadastreFeatureFetcher;
   private final BuildingFinder buildingFinder;
 
-  @Override
-  public void accept(Detection detection) {
+  public Detection apply(Detection detection) {
     if (detection.hasToitureModelName()) {
       var detectionWithDelimitations = computeDelimitationsFromDetectionFacade(detection);
-      detectionRepository.save(detectionWithDelimitations);
+      return detectionRepository.save(detectionWithDelimitations);
     }
+    return detection;
   }
 
   private Detection computeDelimitationsFromDetectionFacade(Detection detection) {
