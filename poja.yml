@@ -23,7 +23,7 @@ concurrency:
 database:
   with_database: None
 emailing:
-  ses_source: lou@bpartners.app
+  ses_source: lou@birdia.fr
 gen_api_client:
   aws_account_id: 'null'
   codeartifact_domain_name: 'null'

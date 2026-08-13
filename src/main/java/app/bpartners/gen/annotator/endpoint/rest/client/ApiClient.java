@@ -201,7 +201,7 @@ public class ApiClient {
   }
 
   protected String getDefaultBaseUri() {
-    return "https://annotator-api.imagery.bpartners.app";
+    return "https://annotator-api.imagery.birdia.fr";
   }
 
   protected HttpClient.Builder createDefaultHttpClientBuilder() {
