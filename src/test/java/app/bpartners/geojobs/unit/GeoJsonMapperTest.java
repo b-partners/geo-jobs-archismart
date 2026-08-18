@@ -4,8 +4,12 @@ import static app.bpartners.geojobs.endpoint.rest.model.Geometry.TypeEnum.MULTI_
 import static app.bpartners.geojobs.model.CustomObjectMapper.objectMapper;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.MOISISSURE_CLAIR;
 import static java.util.UUID.randomUUID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.repository.model.Feature;
@@ -43,10 +47,14 @@ class GeoJsonMapperTest {
   }
 
   public static DetectedObject detectedObject() {
+    return detectedObject(0.95);
+  }
+
+  public static DetectedObject detectedObject(Double computedConfidence) {
     return DetectedObject.builder()
         .id(randomUUID().toString())
         .feature(feature())
-        .computedConfidence(0.95)
+        .computedConfidence(computedConfidence)
         .detectedObjectType(DetectableObjectType.builder().detectableType(MOISISSURE_CLAIR).build())
         .build();
   }
@@ -58,5 +66,34 @@ class GeoJsonMapperTest {
 
     assertNotNull(actual);
     assertFalse(actual.isEmpty());
+  }
+
+  @Test
+  void confidence_property_is_mapped_as_double() {
+    List<GeoJson.GeoFeature> actual =
+        subject.toGeoFeatures(538559, 373791, 20, 1024, List.of(detectedObject(0.95)));
+
+    var confidence = actual.getFirst().getProperties().get("confidence");
+    assertInstanceOf(Double.class, confidence);
+    assertEquals(0.95, confidence);
+  }
+
+  @Test
+  void null_confidence_is_mapped_as_null() {
+    List<GeoJson.GeoFeature> actual =
+        subject.toGeoFeatures(538559, 373791, 20, 1024, List.of(detectedObject(null)));
+
+    assertNull(actual.getFirst().getProperties().get("confidence"));
+  }
+
+  @Test
+  void confidence_is_serialized_as_json_number() {
+    List<GeoJson.GeoFeature> geoFeatures =
+        subject.toGeoFeatures(538559, 373791, 20, 1024, List.of(detectedObject(0.95)));
+
+    var actual = GeoJson.fromFeatures(geoFeatures).getStringValue();
+
+    assertTrue(actual.contains("\"confidence\" : 0.95"), actual);
+    assertFalse(actual.contains("\"confidence\" : \"0.95\""), actual);
   }
 }

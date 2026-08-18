@@ -2,7 +2,8 @@ package app.bpartners.geojobs.validator;
 
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationObjectType.BUILDING_ROOF_SEGMENT_FACE;
-import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_FREE_DELIMITATION;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.model.exception.BadRequestException;
@@ -51,11 +52,18 @@ public class CreateCityJSONRequestValidator implements Consumer<CreateCityJSONRe
           "Requests with more than " + maxRoofs + " delimitations are not supported yet.");
     }
 
-    if (request.getDelimitationType() != null
-        && !PARCEL_FREE_DELIMITATION.equals(request.getDelimitationType())) {
+    var delimitationType = request.getDelimitationType();
+    if (PARCEL_CONSTRAINED_DELIMITATION.equals(delimitationType)) {
       throw new NotImplementedException(
-          "Only PARCEL_FREE_DELIMITATION delimitationType supported for now, otherwise actual is "
-              + request.getDelimitationType());
+          "PARCEL_CONSTRAINED_DELIMITATION delimitationType is not supported yet, only"
+              + " PARCEL_FREE_DELIMITATION and USER_DEFINED_DELIMITATION are.");
+    }
+    // a Point carries no surface, so it cannot be the roof delimitation itself : looking the roof
+    // up around it is what PARCEL_FREE_DELIMITATION is for.
+    if (USER_DEFINED_DELIMITATION.equals(delimitationType) && hasPointDelimitation(request)) {
+      throw new NotImplementedException(
+          "USER_DEFINED_DELIMITATION delimitationType only supports Polygon and MultiPolygon"
+              + " geometries, use PARCEL_FREE_DELIMITATION to provide a Point.");
     }
 
     var delimitationObjectType = request.getDelimitationObjectType();
@@ -87,5 +95,13 @@ public class CreateCityJSONRequestValidator implements Consumer<CreateCityJSONRe
       throw new NotImplementedException(
           "Provided delimitations must be either all Points or all Polygons or all MultiPolygons.");
     }
+  }
+
+  private static boolean hasPointDelimitation(ThreeDRequest request) {
+    return request.getDelimitations().stream()
+        .anyMatch(
+            feature ->
+                feature.getGeometry() != null
+                    && feature.getGeometry().getActualInstance() instanceof Point);
   }
 }

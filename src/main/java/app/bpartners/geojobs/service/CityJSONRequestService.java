@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONDelimitationObjectType.BUILDING_ROOF;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.PROCESSING;
@@ -182,12 +183,19 @@ public class CityJSONRequestService {
     }
 
     var cityJSONRequestBuilder = cityJSONRequest.toBuilder();
-    try {
-      addDelimitationIfOnePointFeatureIsPresent(cityJSONRequest, cityJSONRequestBuilder);
-    } catch (ApiException e) {
-      logApiError(e);
-      return cityJSONRequestRepository.save(
-          cityJSONRequest.toBuilder().status(FAILED).step(REQUEST_ACCEPTED).build());
+    if (USER_DEFINED_DELIMITATION.equals(cityJSONRequest.getDelimitationType())) {
+      cityJSONRequestBuilder.featuresWithDelimitation(
+          cityJSONRequest.getDelimitations().stream()
+              .map(feature -> new FeatureWithDelimitation(feature, List.of(feature)))
+              .toList());
+    } else {
+      try {
+        addDelimitationIfOnePointFeatureIsPresent(cityJSONRequest, cityJSONRequestBuilder);
+      } catch (ApiException e) {
+        logApiError(e);
+        return cityJSONRequestRepository.save(
+            cityJSONRequest.toBuilder().status(FAILED).step(REQUEST_ACCEPTED).build());
+      }
     }
 
     return cityJSONRequestRepository.save(

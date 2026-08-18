@@ -15,6 +15,7 @@ import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.hash.FileHash;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.postprocessing.StationnementPostProcessor;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.GeoJsonConversionJobRepository;
 import app.bpartners.geojobs.repository.HumanDetectedTileRepository;
@@ -28,6 +29,7 @@ import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.event.GeoJsonConversionTaskConsumer;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
+import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +48,8 @@ class GeoJsonConversionTaskConsumerTest {
   FileWriter fileWriterMock = mock();
   ZoneDetectionJobService zoneDetectionJobServiceMock = mock();
   DetectionRepository detectionRepositoryMock = mock();
+  StationnementPostProcessor stationnementPostProcessor =
+      new StationnementPostProcessor(new GeometryConverter(), new GeometrySquareMeterArea());
   GeoJsonConversionTaskConsumer subject =
       new GeoJsonConversionTaskConsumer(
           machineDetectedTileRepositoryMock,
@@ -55,7 +59,8 @@ class GeoJsonConversionTaskConsumerTest {
           bucketComponentMock,
           fileWriterMock,
           zoneDetectionJobServiceMock,
-          detectionRepositoryMock);
+          detectionRepositoryMock,
+          stationnementPostProcessor);
 
   @BeforeEach
   void setUp() {

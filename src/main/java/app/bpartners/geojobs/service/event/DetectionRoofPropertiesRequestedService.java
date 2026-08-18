@@ -2,7 +2,9 @@ package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
+import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
 import app.bpartners.geojobs.repository.DetectionRepository;
@@ -12,6 +14,8 @@ import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
 import app.bpartners.geojobs.repository.model.detection.RoofCoveringType;
 import app.bpartners.geojobs.service.detection.RoofCovering;
+import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
+import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,11 +38,37 @@ public class DetectionRoofPropertiesRequestedService
   private final MachineDetectedTileRepository machineDetectedTileRepository;
   private final GeometryConverter geometryConverter;
   private final ObjectMapper objectMapper;
+  private final DetectionPropertiesService detectionPropertiesService;
+  private final EventProducer eventProducer;
+  private final GeoJsonConversionJobService geoJsonConversionJobService;
+  private final ZoneDetectionJobService zoneDetectionJobService;
 
   @Override
   public void accept(DetectionRoofPropertiesRequested event) {
     var detectionIdentifier = event.getDetectionIdentifier();
-    apply(detectionIdentifier);
+    var detectionWithCovering = apply(detectionIdentifier);
+    if (detectionWithCovering.hasToitureModelName()) {
+      var providedFeatures = detectionWithCovering.getProvidedGeoJsonZone();
+      var detectionWithResultProperties = detectionWithCovering;
+      if (providedFeatures != null) {
+        for (var providedFeature : providedFeatures) {
+          detectionWithResultProperties =
+              detectionPropertiesService.apply(
+                  detectionWithResultProperties,
+                  providedFeature,
+                  detectionWithResultProperties.getDelimitationOf(providedFeature));
+        }
+        if (detectionWithResultProperties.needsImageOutput()) {
+          var detectionId = detectionWithResultProperties.getId();
+          providedFeatures.forEach(
+              providedFeature ->
+                  eventProducer.accept(
+                      List.of(new FeatureVggRequested(detectionId, providedFeature))));
+        }
+      }
+    }
+    var zoneDetectionJob = zoneDetectionJobService.findById(detectionWithCovering.getZdjId());
+    geoJsonConversionJobService.getOrComputeGeoJsonConversionJob(zoneDetectionJob);
   }
 
   public Detection apply(String detectionIdentifier) {

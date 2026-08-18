@@ -4,7 +4,6 @@ import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
-import app.bpartners.geojobs.endpoint.event.model.FeatureWithDetectionPropertiesRequested;
 import app.bpartners.geojobs.endpoint.event.model.annotation.AnnotationDeliveryJobRequested;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneDetectionJobSucceeded;
 import app.bpartners.geojobs.repository.AnnotationDeliveryConfigurationRepository;
@@ -89,21 +88,11 @@ public class ZoneDetectionJobSucceededService implements Consumer<ZoneDetectionJ
     if (zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(succeededJobId) == 0L
         || (detection != null && !detection.isAnnotationDeliveryEnable())) {
 
-      if (detection != null) {
-        if (detection.hasToitureModelName()) {
-          eventProducer.accept(List.of(new DetectionRoofPropertiesRequested(detection.getId())));
-        }
-        if (detection.needsImageOutput()) {
-          var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-          for (int i = 0; i < providedGeoJsonZone.size(); i++) {
-            eventProducer.accept(
-                List.of(
-                    new FeatureWithDetectionPropertiesRequested(
-                        detection.getId(), providedGeoJsonZone.get(i))));
-          }
-        }
+      if (detection != null && detection.hasToitureModelName()) {
+        eventProducer.accept(List.of(new DetectionRoofPropertiesRequested(detection.getId())));
+      } else {
+        geoJsonConversionJobService.getOrComputeGeoJsonConversionJob(succeededZoneDetectionJob);
       }
-      geoJsonConversionJobService.getOrComputeGeoJsonConversionJob(succeededZoneDetectionJob);
       return;
     }
     var minimumConfidenceForDelivery =

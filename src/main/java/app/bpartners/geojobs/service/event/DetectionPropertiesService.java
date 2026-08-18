@@ -6,9 +6,6 @@ import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DE
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
 import static app.bpartners.geojobs.service.geojson.GeoJsonMapper.convertPixelToGeographicalCoordinates;
 
-import app.bpartners.geojobs.endpoint.event.EventProducer;
-import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
-import app.bpartners.geojobs.endpoint.event.model.FeatureWithDetectionPropertiesRequested;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
@@ -17,9 +14,7 @@ import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.service.FeatureRoofResultPropertiesComputer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geojson.GeometryCorrector;
-import jakarta.persistence.EntityManager;
 import java.util.*;
-import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Geometry;
@@ -28,62 +23,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FeatureWithDetectionPropertiesRequestedService
-    implements Consumer<FeatureWithDetectionPropertiesRequested> {
+public class DetectionPropertiesService {
   private static final int DEFAULT_IMAGE_SIZE = 1024;
-  private final EntityManager entityManager;
   private final DetectionRepository detectionRepository;
   private final FeatureRoofResultPropertiesComputer featureRoofResultPropertiesComputer;
   private final GeometryConverter geometryConverter;
   private final MachineDetectedTileRepository machineDetectedTileRepository;
-  private final EventProducer eventProducer;
   private final GeometryCorrector geometryCorrector;
-
-  @Override
-  public void accept(FeatureWithDetectionPropertiesRequested event) {
-    var detectionIdentifier = event.getDetectionIdentifier();
-    var feature = event.getFeature();
-    entityManager.clear();
-    var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
-    var delimitations = detection.getDelimitationOf(feature);
-    if (detection.hasToitureModelName()) {
-      var savedDetection = apply(detection, feature, delimitations);
-      if (savedDetection != null && !savedDetection.equals(detection)) {
-        var optionalProvidedUpdatedFeature =
-            savedDetection.getProvidedGeoJsonZone().stream()
-                .filter(
-                    providedGeoJsonZone -> {
-                      var idKey = "id";
-                      var featureIdKey = "feature_id";
-                      return isPropertyEquals(idKey, providedGeoJsonZone, feature)
-                          || isPropertyEquals(featureIdKey, providedGeoJsonZone, feature);
-                    })
-                .findFirst();
-        if (optionalProvidedUpdatedFeature.isPresent()) {
-          eventProducer.accept(
-              List.of(
-                  new FeatureVggRequested(
-                      detectionIdentifier, optionalProvidedUpdatedFeature.get())));
-        } else {
-          eventProducer.accept(List.of(new FeatureVggRequested(detectionIdentifier, feature)));
-        }
-      }
-    } else {
-      eventProducer.accept(List.of(new FeatureVggRequested(detectionIdentifier, feature)));
-    }
-  }
-
-  private boolean isPropertyEquals(
-      String featureProperty, Feature providedFeature, Feature actualFeature) {
-    return providedFeature.getProperties() != null
-        && actualFeature.getProperties() != null
-        && providedFeature.getProperties().get(featureProperty) != null
-        && actualFeature.getProperties().get(featureProperty) != null
-        && providedFeature
-            .getProperties()
-            .get(featureProperty)
-            .equals(actualFeature.getProperties().get(featureProperty));
-  }
 
   public app.bpartners.geojobs.repository.model.detection.Detection apply(
       app.bpartners.geojobs.repository.model.detection.Detection detection,

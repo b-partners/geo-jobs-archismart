@@ -102,6 +102,12 @@ test {
     finalizedBy jacocoTestCoverageVerification
     minHeapSize = "8g"
     maxHeapSize = "10g"
+    testLogging {
+        events "failed"
+        exceptionFormat = "full"
+        showStackTraces = true
+        showCauses = true
+    }
 }
 
 jacocoTestCoverageVerification {

@@ -62,19 +62,23 @@ public class GeoJsonConverter implements BiFunction<List<DetectedTile>, MultiPol
     var unifiedStationnementObjects = unifyStationnementModelObjects(geoFeatures);
 
     List<GeoJson.GeoFeature> convertedGeoFeatures =
-        new ArrayList<>(
-            providedGeometryMultiPolygon == null
-                ? geoFeatures
-                : geoFeatures.stream()
-                    .map(
-                        geoFeature ->
-                            clipToProvidedGeometry(geoFeature, providedGeometryMultiPolygon))
-                    .filter(Objects::nonNull)
-                    .toList());
+        new ArrayList<>(clipAllToProvidedGeometry(geoFeatures, providedGeometryMultiPolygon));
 
-    convertedGeoFeatures.addAll(unifiedStationnementObjects);
+    convertedGeoFeatures.addAll(
+        clipAllToProvidedGeometry(unifiedStationnementObjects, providedGeometryMultiPolygon));
 
     return fromFeatures(convertedGeoFeatures);
+  }
+
+  private List<GeoJson.GeoFeature> clipAllToProvidedGeometry(
+      List<GeoJson.GeoFeature> geoFeatures, MultiPolygon providedGeometryMultiPolygon) {
+    if (providedGeometryMultiPolygon == null) {
+      return geoFeatures;
+    }
+    return geoFeatures.stream()
+        .map(geoFeature -> clipToProvidedGeometry(geoFeature, providedGeometryMultiPolygon))
+        .filter(Objects::nonNull)
+        .toList();
   }
 
   private GeoJson.GeoFeature clipToProvidedGeometry(

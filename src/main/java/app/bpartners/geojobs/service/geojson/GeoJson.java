@@ -20,6 +20,8 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 public class GeoJson implements Serializable {
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private final String stringValue;
   private final List<GeoFeature> geoFeatures;
 
@@ -38,10 +40,9 @@ public class GeoJson implements Serializable {
   }
 
   private static String geoFeaturesAsString(List<GeoFeature> geoFeatures) {
-    ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     List<Map<String, Object>> features = getGeoFeatures(geoFeatures);
     try {
-      return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(features);
+      return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(features);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -69,30 +70,26 @@ public class GeoJson implements Serializable {
   }
 
   private static String geojsonString(List<GeoFeature> geoFeatures) {
-    ObjectMapper objectMapper = new ObjectMapper();
-
     Map<String, Object> geoJson = new HashMap<>();
     geoJson.put("type", "FeatureCollection");
 
     geoJson.put("features", getGeoFeatures(geoFeatures));
 
     try {
-      return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(geoJson);
+      return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(geoJson);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }
 
   public static String geoFeatureString(GeoFeature geoFeature) {
-    ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-
     Map<String, Object> feature = new HashMap<>();
     feature.put("type", "Feature");
     feature.put("geometry", geoFeature.getGeometry());
     feature.put("properties", geoFeature.getProperties());
 
     try {
-      return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(feature);
+      return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(feature);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }

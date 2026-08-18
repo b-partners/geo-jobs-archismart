@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMa
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.STATIONNEMENT;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
@@ -362,6 +363,14 @@ public class Detection implements Serializable {
         || (detectableObjectModel != null
             && detectableObjectModel.getModelName() != null
             && TOITURE.equals(detectableObjectModel.getModelName()));
+  }
+
+  public boolean hasStationnementModelName() {
+    return (detectableObjectModelList != null
+            && detectableObjectModelList.stream()
+                .anyMatch(model -> STATIONNEMENT.equals(model.getModelName())))
+        || (detectableObjectModel != null
+            && STATIONNEMENT.equals(detectableObjectModel.getModelName()));
   }
 
   public boolean isSucceeded() {

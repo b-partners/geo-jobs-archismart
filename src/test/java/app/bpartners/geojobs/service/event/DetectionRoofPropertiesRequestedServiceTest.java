@@ -10,7 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
+import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.repository.DetectionRepository;
@@ -19,7 +21,10 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
+import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
+import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
+import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -37,12 +42,20 @@ class DetectionRoofPropertiesRequestedServiceTest {
   GeometryConverter geometryConverterMock = mock();
   ObjectMapper objectMapperMock = new ObjectMapper().findAndRegisterModules();
   EntityManager entityManagerMock = mock();
+  DetectionPropertiesService featurePropertiesServiceMock = mock();
+  EventProducer eventProducerMock = mock();
+  GeoJsonConversionJobService geoJsonConversionJobServiceMock = mock();
+  ZoneDetectionJobService zoneDetectionJobServiceMock = mock();
   DetectionRoofPropertiesRequestedService subject =
       new DetectionRoofPropertiesRequestedService(
           detectionRepositoryMock,
           machineDetectedTileRepositoryMock,
           geometryConverterMock,
-          objectMapperMock);
+          objectMapperMock,
+          featurePropertiesServiceMock,
+          eventProducerMock,
+          geoJsonConversionJobServiceMock,
+          zoneDetectionJobServiceMock);
 
   @Test
   void compute_detection_roof_properties() {
@@ -134,6 +147,75 @@ class DetectionRoofPropertiesRequestedServiceTest {
                                     "{\"primary\":\"ROOF_ASPHALTE_BITUME\",\"secondary\":\"ROOF_GRAVIER\"}"))))))
             .build(),
         detectionCaptor.getValue());
+  }
+
+  @Test
+  void chains_result_properties_vgg_and_geojson_conversion_after_covering() {
+    var detectionIdentifier = randomUUID().toString();
+    var zoneDetectionJobIdentifier = randomUUID().toString();
+    var providedFeature = featureDelimiterOne(Map.of());
+    var detection =
+        Detection.builder()
+            .id(detectionIdentifier)
+            .zdjId(zoneDetectionJobIdentifier)
+            .needsImageOutput(true)
+            .detectableObjectModelList(List.of(new DetectableObjectModel().modelName(TOITURE)))
+            .featureWithDelimitations(List.of())
+            .providedGeoJsonZone(List.of(providedFeature))
+            .build();
+    var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
+    when(detectionRepositoryMock.findById(detectionIdentifier)).thenReturn(Optional.of(detection));
+    when(machineDetectedTileRepositoryMock.findAllByZdjJobId(zoneDetectionJobIdentifier))
+        .thenReturn(List.of());
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(featurePropertiesServiceMock.apply(any(), any(), any())).thenReturn(detection);
+    when(zoneDetectionJobServiceMock.findById(zoneDetectionJobIdentifier))
+        .thenReturn(zoneDetectionJobMock);
+
+    assertDoesNotThrow(
+        () -> subject.accept(new DetectionRoofPropertiesRequested(detectionIdentifier)));
+
+    verify(featurePropertiesServiceMock, times(1)).apply(any(), any(), any());
+    var vggCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock).accept(vggCaptor.capture());
+    var vggEvent = (FeatureVggRequested) vggCaptor.getValue().getFirst();
+    assertEquals(detectionIdentifier, vggEvent.getDetectionIdentifier());
+    verify(geoJsonConversionJobServiceMock, times(1))
+        .getOrComputeGeoJsonConversionJob(zoneDetectionJobMock);
+  }
+
+  @Test
+  void chains_geojson_conversion_without_vgg_when_image_output_not_needed() {
+    var detectionIdentifier = randomUUID().toString();
+    var zoneDetectionJobIdentifier = randomUUID().toString();
+    var providedFeature = featureDelimiterOne(Map.of());
+    var detection =
+        Detection.builder()
+            .id(detectionIdentifier)
+            .zdjId(zoneDetectionJobIdentifier)
+            .needsImageOutput(false)
+            .detectableObjectModelList(List.of(new DetectableObjectModel().modelName(TOITURE)))
+            .featureWithDelimitations(List.of())
+            .providedGeoJsonZone(List.of(providedFeature))
+            .build();
+    var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
+    when(detectionRepositoryMock.findById(detectionIdentifier)).thenReturn(Optional.of(detection));
+    when(machineDetectedTileRepositoryMock.findAllByZdjJobId(zoneDetectionJobIdentifier))
+        .thenReturn(List.of());
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(featurePropertiesServiceMock.apply(any(), any(), any())).thenReturn(detection);
+    when(zoneDetectionJobServiceMock.findById(zoneDetectionJobIdentifier))
+        .thenReturn(zoneDetectionJobMock);
+
+    assertDoesNotThrow(
+        () -> subject.accept(new DetectionRoofPropertiesRequested(detectionIdentifier)));
+
+    verify(featurePropertiesServiceMock, times(1)).apply(any(), any(), any());
+    verify(eventProducerMock, never()).accept(any());
+    verify(geoJsonConversionJobServiceMock, times(1))
+        .getOrComputeGeoJsonConversionJob(zoneDetectionJobMock);
   }
 
   private static Feature featureDelimiterTwo(Map<String, Object> properties) {

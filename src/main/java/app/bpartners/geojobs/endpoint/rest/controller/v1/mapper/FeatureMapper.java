@@ -184,24 +184,24 @@ public class FeatureMapper {
         return buildingFinder.getBuildingMultiPolygon(point);
       }
       case Polygon polygon -> {
-        var polygons =
-            polygon.getCoordinates().stream().map(geometryConverter::convertToPolygon).toList();
-        if (polygons.size() != 1) {
-          log.info("Polygon with more than one ring not supported, first element used");
-        }
-        return polygons.getFirst();
+        var polygons = geometryConverter.convertRingsToPolygons(polygon.getCoordinates());
+        return polygons.size() == 1 ? polygons.getFirst() : toMultiPolygon(polygons);
       }
       case MultiPolygon multiPolygon -> {
-        var multiPolygonCoordinates = multiPolygon.getCoordinates();
-        if (multiPolygonCoordinates.size() != 1) {
-          log.info(
-              "MultiPolygon {} with more than one polygon not supported, first element used",
-              multiPolygonCoordinates);
-        }
-        return geometryConverter.apply(multiPolygonCoordinates);
+        return toMultiPolygon(
+            multiPolygon.getCoordinates().stream()
+                .map(geometryConverter::convertRingsToPolygons)
+                .flatMap(Collection::stream)
+                .toList());
       }
       default -> throw new NotImplementedException("Unknown geometry type " + geometryType);
     }
+  }
+
+  private org.locationtech.jts.geom.MultiPolygon toMultiPolygon(
+      List<org.locationtech.jts.geom.Polygon> polygons) {
+    return geometryFactory.createMultiPolygon(
+        polygons.toArray(new org.locationtech.jts.geom.Polygon[0]));
   }
 
   public org.locationtech.jts.geom.Polygon toDomainPolygon(Feature feature) {
@@ -211,12 +211,7 @@ public class FeatureMapper {
         return polygon;
       }
       case org.locationtech.jts.geom.MultiPolygon multiPolygon -> {
-        if (multiPolygon.getNumGeometries() > 0) {
-          log.info(
-              "MultiPolygon {} with more than one polygon not supported, first element used",
-              multiPolygon);
-        }
-        return (org.locationtech.jts.geom.Polygon) multiPolygon.getGeometryN(0);
+        return geometryConverter.widestPolygonWithSurfaceOf(multiPolygon);
       }
       default ->
           throw new NotImplementedException(
@@ -231,17 +226,13 @@ public class FeatureMapper {
       case Point ignored ->
           throw new NotImplementedException(
               "Point geometry type not supported to convert to List<Polygon>");
-      case Polygon polygon -> {
-        var polygons =
-            polygon.getCoordinates().stream().map(geometryConverter::convertToPolygon).toList();
-        acc.addAll(polygons);
-      }
+      case Polygon polygon ->
+          acc.addAll(geometryConverter.convertRingsToPolygons(polygon.getCoordinates()));
       case MultiPolygon multiPolygon -> {
         var multiPolygonCoordinates = multiPolygon.getCoordinates();
         var polygonsRetrievedFromMultiPolygon =
             multiPolygonCoordinates.stream()
-                .map(
-                    polygons -> polygons.stream().map(geometryConverter::convertToPolygon).toList())
+                .map(geometryConverter::convertRingsToPolygons)
                 .flatMap(Collection::stream)
                 .toList();
         acc.addAll(polygonsRetrievedFromMultiPolygon);

@@ -151,6 +151,21 @@ public class GeometryConverter {
   }
 
   public Polygon convertToPolygon(List<List<BigDecimal>> points) {
+    var repairedGeometry = repairedGeometryOfRing(points);
+    return repairedGeometry instanceof MultiPolygon repairedMultiPolygon
+        ? widestPolygonWithSurfaceOf(repairedMultiPolygon)
+        : (Polygon) repairedGeometry;
+  }
+
+  public List<Polygon> convertToPolygons(List<List<BigDecimal>> points) {
+    return polygonsWithSurfaceOf(repairedGeometryOfRing(points));
+  }
+
+  public List<Polygon> convertRingsToPolygons(List<List<List<BigDecimal>>> rings) {
+    return polygonsWithSurfaceOf(repairedGeometryOfRings(rings));
+  }
+
+  private Geometry repairedGeometryOfRing(List<List<BigDecimal>> points) {
     if (points == null || points.size() < 4) {
       throw new IllegalArgumentException("Polygon must contain at least 4 points.");
     }
@@ -164,18 +179,71 @@ public class GeometryConverter {
 
     LinearRing shell = geometryFactory.createLinearRing(coordinates);
 
-    Polygon polygon = geometryFactory.createPolygon(shell);
+    return repaired(geometryFactory.createPolygon(shell));
+  }
 
-    if (!polygon.isValid()) {
-      var fixGeometry = GeometryFixer.fix(polygon);
-      if (fixGeometry instanceof Polygon) {
-        polygon = (Polygon) fixGeometry; // ou polygon.buffer(0)
-      } else if (fixGeometry instanceof MultiPolygon) {
-        polygon = (Polygon) fixGeometry.getGeometryN(0);
+  private Geometry repairedGeometryOfRings(List<List<List<BigDecimal>>> rings) {
+    if (rings == null || rings.isEmpty()) {
+      throw new IllegalArgumentException("Polygon must contain at least one ring.");
+    }
+    LinearRing shell = toLinearRing(rings.getFirst());
+    LinearRing[] holes = new LinearRing[rings.size() - 1];
+    for (int i = 1; i < rings.size(); i++) {
+      holes[i - 1] = toLinearRing(rings.get(i));
+    }
+    return repaired(geometryFactory.createPolygon(shell, holes));
+  }
+
+  private Geometry repaired(Polygon polygon) {
+    if (polygon.isValid()) {
+      return polygon;
+    }
+    var fixGeometry = GeometryFixer.fix(polygon); // ou polygon.buffer(0)
+    return fixGeometry instanceof Polygonal ? fixGeometry : polygon;
+  }
+
+  private List<Polygon> polygonsWithSurfaceOf(Geometry repairedGeometry) {
+    if (!(repairedGeometry instanceof MultiPolygon repairedMultiPolygon)) {
+      return List.of((Polygon) repairedGeometry);
+    }
+    var polygonsWithSurface = polygonsWithSurfaceOf(repairedMultiPolygon);
+    if (polygonsWithSurface.isEmpty()) {
+      log.warn("Repaired geometry {} left without any surface", repairedMultiPolygon);
+      return List.of((Polygon) repairedMultiPolygon.getGeometryN(0));
+    }
+    return polygonsWithSurface;
+  }
+
+  public Polygon widestPolygonWithSurfaceOf(MultiPolygon multiPolygon) {
+    var polygonsWithSurface = polygonsWithSurfaceOf(multiPolygon);
+    if (polygonsWithSurface.isEmpty()) {
+      log.warn("Repaired geometry {} left without any surface", multiPolygon);
+      return (Polygon) multiPolygon.getGeometryN(0);
+    }
+    var widest =
+        polygonsWithSurface.stream()
+            .max(Comparator.comparingDouble(Polygon::getArea))
+            .orElseThrow();
+    if (polygonsWithSurface.size() > 1) {
+      log.warn(
+          "Repaired self-intersecting geometry split into {} parts, only the widest one is kept:"
+              + " {} of {} square unit(s) dropped",
+          multiPolygon.getNumGeometries(),
+          multiPolygon.getArea() - widest.getArea(),
+          multiPolygon.getArea());
+    }
+    return widest;
+  }
+
+  private List<Polygon> polygonsWithSurfaceOf(MultiPolygon multiPolygon) {
+    var polygonsWithSurface = new ArrayList<Polygon>();
+    for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+      var part = (Polygon) multiPolygon.getGeometryN(i);
+      if (part.getArea() > 0) {
+        polygonsWithSurface.add(part);
       }
     }
-
-    return polygon;
+    return polygonsWithSurface;
   }
 
   private static Coordinate[] ensureClosed(Coordinate[] coords) {

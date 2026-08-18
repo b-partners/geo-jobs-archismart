@@ -9,12 +9,14 @@ import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.postprocessing.StationnementPostProcessor;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.GeoJsonConversionJobRepository;
 import app.bpartners.geojobs.repository.HumanDetectedTileRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.DetectedObject;
+import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionTask;
 import app.bpartners.geojobs.service.TaskConsumer;
@@ -22,6 +24,7 @@ import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConverter;
 import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.MultiPolygon;
@@ -44,6 +47,7 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
   private final FileWriter writer;
   private final ZoneDetectionJobService zoneDetectionJobService;
   private final DetectionRepository detectionRepository;
+  private final StationnementPostProcessor stationnementPostProcessor;
 
   @Override
   public void accept(GeoJsonConversionTask geoJsonConversionTask) {
@@ -62,13 +66,17 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
     int pageNumber = geoJsonConversionTask.getPage() - 1;
     var paginatedDetectedTiles =
         computeDetectedTile(zoneDetectionType, zoneDetectionJobId, pageNumber, detectableType);
-    var providedGeometryMultiPolygon = getProvidedGeometryMultiPolygon(zoneDetectionJobId);
+    var detection = detectionRepository.findByZdjId(zoneDetectionJobId).orElse(null);
+    var providedGeometryMultiPolygon = getProvidedGeometryMultiPolygon(detection);
     var zoneName = zoneDetectionJob.getZoneName();
     var fileName = zoneName + "_" + detectableType + "-part" + "-" + pageNumber;
     var cleanedFileName = cleanFileName(fileName);
     var fileKey =
         GEO_JSON_BUCKET_FOLDER + zoneDetectionJobId + "/" + cleanedFileName + GEO_JSON_EXTENSION;
-    var geoJson = geoJsonConverter.apply(paginatedDetectedTiles, providedGeometryMultiPolygon);
+    var geoJson =
+        stationnementPostProcessor.apply(
+            geoJsonConverter.apply(paginatedDetectedTiles, providedGeometryMultiPolygon),
+            detection);
     var geoJsonAsByte = geoJson.getStringValue().getBytes();
     var geoJsonAsFile =
         writer.write(geoJsonAsByte, createTempDirectory(), cleanedFileName + GEO_JSON_EXTENSION);
@@ -88,12 +96,10 @@ public class GeoJsonConversionTaskConsumer implements TaskConsumer<GeoJsonConver
         .replaceAll(" ", "_");
   }
 
-  private MultiPolygon getProvidedGeometryMultiPolygon(String zoneDetectionJobId) {
-    var optionalDetection = detectionRepository.findByZdjId(zoneDetectionJobId);
-    if (optionalDetection.isEmpty()) {
+  private MultiPolygon getProvidedGeometryMultiPolygon(@Nullable Detection detection) {
+    if (detection == null) {
       return null;
     }
-    var detection = optionalDetection.get();
     return detection.getProvidedGeoJsonZone().stream()
         .map(
             feature ->

@@ -33,6 +33,16 @@ jobs:
       - run: chmod +x .shell/publish_gen_to_maven_local.sh
       - run: ./gradlew test
 
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: test-report
+          path: |
+            build/reports/tests/test
+            build/test-results/test
+          retention-days: 7
+
       - name: Cache SonarCloud packages
         uses: actions/cache@v4.2.2
         with:

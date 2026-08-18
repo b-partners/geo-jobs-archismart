@@ -9,11 +9,9 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
-import app.bpartners.geojobs.endpoint.event.model.FeatureWithDetectionPropertiesRequested;
 import app.bpartners.geojobs.endpoint.event.model.annotation.AnnotationDeliveryJobRequested;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneDetectionJobSucceeded;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
-import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.repository.AnnotationDeliveryConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
@@ -231,16 +229,43 @@ class ZoneDetectionJobSucceededServiceTest {
   }
 
   @Test
-  void process_geo_json_conversion_job_and_produces_event_when_any_in_doubt_detected_tile() {
+  void toiture_detection_only_requests_roof_properties_and_defers_geojson_conversion() {
     var succeededJobId = randomUUID().toString();
     var detectionId = randomUUID().toString();
     var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
     var detectionMock = mock(Detection.class);
     when(detectionMock.getId()).thenReturn(detectionId);
     when(detectionMock.hasToitureModelName()).thenReturn(true);
-    when(detectionMock.needsImageOutput()).thenReturn(true);
-    when(detectionMock.getProvidedGeoJsonZone()).thenReturn(List.of(new Feature()));
-    when(detectionMock.getPolygonGeoJsonZone()).thenReturn(new Feature());
+    when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(succeededJobId))
+        .thenReturn(0L);
+    when(zoneDetectionJobServiceMock.findById(succeededJobId)).thenReturn(zoneDetectionJobMock);
+    when(detectionRepositoryMock.findByZdjId(succeededJobId))
+        .thenReturn(Optional.of(detectionMock));
+
+    assertDoesNotThrow(
+        () ->
+            subject.accept(
+                ZoneDetectionJobSucceeded.builder().succeededJobId(succeededJobId).build()));
+
+    verify(geoJsonConversionJobServiceMock, never())
+        .getOrComputeGeoJsonConversionJob(any(ZoneDetectionJob.class));
+    verify(configurationRepositoryMock, never()).findLatestConfiguration();
+    var listCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock, times(1)).accept(listCaptor.capture());
+    var detectionRoofPropertiesRequested =
+        (DetectionRoofPropertiesRequested) listCaptor.getValue().getFirst();
+    assertEquals(
+        new DetectionRoofPropertiesRequested(detectionId), detectionRoofPropertiesRequested);
+    assertEquals(EVENT_STACK_2, detectionRoofPropertiesRequested.getEventStack());
+    assertEquals(Duration.ofMinutes(5L), detectionRoofPropertiesRequested.maxConsumerDuration());
+  }
+
+  @Test
+  void non_toiture_detection_triggers_geojson_conversion_inline() {
+    var succeededJobId = randomUUID().toString();
+    var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
+    var detectionMock = mock(Detection.class);
+    when(detectionMock.hasToitureModelName()).thenReturn(false);
     when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(succeededJobId))
         .thenReturn(0L);
     when(zoneDetectionJobServiceMock.findById(succeededJobId)).thenReturn(zoneDetectionJobMock);
@@ -254,24 +279,7 @@ class ZoneDetectionJobSucceededServiceTest {
 
     verify(geoJsonConversionJobServiceMock, times(1))
         .getOrComputeGeoJsonConversionJob(zoneDetectionJobMock);
-    verify(configurationRepositoryMock, never()).findLatestConfiguration();
-    var listCaptor = ArgumentCaptor.forClass(List.class);
-    verify(eventProducerMock, times(2)).accept(listCaptor.capture());
-    var detectionRoofPropertiesRequested =
-        (DetectionRoofPropertiesRequested) listCaptor.getAllValues().getFirst().getFirst();
-    var featureWithDetectionPropertiesRequested =
-        (FeatureWithDetectionPropertiesRequested) listCaptor.getAllValues().getLast().getFirst();
-    assertEquals(
-        new DetectionRoofPropertiesRequested(detectionId), detectionRoofPropertiesRequested);
-    assertEquals(
-        new FeatureWithDetectionPropertiesRequested(detectionId, new Feature()),
-        featureWithDetectionPropertiesRequested);
-    assertEquals(EVENT_STACK_2, featureWithDetectionPropertiesRequested.getEventStack());
-    assertEquals(
-        Duration.ofSeconds(60L), featureWithDetectionPropertiesRequested.maxConsumerDuration());
-    assertEquals(
-        Duration.ofSeconds(30L),
-        featureWithDetectionPropertiesRequested.maxConsumerBackoffBetweenRetries());
+    verify(eventProducerMock, never()).accept(any());
   }
 
   private String expectedEmailContainingDetectionWhenNoResultRetrieved(String detectionE2Id) {

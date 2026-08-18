@@ -28,10 +28,10 @@ import app.bpartners.geojobs.service.SynchronousDetectionService;
 import app.bpartners.geojobs.service.detection.DetectionTilingCreation;
 import app.bpartners.geojobs.service.detection.MachineDetectionCreation;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
+import app.bpartners.geojobs.service.event.DetectionPropertiesService;
 import app.bpartners.geojobs.service.event.DetectionRoofPropertiesRequestedService;
 import app.bpartners.geojobs.service.event.FeatureImageRequestedService;
 import app.bpartners.geojobs.service.event.FeatureVggRequestedService;
-import app.bpartners.geojobs.service.event.FeatureWithDetectionPropertiesRequestedService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import jakarta.persistence.EntityManager;
@@ -56,8 +56,7 @@ class SynchronousDetectionServiceTest {
   FeatureImageRequestedService featureImageRequestedServiceMock = mock();
   EntityManager entityManagerMock = mock();
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
-  FeatureWithDetectionPropertiesRequestedService
-      featureWithDetectionPropertiesRequestedServiceMock = mock();
+  DetectionPropertiesService detectionPropertiesServiceMock = mock();
   SynchronousDetectionService subject =
       new SynchronousDetectionService(
           detectionRepositoryMock,
@@ -74,7 +73,7 @@ class SynchronousDetectionServiceTest {
           featureImageRequestedServiceMock,
           entityManagerMock,
           detectionRoofPropertiesRequestedServiceMock,
-          featureWithDetectionPropertiesRequestedServiceMock);
+          detectionPropertiesServiceMock);
 
   @Test
   void return_succeeded_detection_and_trigger_geo_json_generation() {
@@ -127,7 +126,7 @@ class SynchronousDetectionServiceTest {
     doNothing().when(entityManagerMock).clear();
     when(detectionRoofPropertiesRequestedServiceMock.apply(detectionId))
         .thenReturn(detectionWithVGGAndImagesFinished);
-    when(featureWithDetectionPropertiesRequestedServiceMock.apply(
+    when(detectionPropertiesServiceMock.apply(
             detectionWithVGGAndImagesFinished, feature, List.of(feature)))
         .thenReturn(detectionWithVGGAndImagesFinished);
 

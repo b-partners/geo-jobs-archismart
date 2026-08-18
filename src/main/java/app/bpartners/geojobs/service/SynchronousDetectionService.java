@@ -16,10 +16,10 @@ import app.bpartners.geojobs.repository.DetectableObjectConfigurationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.tiling.ParcelTilingTask;
 import app.bpartners.geojobs.service.detection.*;
+import app.bpartners.geojobs.service.event.DetectionPropertiesService;
 import app.bpartners.geojobs.service.event.DetectionRoofPropertiesRequestedService;
 import app.bpartners.geojobs.service.event.FeatureImageRequestedService;
 import app.bpartners.geojobs.service.event.FeatureVggRequestedService;
-import app.bpartners.geojobs.service.event.FeatureWithDetectionPropertiesRequestedService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import jakarta.persistence.EntityManager;
@@ -53,8 +53,7 @@ public class SynchronousDetectionService
   private final FeatureImageRequestedService featureImageRequestedService;
   private final EntityManager entityManager;
   private final DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedService;
-  private final FeatureWithDetectionPropertiesRequestedService
-      featureWithDetectionPropertiesRequestedService;
+  private final DetectionPropertiesService detectionPropertiesService;
 
   @SneakyThrows
   @Override
@@ -146,7 +145,7 @@ public class SynchronousDetectionService
 
     var detectionResultPropertiesComputingStart = now();
     var detectionWithResultProperties =
-        featureWithDetectionPropertiesRequestedService.apply(
+        detectionPropertiesService.apply(
             detectionWithComputedRoofProperties,
             detectionWithComputedRoofProperties.getProvidedGeoJsonZone().getFirst(),
             detectionWithComputedRoofProperties.getDelimitationOf(

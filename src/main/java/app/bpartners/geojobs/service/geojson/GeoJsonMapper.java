@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -100,11 +101,25 @@ public class GeoJsonMapper {
         objectFeature.getProperties() == null
             ? new HashMap<String, Object>()
             : objectFeature.getProperties();
-    var confidence =
+    var confidenceAsString =
         object.getComputedConfidence() != null ? object.getComputedConfidence().toString() : null;
-    properties.put("confidence", confidence);
+    var confidenceValue = getConfidenceValue(confidenceAsString);
+    properties.put("confidence", confidenceValue);
     properties.put("label", object.getDetectedObjectType().getDetectableType().name());
     return getGeoFeature(multipolygonCoordinates, properties);
+  }
+
+  @Nullable
+  private static Double getConfidenceValue(String confidenceAsString) {
+    if (confidenceAsString == null) {
+      return null;
+    }
+    try {
+      return Double.parseDouble(confidenceAsString);
+    } catch (NumberFormatException e) {
+      log.error("Unable to convert confidence {} to Double", confidenceAsString, e);
+      return null;
+    }
   }
 
   public GeoJson.GeoFeature getGeoFeature(
