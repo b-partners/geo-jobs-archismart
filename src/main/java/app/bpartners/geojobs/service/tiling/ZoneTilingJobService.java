@@ -38,6 +38,7 @@ import app.bpartners.geojobs.service.event.TilingTaskConsumer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
@@ -297,29 +298,33 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
     return duplicatedJob;
   }
 
-  @SneakyThrows
   public List<ParcelTilingTask> getTilingTasks(CreateZoneTilingJob job, String jobId) {
+    return getTilingTasks(job, jobId, List.of(computeSupportedImageZoom(job)));
+  }
+
+  @SneakyThrows
+  public List<ParcelTilingTask> getTilingTasks(
+      CreateZoneTilingJob job, String jobId, Collection<ArcgisImageZoom> imageZooms) {
     var serverUrl = new URI(Objects.requireNonNull(job.getGeoServerUrl())).toURL();
     var providedFeatures = Objects.requireNonNull(job.getFeatures());
     var geometryConverter = new GeometryConverter();
     var featuresToBeTiled = getFeaturesToBeTiled(providedFeatures, geometryConverter);
-    var imageZoom = computeSupportedImageZoom(job);
     var tilePolygonRetriever = new TilePolygonRetriever(new TileFinder(), geometryConverter);
-    var featuresSplitByTiles =
-        splitFeaturesByTiles(featuresToBeTiled, geometryConverter, tilePolygonRetriever, imageZoom);
 
-    return featuresSplitByTiles.stream()
-        .map(
-            feature -> {
-              feature
-                  .getProperties()
-                  .put(
-                      "zoom",
-                      zoomMapper
-                          .toDomain(Objects.requireNonNull(job.getZoomLevel()))
-                          .getZoomLevel());
-              return tilingTaskMapper.from(feature, serverUrl, job.getGeoServerParameter(), jobId);
-            })
+    return imageZooms.stream()
+        .distinct()
+        .peek(ZoneTilingJobService::requireSupportedImageZoom)
+        .flatMap(
+            imageZoom ->
+                splitFeaturesByTiles(
+                        featuresToBeTiled, geometryConverter, tilePolygonRetriever, imageZoom)
+                    .stream()
+                    .map(
+                        feature -> {
+                          feature.getProperties().put("zoom", imageZoom.getZoomLevel());
+                          return tilingTaskMapper.from(
+                              feature, serverUrl, job.getGeoServerParameter(), jobId);
+                        }))
         .collect(toList());
   }
 
@@ -386,6 +391,13 @@ public class ZoneTilingJobService extends JobService<ParcelTilingTask, ZoneTilin
     return distinctTilesByKey.values().stream()
         .map(geometryConverter::toRestFeature)
         .collect(toList());
+  }
+
+  private static void requireSupportedImageZoom(ArcgisImageZoom imageZoom) {
+    switch (imageZoom) {
+      case TOWN, BUILDINGS, BUILDING, HOUSES_0, HOUSES_1 -> {}
+      default -> throw new BadRequestException("Unsupported zoom level: " + imageZoom);
+    }
   }
 
   @NotNull

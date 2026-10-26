@@ -1,8 +1,8 @@
 package app.bpartners.geojobs.service.event;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.DetectionTrackingRegistrationRequested;
 import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionAssemblySucceeded;
-import app.bpartners.geojobs.endpoint.event.model.GeoJsonConversionProcessSucceeded;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -49,6 +49,6 @@ public class GeoJsonConversionAssemblySucceededService
     optionalDetection.ifPresent(
         detection ->
             eventProducer.accept(
-                List.of(new GeoJsonConversionProcessSucceeded(detection.getId()))));
+                List.of(new DetectionTrackingRegistrationRequested(detection.getId()))));
   }
 }

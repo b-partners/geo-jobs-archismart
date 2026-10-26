@@ -43,7 +43,8 @@ class RoofCoveringDetectorIT extends FacadeIT {
                 .bucketPath(TILE_BUCKET_PATH)
                 .coordinates(new TileCoordinates().x(544680).y(383095).z(20))
                 .build(),
-            maskFile);
+            maskFile,
+            null);
 
     assertEquals(expectedCovering(), actual);
   }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
+import app.bpartners.geojobs.service.lidar.api.WalloniaBoundaryChecker;
 import app.bpartners.geojobs.utils.lidar.LidarRoofsAnalysisProcessorCreator;
 import java.nio.file.Files;
 import java.util.Set;
@@ -18,7 +19,8 @@ import org.locationtech.jts.geom.Geometry;
 @Disabled
 class LidarDataToCityJsonProcessorTest {
   private static final LidarDataToCityJsonProcessor subject =
-      new LidarDataToCityJsonProcessor(new CityJsonFactory(), new SwissBoundaryChecker());
+      new LidarDataToCityJsonProcessor(
+          new CityJsonFactory(), new SwissBoundaryChecker(), new WalloniaBoundaryChecker());
 
   private static final LidarRoofsAnalysisProcessorCreator processorCreator =
       new LidarRoofsAnalysisProcessorCreator();

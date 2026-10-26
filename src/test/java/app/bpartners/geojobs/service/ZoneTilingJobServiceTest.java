@@ -3,10 +3,15 @@ package app.bpartners.geojobs.service;
 import static app.bpartners.geojobs.endpoint.rest.model.BucketSeparatorType.SLASH;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.*;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.*;
+import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.CITY;
+import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
+import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_1;
 import static app.bpartners.geojobs.repository.model.GeoJobType.DETECTION;
 import static app.bpartners.geojobs.repository.model.GeoJobType.TILING;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -17,7 +22,11 @@ import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobWithoutTasks
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.TilingTaskMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoomMapper;
 import app.bpartners.geojobs.endpoint.rest.model.BucketSeparatorType;
+import app.bpartners.geojobs.endpoint.rest.model.CreateZoneTilingJob;
+import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.FeatureGeometry;
 import app.bpartners.geojobs.endpoint.rest.model.GeoServerParameter;
+import app.bpartners.geojobs.endpoint.rest.model.Polygon;
 import app.bpartners.geojobs.job.model.JobStatus;
 import app.bpartners.geojobs.job.model.Status;
 import app.bpartners.geojobs.job.model.TaskStatus;
@@ -35,8 +44,10 @@ import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.event.TilingTaskConsumer;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -82,6 +93,53 @@ public class ZoneTilingJobServiceTest {
           tilingTaskConsumerMock,
           workersMock,
           buildingFinderMock);
+
+  @Test
+  void tiles_the_zone_once_per_requested_zoom() {
+    var job =
+        new CreateZoneTilingJob()
+            .geoServerUrl("https://geoserver.test")
+            .geoServerParameter(new GeoServerParameter())
+            .features(List.of(square()));
+    when(tilingTaskMapper.from(any(), any(), any(), any()))
+        .thenReturn(ParcelTilingTask.builder().build());
+
+    var tasks = subject.getTilingTasks(job, "jobId", List.of(HOUSES_0, HOUSES_1, HOUSES_0));
+
+    var featureCaptor = ArgumentCaptor.forClass(Feature.class);
+    verify(tilingTaskMapper, times(tasks.size()))
+        .from(featureCaptor.capture(), any(), any(), eq("jobId"));
+    var tileCountByZoom =
+        featureCaptor.getAllValues().stream()
+            .collect(groupingBy(feature -> feature.getProperties().get("zoom"), counting()));
+    assertEquals(Set.of(20, 21), tileCountByZoom.keySet());
+    assertTrue(tileCountByZoom.get(21) > tileCountByZoom.get(20));
+  }
+
+  @Test
+  void refuses_to_tile_on_an_unsupported_zoom() {
+    var job =
+        new CreateZoneTilingJob()
+            .geoServerUrl("https://geoserver.test")
+            .geoServerParameter(new GeoServerParameter())
+            .features(List.of(square()));
+
+    assertThrows(
+        BadRequestException.class, () -> subject.getTilingTasks(job, "jobId", List.of(CITY)));
+  }
+
+  private Feature square() {
+    var ring =
+        List.of(
+            List.of(BigDecimal.valueOf(2.3500), BigDecimal.valueOf(48.8500)),
+            List.of(BigDecimal.valueOf(2.3530), BigDecimal.valueOf(48.8500)),
+            List.of(BigDecimal.valueOf(2.3530), BigDecimal.valueOf(48.8530)),
+            List.of(BigDecimal.valueOf(2.3500), BigDecimal.valueOf(48.8530)),
+            List.of(BigDecimal.valueOf(2.3500), BigDecimal.valueOf(48.8500)));
+    var polygon = new Polygon().coordinates(List.of(ring));
+    polygon.setType(Polygon.TypeEnum.POLYGON);
+    return new Feature().geometry(new FeatureGeometry(polygon));
+  }
 
   @Test
   void duplicate_ok() {

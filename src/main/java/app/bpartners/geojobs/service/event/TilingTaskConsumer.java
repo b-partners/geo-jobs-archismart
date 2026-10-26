@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
 
 @AllArgsConstructor
@@ -42,9 +43,9 @@ public class TilingTaskConsumer implements TaskConsumer<ParcelTilingTask> {
     String bucketKey = downloadedTiles.getName();
 
     bucketComponent.upload(downloadedTiles, bucketKey);
-    downloadedTiles.delete();
-
     setParcelTiles(downloadedTiles, parcel, bucketKey);
+    // File.delete() silently fails on a non-empty directory: tiles piled up for the next tasks
+    FileUtils.deleteQuietly(downloadedTiles);
     log.info(
         "Tiling task finished in {} seconds for tiles={}",
         Duration.between(tilingTaskStart, now()).toSeconds(),

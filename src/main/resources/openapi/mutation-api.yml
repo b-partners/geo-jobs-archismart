@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Mutation Dégât Detection API
+  description: >
+    Serverless API for detecting mutation/dégât between two images of the same
+    scene. The Lambda function runs a computer-vision model (ONNX Runtime) to
+    compare a "before" image and an "after" image, restricted to a region of
+    interest defined by a reference mask, and returns the detected mutation
+    class.
+
+    ### Request flow
+
+    1. Base64-encode the before image, after image and reference mask
+       (PNG/JPEG).
+    2. POST the JSON payload below to `/mutation`.
+    3. The API responds with the detected mutation class.
+
+    > **Note:** Request bodies are forwarded raw by API Gateway. Send the JSON
+    > payload directly with `Content-Type: application/json`.
+  version: 1.0.0
+
+paths:
+  /mutation:
+    post:
+      summary: Detect mutation between two images
+      description: >
+        Decodes the three base64-encoded images, runs inference on the
+        before/after pair constrained by the reference mask, and returns the
+        detected mutation label along with the provided filename.
+      operationId: detectMutation
+      tags:
+        - Mutation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutationRequest"
+            example:
+              base64_old: "<base64-encoded before image>"
+              base64_new: "<base64-encoded after image>"
+              base64_mask: "<base64-encoded reference mask>"
+              filename: "parcelle_42"
+      responses:
+        "200":
+          description: >
+            Successful detection. `mutation` is `null` when the reference mask
+            is empty (no region of interest), otherwise one of the mutation
+            classes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MutationResponse"
+              examples:
+                mutationFound:
+                  summary: A mutation was detected
+                  value:
+                    status: success
+                    mutation: deterioration
+                    filename: parcelle_42
+                emptyMask:
+                  summary: Reference mask is empty (no ROI)
+                  value:
+                    status: success
+                    mutation: null
+                    filename: parcelle_42
+        "400":
+          description: >
+            Bad request. Either one of the required keys
+            `base64_old` / `base64_new` / `base64_mask` is missing, or one of
+            the base64 payloads is invalid / not a decodable image.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingKey:
+                  value:
+                    error: >-
+                      bad request: one / many of these keys [base64_old,
+                      base64_new, base64_mask] is/are missing
+                invalidBase64:
+                  value:
+                    error: >-
+                      bad request: one / many of [base64_old, base64_new,
+                      base64_mask] base64_data sent is/are invalid
+                    error_text: "Invalid base64-encoded string: ..."
+        "500":
+          description: Internal server error (e.g. model or S3 failure).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                internalError:
+                  value:
+                    error: "Exception message from the runtime"
+
+components:
+  schemas:
+    MutationRequest:
+      type: object
+      description: >
+        Payload of the mutation detection request. All images must be
+        base64-encoded raw image bytes (PNG/JPEG).
+      required:
+        - base64_old
+        - base64_new
+        - base64_mask
+      properties:
+        base64_old:
+          type: string
+          format: byte
+          description: Base64-encoded image of the previous state of the scene.
+        base64_new:
+          type: string
+          format: byte
+          description: Base64-encoded image of the current state of the scene.
+        base64_mask:
+          type: string
+          format: byte
+          description: >
+            Base64-encoded reference mask delimiting the region of interest.
+            Only the first channel is used; values are treated as binary
+            (0 = background, 255 = ROI). A mask with no ROI pixels yields
+            `"mutation": null`.
+        filename:
+          type: string
+          description: Optional identifier echoed back in the response.
+          default: testFile
+      additionalProperties: false
+
+    MutationResponse:
+      type: object
+      description: Successful detection response.
+      properties:
+        status:
+          type: string
+          description: Always "success".
+          enum:
+            - success
+        mutation:
+          type: string
+          nullable: true
+          description: >
+            Detected mutation class within the reference-mask ROI, or `null`
+            when the mask is empty (no region of interest).
+          enum:
+            - background
+            - improvement
+            - deterioration
+            - RAS
+            - none
+            - unknown
+          x-nullable-notes: >
+            `none` = no active class inside the ROI; `unknown` = unmapped class
+            id; `null` = empty reference mask.
+        filename:
+          type: string
+          description: Identifier echoed back from the request.
+      required:
+        - status
+        - mutation
+        - filename
+
+    ErrorResponse:
+      type: object
+      description: Error payload returned for 4xx / 5xx responses.
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+        error_text:
+          type: string
+          description: >
+            Optional underlying exception detail (only present on invalid
+            base64 payloads).
+      required:
+        - error

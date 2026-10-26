@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.controller.v1;
 
 import static app.bpartners.geojobs.file.ExtensionGuesser.OFFICE_OPEN_XML_FILE_MEDIA_TYPE;
+import static app.bpartners.geojobs.monitoring.StepDurationLogger.logDurationOf;
 
 import app.bpartners.geojobs.endpoint.rest.V1RestController;
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.CreateDetectionMapper;
@@ -196,11 +197,20 @@ public class DetectionController {
   public Detection processDetectionSynchronously(
       @PathVariable(name = "id") String detectionId,
       @RequestBody CreateDetectionDebugMode createDetectionDebugMode) {
-    var createDetection = createDetectionMapper.fromDebugMode(createDetectionDebugMode);
-    createDetectionValidator.accept(createDetection);
-    detectionAuthorizer.accept(detectionId, createDetection, authProvider.getPrincipal());
+    var createDetection =
+        logDurationOf(
+            "createDetection mapping",
+            () -> createDetectionMapper.fromDebugMode(createDetectionDebugMode));
+    logDurationOf(
+        "createDetection validation", () -> createDetectionValidator.accept(createDetection));
+    logDurationOf(
+        "detection authorization",
+        () ->
+            detectionAuthorizer.accept(detectionId, createDetection, authProvider.getPrincipal()));
     var communityAuthorization =
-        communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword());
+        logDurationOf(
+            "community authorization lookup",
+            () -> communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword()));
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId).orElse(null);
     return detectionRestMapper.toRest(
         detectionService.processDetectionSynchronously(

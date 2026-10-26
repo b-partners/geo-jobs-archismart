@@ -8,7 +8,6 @@ import app.bpartners.geojobs.model.lidar.planes.model.RoofPointsDelimitationTran
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.api.LasIndexApi;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
-import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -16,6 +15,7 @@ import java.util.stream.IntStream;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.MultiPolygon;
@@ -32,18 +32,13 @@ public class LasRoofsPointsExtractor
     implements BiFunction<LasRoofDelimitationType, Set<Geometry>, PointsExtractionResult> {
   private final LidarApiFacade lidarApi;
   private final GeometrySquareMeterArea projector;
-  private final SwissBoundaryChecker swissBoundaryChecker;
   private final LasRoofPointsExtractorFromOneUrl pointsExtractorFromOneUrl;
 
   @Autowired
   public LasRoofsPointsExtractor(
-      LasIndexApi lasIndexApi,
-      LidarApiFacade lidarApi,
-      GeometrySquareMeterArea projector,
-      SwissBoundaryChecker swissBoundaryChecker) {
+      LasIndexApi lasIndexApi, LidarApiFacade lidarApi, GeometrySquareMeterArea projector) {
     this.lidarApi = lidarApi;
     this.projector = projector;
-    this.swissBoundaryChecker = swissBoundaryChecker;
     this.pointsExtractorFromOneUrl = new LasRoofPointsExtractorFromOneUrl(lidarApi, lasIndexApi);
   }
 
@@ -55,13 +50,14 @@ public class LasRoofsPointsExtractor
     try {
       Set<Geometry> roofsEPSG4326Validated =
           roofsEPSG4326.stream().map(this::validateAndFix).collect(Collectors.toSet());
-      var lidarFilesUrl = lidarApi.getUniqueLidarFilesUrls(roofsEPSG4326Validated);
+      var result = lidarApi.getUniqueLidarFilesUrls(roofsEPSG4326Validated);
+      var lidarFilesUrl = result.filesUrls();
 
       if (lidarFilesUrl.isEmpty()) {
         return new PointsExtractionResult(new HashMap<>());
       }
 
-      var delimitations = emptyDelimitedPoints(type, roofsEPSG4326Validated);
+      var delimitations = emptyDelimitedPoints(type, roofsEPSG4326Validated, result.targetCrs());
       var pointsPerFiles = getPointsFromFiles(lidarFilesUrl, delimitations);
       var all = new ArrayList<>(pointsPerFiles);
       all.add(new HashSet<>(delimitations.values()));
@@ -151,13 +147,15 @@ public class LasRoofsPointsExtractor
   }
 
   private Map<Envelope, DelimitedRoofPoints> emptyDelimitedPoints(
-      LasRoofDelimitationType type, Set<Geometry> roofsEPSG4326) {
+      LasRoofDelimitationType type,
+      Set<Geometry> roofsEPSG4326,
+      CoordinateReferenceSystem targetCrs) {
     Map<Envelope, DelimitedRoofPoints> delimitations = new HashMap<>();
     var transformer = new RoofPointsDelimitationTransformer(ROOF_FACES_BUFFER);
 
     for (var roofEPSG4326 : roofsEPSG4326) {
       var envelope = roofEPSG4326.getEnvelopeInternal();
-      var roofInLocalCRS = projectToLocalCRS(roofEPSG4326);
+      var roofInLocalCRS = projector.project(roofEPSG4326, WGS84, targetCrs);
       var delimitedRoofPoints =
           new DelimitedRoofPoints(type, roofEPSG4326, roofInLocalCRS, transformer);
 
@@ -165,13 +163,6 @@ public class LasRoofsPointsExtractor
     }
 
     return delimitations;
-  }
-
-  private Geometry projectToLocalCRS(Geometry roofEPSG4326) {
-    if (swissBoundaryChecker.isGeometryInSwiss(roofEPSG4326)) {
-      return projector.project(roofEPSG4326, WGS84, EPSG_2056);
-    }
-    return projector.project(roofEPSG4326, WGS84, LAMBERT_93);
   }
 
   private static Envelope normalize(Envelope envelope) {

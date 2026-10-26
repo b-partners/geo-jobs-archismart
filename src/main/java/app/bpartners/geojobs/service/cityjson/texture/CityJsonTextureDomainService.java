@@ -87,6 +87,8 @@ public class CityJsonTextureDomainService {
         crs = WGS84;
       } else if (referenceSystem.contains("2154")) {
         crs = LAMBERT_93;
+      } else if (referenceSystem.contains("3812")) {
+        crs = EPSG_3812;
       } else {
         log.warn("CRS {} not supported. Using {}", referenceSystem, crs.getName());
       }

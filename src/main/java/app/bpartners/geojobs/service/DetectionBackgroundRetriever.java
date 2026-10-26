@@ -26,7 +26,7 @@ public class DetectionBackgroundRetriever implements Function<Detection, MultiPo
 
   @Override
   public MultiPolygon apply(Detection detection) {
-    if (!detection.hasToitureModelName()) {
+    if (!detection.hasRoofBasedModelName()) {
       throw new NotImplementedException(
           "Only detection using TOITURE model is supported for now, otherwise actual is "
               + detection.getDetectableObjectModel().getModelName());

@@ -14,7 +14,6 @@ import app.bpartners.geojobs.service.lidar.LasRoofPointsExtractorFromOneUrl;
 import app.bpartners.geojobs.service.lidar.LasRoofsPointsExtractor;
 import app.bpartners.geojobs.service.lidar.api.LasIndexApi;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
-import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,8 +25,7 @@ public class LasRoofsPointsExtractorCreator {
   private static final GeometrySquareMeterArea projector = new GeometrySquareMeterArea();
 
   public static LasRoofsPointsExtractor create(LidarApiFacade lidarApi) {
-    return new LasRoofsPointsExtractor(
-        lasIndexApiMock(), lidarApi, projector, swissBoundaryCheckerMock());
+    return new LasRoofsPointsExtractor(lasIndexApiMock(), lidarApi, projector);
   }
 
   public static LasRoofsPointsExtractor create(String url, Set<Geometry> geometries) {
@@ -59,7 +57,8 @@ public class LasRoofsPointsExtractorCreator {
         filesUrl.stream().map(LasRoofsPointsExtractorCreator::getDuplicatedResourceFile).toList();
 
     var lidarApiMock = mock(LidarApiFacade.class);
-    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(projected);
+    when(lidarApiMock.getUniqueLidarFilesUrls(any()))
+        .thenReturn(new LidarApiFacade.LidarFilesResult(projected, LAMBERT_93));
     when(lidarApiMock.download(any(), any()))
         .thenAnswer(
             invocation -> {
@@ -67,8 +66,7 @@ public class LasRoofsPointsExtractorCreator {
               return Optional.of(filesData.get(filesUrl.indexOf(filename)));
             });
 
-    return new LasRoofsPointsExtractor(
-        lidarApiMock, projector, swissBoundaryCheckerMock(), fromOneUrl(lidarApiMock));
+    return new LasRoofsPointsExtractor(lidarApiMock, projector, fromOneUrl(lidarApiMock));
   }
 
   private static LasRoofPointsExtractorFromOneUrl fromOneUrl(LidarApiFacade lidarApi) {
@@ -87,12 +85,6 @@ public class LasRoofsPointsExtractorCreator {
     var cleaner = mock(LasFileCleaner.class);
     doNothing().when(cleaner).clean(any());
     return cleaner;
-  }
-
-  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
-    var checker = mock(SwissBoundaryChecker.class);
-    when(checker.isGeometryInSwiss(any())).thenReturn(false);
-    return checker;
   }
 
   public static File getDuplicatedResourceFile(String path) {

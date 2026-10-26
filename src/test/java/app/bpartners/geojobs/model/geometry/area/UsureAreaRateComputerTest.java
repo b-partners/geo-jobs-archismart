@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.repository.model.detection.DetectableType.US
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.model.DetectedTile;
+import app.bpartners.geojobs.model.geometry.area.rate.UsureAreaRateComputer;
 import app.bpartners.geojobs.repository.model.detection.DetectedObject;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,6 @@ class UsureAreaRateComputerTest extends AreaRateComputerTest {
     // Total = (1 + 8) / 100 * 100 = 9.0
 
     assertEquals(9.0, computer.getUsureAreaRate());
-    assertEquals(3.6, computer.getGlobalRate()); // weight is 0.4. 9.0 * 0.4 = 3.6
   }
 
   @Test

@@ -50,7 +50,7 @@ class TileImageBlurTest {
     var detectionId = randomUUID().toString();
 
     when(detectionMock.getId()).thenReturn(detectionId);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.getGeoJsonDelimitationType()).thenReturn(ZONE);
     when(detectionMock.getDetectableObjectModel())
         .thenReturn(new DetectableObjectModel().modelName(TOITURE));

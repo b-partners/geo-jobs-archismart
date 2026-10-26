@@ -28,9 +28,9 @@ public class CacherApiClient {
 
   public URL getWithCache(URL decodedUrl) {
     var encodedUrl = new EncodedURL(decodedUrl);
-
     try {
-      var uri = buildGetWithCacheUri(encodedUrl.value(), properties);
+      var uri = buildGetWithCacheUri(decodedUrl.toString(), properties);
+      log.info("Cacher URI: {}, encodedUrl:{}", uri, encodedUrl.value());
       var restTemplate = getCacherRestTemplate(properties);
       var rawUrl = restTemplate.getForObject(uri, String.class);
       return new URL(rawUrl);
@@ -42,7 +42,7 @@ public class CacherApiClient {
   private URI buildGetWithCacheUri(String encodedUrl, CacherApiProperties properties) {
     return fromUriString(properties.getBaseUrl())
         .pathSegment(PATH)
-        .queryParam(ENCODED_URL_REQUEST_PARAM_NAME, encodedUrl.toString())
+        .queryParam(ENCODED_URL_REQUEST_PARAM_NAME, encodedUrl)
         .queryParam(API_KEY_REQUEST_PARAM_NAME, properties.getApiKey())
         .build()
         .toUri();

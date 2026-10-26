@@ -3,7 +3,7 @@ package app.bpartners.geojobs.endpoint.rest.controller.v1;
 import app.bpartners.geojobs.endpoint.rest.V1RestController;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.RoofScoreMapper;
 import app.bpartners.geojobs.endpoint.rest.model.RoofScore;
-import app.bpartners.geojobs.model.geometry.area.RoofDamageRates;
+import app.bpartners.geojobs.model.geometry.area.rate.RoofDamageRates;
 import app.bpartners.geojobs.validator.RoofDamageRateValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;

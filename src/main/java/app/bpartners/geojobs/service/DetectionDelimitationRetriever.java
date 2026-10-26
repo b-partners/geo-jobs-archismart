@@ -30,7 +30,7 @@ public class DetectionDelimitationRetriever implements Function<Detection, Detec
   private final BuildingFinder buildingFinder;
 
   public Detection apply(Detection detection) {
-    if (detection.hasToitureModelName()) {
+    if (detection.hasRoofBasedModelName()) {
       var detectionWithDelimitations = computeDelimitationsFromDetectionFacade(detection);
       return detectionRepository.save(detectionWithDelimitations);
     }

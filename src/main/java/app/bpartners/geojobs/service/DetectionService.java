@@ -7,6 +7,7 @@ import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PENDING;
 import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.PROCESSING;
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.CLIENT_EXCEPTION;
+import static app.bpartners.geojobs.monitoring.StepDurationLogger.logDurationOf;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFeatureType.PROVIDED_FEATURE;
 import static app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob.DetectionType.HUMAN;
 import static app.bpartners.geojobs.service.detection.DetectionCreationMapper.getOrSetFeatureIdentifier;
@@ -349,24 +350,42 @@ public class DetectionService {
       CreateDetection createDetection,
       String communityOwnerId,
       Boolean debugMode) {
-    var validatedCreateDetection = synchronousDetectionValidator.apply(createDetection);
+    var validatedCreateDetection =
+        logDurationOf(
+            "synchronous detection validation",
+            () -> synchronousDetectionValidator.apply(createDetection));
 
     var optionalDetection =
-        detectionRepository.findByEndToEndIdAndCommunityOwnerId(detectionId, communityOwnerId);
+        logDurationOf(
+            "detection lookup by e2Id",
+            () ->
+                detectionRepository.findByEndToEndIdAndCommunityOwnerId(
+                    detectionId, communityOwnerId));
     Detection detectionToBeProcessed;
     detectionToBeProcessed =
-        optionalDetection.orElseGet(
+        logDurationOf(
+            "detection creation when absent",
             () ->
-                createDetectionJob(
-                    detectionId, validatedCreateDetection, communityOwnerId, true, debugMode));
+                optionalDetection.orElseGet(
+                    () ->
+                        createDetectionJob(
+                            detectionId,
+                            validatedCreateDetection,
+                            communityOwnerId,
+                            true,
+                            debugMode)));
     var features =
-        validatedCreateDetection.getGeoJsonZone().stream()
-            .peek(getOrSetFeatureIdentifier(Feature::getProperties, Feature::setProperties))
-            .map(FeatureMapper::toDomainFeature)
-            .toList();
+        logDurationOf(
+            "provided features mapping",
+            () ->
+                validatedCreateDetection.getGeoJsonZone().stream()
+                    .peek(getOrSetFeatureIdentifier(Feature::getProperties, Feature::setProperties))
+                    .map(FeatureMapper::toDomainFeature)
+                    .toList());
     var detectionToSave = detectionToBeProcessed.toBuilder().providedGeoJsonZone(features).build();
     detectionToSave.addFeatures(features, PROVIDED_FEATURE);
-    var savedDetectionToBeProcessed = detectionRepository.save(detectionToSave);
+    var savedDetectionToBeProcessed =
+        logDurationOf("detection saving", () -> detectionRepository.save(detectionToSave));
 
     try {
       synchronousDetectionService.apply(savedDetectionToBeProcessed);

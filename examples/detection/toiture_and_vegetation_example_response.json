@@ -33,7 +33,7 @@
   "emailReceiver": "tech@birdia.fr",
   "zoneName": "205 Bd des Roses, 06210 Mandelieu-la-Napoule, France",
   "geoServerProperties": {
-    "geoServerUrl": "http://35.181.83.111/geoserver/cite/wms",
+    "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
     "geoServerParameter": {
       "service": "WMS",
       "request": "GetMap",
@@ -46,9 +46,6 @@
       "height": 1024,
       "srs": "EPSG:3857"
     }
-  },
-  "detectableObjectModel": {
-    "modelName": "BP_TOITURE"
   },
   "detectableObjectModelList": [
     {
@@ -76,8 +73,8 @@
       }
     }
   ],
-  "geoJsonDelimitationType": "PARCEL",
-  "geoJsonOutput": "ZIP",
+  "geoJsonDelimitationType": "PARCEL_CONSTRAINED_DELIMITATION",
+  "geoJsonOutput": "GEO_JSON",
   "needsImageOutput": true,
   "toNotify": false
 }

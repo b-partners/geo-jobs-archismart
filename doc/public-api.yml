@@ -7,7 +7,9 @@ info:
     
     # Versioning
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are : 
-    - [v1.3.5 (2026-05-12)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-5-api.yml) *(current)*
+    - [v1.4.0 (2026-10-26)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-4-0-api.yml) *(current)*
+    - [v1.3.6 (2026-09-17)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-6-api.yml)
+    - [v1.3.5 (2026-05-12)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-5-api.yml)
     - [v1.3.4 (2026-03-31)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-4-api.yml)
     - [v1.3.3 (2026-03-11)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-3-api.yml)
     - [v1.3.2 (2026-02-25)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/b-partners/geo-jobs/prod/doc/version/v1-3-2-api.yml)
@@ -50,40 +52,52 @@ info:
     
     # Detection examples
     
-    ### Detection on roof objects providing geojson multiPolygon
+    ### Detection on roof objects providing geojson multi-polygon geometry
     1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
-    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection_toiture_payload_example.json).
-    Note that `detectableObjectModel` property must be set to `BP_TOITURE` and `geoServerProperties` property to `null`.
-    To handle models through one detection, use `detectableObjectModelList` instead of detectableObjectModel.
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection_toiture_multi_polygon_payload_example.json).
+    Note that `detectableObjectModelList` property must contain the `BP_TOITURE` model.
     2. Track the progress of your detection through `GET /detections/{id}`. 
     Detection is finished when `geoJsonUrl` property containing your detection result is not null.
-    Expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/toiture_analysis_result_example.geojson)
+    Expected API result example is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection-toiture-multi-polygon-api-response-example.json)
+    Expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection-toiture-multi-polygon-geojson-response-example.geojson)
     
     ### Detection on roof objects providing excel file containing textual addresses 
     1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
-    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/detection_creation_using_toiture_model_example.json). 
-    Note that `detectableObjectModel` property must be set to `BP_TOITURE` and `geoServerProperties` property to `null`.
-    To handle models through one detection, use `detectableObjectModelList` instead of detectableObjectModel.
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/excel/detection_toiture_for_excel_process_payload_example.json).
+    Note that `detectableObjectModelList` property must contain the `BP_TOITURE` model.
     2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
     Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/excel/excel_addresses_example.xlsx)
-    3. Track the progress of your detection through `GET /detections/{id}`. 
+    3. Track the progress of your detection through `GET /detections/{id}`.
     Detection is finished when `geoJsonUrl` property containing your detection result is not null.
-    4. Processing time is variable due to address conversion, 
-    expected geojson example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/toiture_analysis_result_example.geojson). 
-    
-    ### Detection on parcels including roof objects and trees providing excel file containing textual addresses
+    4. Processing time is variable due to address conversion.
+
+    ### Detection on parcels including roof objects and trees providing geojson geometry
     1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
-    using the example request body accessible [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/detection_parcel_payload_example.json). 
+    using the example request body accessible [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/preprod/examples/detection/detection_parcel_geojson_payload_example.json). 
     Especially, note that both `BP_TOITURE` and `BP_VEGETATION` must be specified during creation through `detectableObjectModelList` property.
-    Also, `geoJsonDelimitationType` property must be set as `PARCEL` to consider the address's parcel.
-    In case you need to get images and its detections result for each address detected, set `needsImageOutput` property to `true`.
-    2. Submit list of addresses contained inside an **Excel file** in a second call `POST /detections/{id}/excel`. 
-    Example can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/excel/excel_addresses_example.xlsx)
-    3. Track the progress of your detection through `GET /detections/{id}`. 
+    Also, `geoJsonDelimitationType` property must be set as `PARCEL_CONSTRAINED_DELIMITATION` to consider the zone's parcel.
+    Provide your zone directly through the `geoJsonZone` property using point, polygon or multi-polygon geometry.
+    In case you need to get images and its detections result for each detected feature, set `needsImageOutput` property to `true`.
+    2. Track the progress of your detection through `GET /detections/{id}`.
     Once detection is on step POST_PROCESSING with status progression FINISHED and status health SUCCEEDED : 
-    - Images result, if needed, can be obtained through each feature corresponding to each detected address inside `geoJsonZone` where `original_image_url` allow to retrieve address's image and `vgg_url` detection results to be displayed on obtained image. 
+    - Images result, if needed, can be obtained through each feature inside `geoJsonZone` where `original_image_url` allow to retrieve the feature's image and `vgg_url` detection results to be displayed on obtained image.
       Expected result can be found [here](https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/toiture_and_vegetation_example_response.json).
     - GeoJson result can be obtained through `geoJsonUrl` and can be displayed on a map as QGIS.
+    
+    ### Detection on revetement and obstacles at 20 cm precision providing geojson polygon geometry
+    1. Submit detection request through `POST /detections/{id}` where `{id}` is yours to be created
+    using the example request body accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/detection_revetement_obstacle_polygon_payload_example.json).
+    Especially, note that `detectableObjectModelList` property must contain the `BP_REVETEMENT_OBSTACLE` model, which supports imagery layers of 5 cm and 20 cm.
+    Do not provide `geoServerProperties`: imagery layer, and so its precision, is automatically selected from the zone location, here a zone covered by 20 cm imagery.
+    Also, `geoJsonDelimitationType` property must be set as `USER_DEFINED_DELIMITATION` to use the provided polygon directly as the zone.
+    Provide your zone directly through the `geoJsonZone` property using polygon geometry.
+    In case you need to get images and its detections result for each detected feature, set `needsImageOutput` property to `true`.
+    2. Track the progress of your detection through `GET /detections/{id}`.
+    Once detection is on step POST_PROCESSING with status progression FINISHED and status health SUCCEEDED : 
+    - Images result, if needed, can be obtained through each feature inside `geoJsonZone` where `original_image_url` allow to retrieve the feature's image and `vgg_url` detection results to be displayed on obtained image.
+    - GeoJson result can be obtained through `geoJsonUrl` and can be displayed on a map as QGIS.
+    Expected API result example is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/detection_revetement_obstacle_polygon_api_response_example.json).
+    Expected VGG example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/vgg/revetement_obstacle_polygon_20cm.json).
     
     # 3D request examples
     
@@ -114,13 +128,14 @@ info:
     3. You can preview downloaded CityJSON file result through [https://ninja.cityjson.org](https://ninja.cityjson.org/).
     Expected city JSON example result is accessible [here](https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/cityjson/city_json_file_example.json).
 
-  version: '1.3.5'
+  version: '1.4.0'
 
 servers:
   - url: 'https://api.birdia.fr'
 tags:
   - name: Usage
   - name: Image
+  - name: Coverage
   - name: Detection
   - name: ThreeD
     description: Refers to 3D resources such as roof/building 3D model
@@ -172,6 +187,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Detection'
+              examples:
+                detections:
+                  $ref: '#/components/examples/DetectionListResponse'
   '/image':
     get:
       tags:
@@ -254,6 +272,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detection'
+              examples:
+                roofGeoJsonMultiPolygonResult:
+                  $ref: '#/components/examples/DetectionRoofGeoJsonMultiPolygonResponse'
+                parcelGeoJsonZoneResult:
+                  $ref: '#/components/examples/DetectionParcelGeoJsonZoneResponse'
+                revetementObstacleGeoJsonPolygon20cmResult:
+                  $ref: '#/components/examples/DetectionRevetementObstacleGeoJsonPolygon20cmResponse'
     post:
       tags:
         - Detection
@@ -276,10 +301,14 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateDetection'
             examples:
-              detectionForRoof:
-                $ref: '#/components/examples/DetectionUsingToitureModel'
-              detectionForRoofAndVegetation:
-                $ref: '#/components/examples/DetectionUsingToitureAndVegetationModel'
+              roofGeoJsonMultiPolygon:
+                $ref: '#/components/examples/DetectionRoofGeoJsonMultiPolygon'
+              roofFromExcelAddresses:
+                $ref: '#/components/examples/DetectionRoofFromExcelAddresses'
+              parcelGeoJsonZone:
+                $ref: '#/components/examples/DetectionParcelGeoJsonZone'
+              revetementObstacleGeoJsonPolygon20cm:
+                $ref: '#/components/examples/DetectionRevetementObstacleGeoJsonPolygon'
       responses:
         200:
           description: Detection created or launched
@@ -287,6 +316,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detection'
+              examples:
+                roofGeoJsonMultiPolygonResult:
+                  $ref: '#/components/examples/DetectionRoofGeoJsonMultiPolygonResponse'
+                parcelGeoJsonZoneResult:
+                  $ref: '#/components/examples/DetectionParcelGeoJsonZoneResponse'
+                revetementObstacleGeoJsonPolygon20cmResult:
+                  $ref: '#/components/examples/DetectionRevetementObstacleGeoJsonPolygon20cmResponse'
   '/detections/{id}/sync':
     post:
       tags:
@@ -305,6 +341,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateDetection'
+            examples:
+              roofGeoJsonPolygonSync:
+                $ref: '#/components/examples/DetectionSyncRoofGeoJsonPolygon'
       responses:
         200:
           description: Detection created or processing
@@ -312,6 +351,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detection'
+              examples:
+                roofGeoJsonPolygonSyncResult:
+                  $ref: '#/components/examples/DetectionSyncRoofGeoJsonPolygonResponse'
   '/detections/{id}/addresses':
     post:
       tags:
@@ -577,6 +619,67 @@ paths:
               examples:
                 3DResponseWithStatusSucceeded:
                   $ref: '#/components/examples/ThreeDResponseWithProcessingStatusExample'
+  '/coverage':
+    get:
+      tags:
+        - Coverage
+      operationId: getAreaCoverage
+      summary: Check whether an address or a point is covered by HD imagery and by lidar data
+      description: |
+        Tells whether the location can be processed, either from 2D imagery or from lidar data (3D).
+        Provide either a textual address, or point coordinates (longitude and latitude), but not both.
+
+        - **Imagery**: the location is covered when at least one imagery layer is reachable, and `hd` when the
+          best reachable layer has a 5 cm precision, the only precision supported by detection models.
+        - **Lidar**: the location is covered when lidar files are available for it and their header can be read.
+
+        When geodata providers cannot be reached, the response is a `504` and never a "not covered" result.
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - in: query
+          name: address
+          required: false
+          description: Address to check, resolved into a point
+          schema:
+            type: string
+        - in: query
+          name: longitude
+          required: false
+          schema:
+            type: number
+        - in: query
+          name: latitude
+          required: false
+          schema:
+            type: number
+        - in: query
+          name: types
+          required: false
+          description: Coverage types to check, both when none provided
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CoverageType'
+      responses:
+        200:
+          description: Coverage of the location, only for the requested types
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaCoverage'
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        504:
+          description: Geodata providers are unreachable, coverage cannot be determined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestException'
   '/keys':
     delete:
       tags:
@@ -599,38 +702,992 @@ components:
       in: header
       name: x-api-key
   examples:
-    DetectionUsingToitureModel:
-      summary: Detection using BP_TOITURE model
+    DetectionRoofGeoJsonMultiPolygon:
+      summary: Roof detection over a GeoJSON multi-polygon zone
       value:
-        emailReceiver: "<your-email-address>"
-        zoneName: "<your-zone-name>"
-        geoServerProperties: null
-        detectableObjectModel:
-          modelName: "BP_TOITURE"
+        emailReceiver: "your.email@mail.com"
+        zoneName: "your.zone.name"
         detectableObjectModelList:
           - modelName: "BP_TOITURE"
         geoJsonZone:
           - type: "Feature"
+            properties: { }
             geometry:
               type: "MultiPolygon"
               coordinates:
-                - [ [ [ [ -0.24908199906349182, 46.651815670805505 ], [ -0.24908166378736496, 46.65181521051821 ], [ -0.24908166378736496, 46.65181452008728 ], [ -0.24908099323511124, 46.651813829656334 ], [ -0.24908099323511124, 46.65180807606479 ], [ -0.249084010720253, 46.65180807606479 ], [ -0.24908434599637985, 46.65180853635213 ], [ -0.2490846812725067, 46.651808996639474 ], [ -0.24908501654863358, 46.651809687070475 ], [ -0.24908535182476044, 46.65181037750147 ], [ -0.24908535182476044, 46.65181152821978 ], [ -0.2490856871008873, 46.651811988507106 ], [ -0.2490873634815216, 46.65181313922538 ], [ -0.2490873634815216, 46.65181521051821 ], [ -0.24908669292926788, 46.65181544066185 ], [ -0.2490856871008873, 46.651815670805505 ], [ -0.24908535182476044, 46.65181590094914 ], [ -0.24908199906349182, 46.651815670805505 ] ] ] ]
-    DetectionUsingToitureAndVegetationModel:
-      summary: Detection using BP_TOITURE and BP_VEGETATION model
+                - [ [ [ 7.000240685066785, 43.549830291126 ], [ 7.0005827691924765, 43.549830291126 ], [ 7.0005827691924765, 43.5495320142542 ], [ 7.000240685066785, 43.5495320142542 ], [ 7.000240685066785, 43.549830291126 ] ] ]
+                - [ [ [ 7.001070281966349, 43.55023083628538 ], [ 7.001654545570688, 43.55023083628538 ], [ 7.001654545570688, 43.54951011361388 ], [ 7.001070281966349, 43.54951011361388 ], [ 7.001070281966349, 43.55023083628538 ] ] ]
+        geoJsonDelimitationType: "PARCEL_FREE_DELIMITATION"
+        geoJsonOutput: "GEO_JSON"
+    DetectionRoofFromExcelAddresses:
+      summary: Roof detection from an Excel file of addresses (zone uploaded through POST /detections/{id}/excel)
       value:
-        emailReceiver: "<your-email-address>"
+        emailReceiver: "your.email@mail.com"
+        zoneName: "your.zone.name"
+        needsImageOutput: true
+        detectableObjectModelList:
+          - modelName: "BP_TOITURE"
+        geoJsonDelimitationType: "PARCEL_FREE_DELIMITATION"
+        geoJsonOutput: "ZIP"
+    DetectionParcelGeoJsonZone:
+      summary: Parcel detection with roof and vegetation over a GeoJSON zone
+      value:
+        emailReceiver: "<your-email-to-be-notified>"
         zoneName: "<your-zone-name>"
-        geoServerProperties: null
-        detectableObjectModel: null
+        geoJsonDelimitationType: "PARCEL_CONSTRAINED_DELIMITATION"
+        needsImageOutput: true
         detectableObjectModelList:
           - modelName: "BP_TOITURE"
           - modelName: "BP_VEGETATION"
         geoJsonZone:
           - type: "Feature"
+            properties: { }
             geometry:
-              type: "MultiPolygon"
+              type: "Point"
+              coordinates: [ 3.068299423393144, 50.63012080308718 ]
+        geoJsonOutput: "GEO_JSON"
+    DetectionRevetementObstacleGeoJsonPolygon:
+      summary: Revetement and obstacle detection at 20 cm precision over a GeoJSON polygon zone
+      description: |
+        No `geoServerProperties` is provided: imagery layer is automatically selected from the zone location.
+        This example targets a zone whose available imagery is at 20 cm, a precision supported by `BP_REVETEMENT_OBSTACLE` along with 5 cm.
+      value:
+        emailReceiver: "your.email@mail.com"
+        zoneName: "your.zone.name"
+        detectableObjectModelList:
+          - modelName: "BP_REVETEMENT_OBSTACLE"
+        geoJsonZone:
+          - type: "Feature"
+            properties: { }
+            geometry:
+              type: "Polygon"
               coordinates:
-                - [ [ [ [ -0.24908199906349182, 46.651815670805505 ], [ -0.24908166378736496, 46.65181521051821 ], [ -0.24908166378736496, 46.65181452008728 ], [ -0.24908099323511124, 46.651813829656334 ], [ -0.24908099323511124, 46.65180807606479 ], [ -0.249084010720253, 46.65180807606479 ], [ -0.24908434599637985, 46.65180853635213 ], [ -0.2490846812725067, 46.651808996639474 ], [ -0.24908501654863358, 46.651809687070475 ], [ -0.24908535182476044, 46.65181037750147 ], [ -0.24908535182476044, 46.65181152821978 ], [ -0.2490856871008873, 46.651811988507106 ], [ -0.2490873634815216, 46.65181313922538 ], [ -0.2490873634815216, 46.65181521051821 ], [ -0.24908669292926788, 46.65181544066185 ], [ -0.2490856871008873, 46.651815670805505 ], [ -0.24908535182476044, 46.65181590094914 ], [ -0.24908199906349182, 46.651815670805505 ] ] ] ]
+                - [ [ 2.4119102672653323, 47.064610035601 ], [ 2.411931509304379, 47.064534070630415 ], [ 2.4120377194994185, 47.06454854015698 ], [ 2.4120164774604107, 47.06462450510693 ], [ 2.4119102672653323, 47.064610035601 ] ]
+        geoJsonDelimitationType: "USER_DEFINED_DELIMITATION"
+        needsImageOutput: true
+    DetectionSyncRoofGeoJsonPolygon:
+      summary: Synchronous roof detection over a GeoJSON polygon zone
+      value:
+        emailReceiver: "your.email@mail.com"
+        zoneName: "your.zone.name"
+        detectableObjectModelList:
+          - modelName: "BP_TOITURE"
+        geoJsonZone:
+          - type: "Feature"
+            properties: { }
+            geometry:
+              type: "Polygon"
+              coordinates:
+                - [ [ -0.2494458, 46.65203 ], [ -0.2494733, 46.6519681 ], [ -0.2494903, 46.6519052 ], [ -0.2494236, 46.6518819 ], [ -0.2493072, 46.6518756 ], [ -0.2493046, 46.6519124 ], [ -0.2492693, 46.6519465 ], [ -0.2492627, 46.6519923 ], [ -0.2493046, 46.6520013 ], [ -0.2493451, 46.6520094 ], [ -0.2494458, 46.65203 ] ]
+        geoJsonDelimitationType: "USER_DEFINED_DELIMITATION"
+        geoJsonOutput: "ZIP"
+        needsImageOutput: true
+    DetectionRoofGeoJsonMultiPolygonResponse:
+      summary: Detection result for the roof GeoJSON multi-polygon example
+      value:
+        {
+          "id": "<random-uuid>",
+          "step": {
+            "name": "POST_PROCESSING",
+            "status": {
+              "progression": "FINISHED",
+              "health": "SUCCEEDED",
+              "message": null,
+              "creationDatetime": "2026-01-01T00:00:00.00Z"
+            },
+            "statistics": [],
+            "updatedAt": "2026-01-01T00:00:00.00Z"
+          },
+          "geoJsonUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection-toiture-multi-polygon-geojson-response-example.geojson",
+          "shapeUrl": null,
+          "excelUrl": null,
+          "imageUrl": null,
+          "imageProperties": null,
+          "imageTileInfoOrigin": {
+            "size": {
+              "width": 1024,
+              "height": 1024
+            },
+            "coordinates": {
+              "x": 544677,
+              "y": 383097,
+              "z": 20
+            }
+          },
+          "pdfUrl": null,
+          "vggUrl": null,
+          "addresses": [],
+          "creationDatetime": "2026-01-01T00:00:00.00Z",
+          "emailReceiver": "your.email@mail.com",
+          "zoneName": "your.zone.name",
+          "geoServerProperties": {
+            "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+            "geoServerParameter": {
+              "service": "WMS",
+              "request": "GetMap",
+              "layers": "ALPES_MARITIMES_5cm",
+              "precisionLevelInCm": 5,
+              "styles": "",
+              "format": "image/jpeg",
+              "transparent": true,
+              "version": "1.3.0",
+              "width": 1024,
+              "height": 1024,
+              "srs": "EPSG:3857"
+            }
+          },
+          "detectableObjectModel": {
+            "modelName": "BP_TOITURE"
+          },
+          "detectableObjectModelList": [
+            {
+              "modelName": "BP_TOITURE"
+            }
+          ],
+          "geoJsonZone": [
+            {
+              "type": "Feature",
+              "geometry": {
+                "coordinates": [
+                  [
+                    [
+                      [
+                        7.000240685066785,
+                        43.549830291126
+                      ],
+                      [
+                        7.0005827691924765,
+                        43.549830291126
+                      ],
+                      [
+                        7.0005827691924765,
+                        43.5495320142542
+                      ],
+                      [
+                        7.000240685066785,
+                        43.5495320142542
+                      ],
+                      [
+                        7.000240685066785,
+                        43.549830291126
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      [
+                        7.001070281966349,
+                        43.55023083628538
+                      ],
+                      [
+                        7.001654545570688,
+                        43.55023083628538
+                      ],
+                      [
+                        7.001654545570688,
+                        43.54951011361388
+                      ],
+                      [
+                        7.001070281966349,
+                        43.54951011361388
+                      ],
+                      [
+                        7.001070281966349,
+                        43.55023083628538
+                      ]
+                    ]
+                  ]
+                ],
+                "type": "MultiPolygon"
+              },
+              "properties": {
+                "feature_id": "<random-uuid>"
+              }
+            }
+          ],
+          "geoJsonDelimitationType": "PARCEL_FREE_DELIMITATION",
+          "geoJsonOutput": "GEO_JSON",
+          "needsImageOutput": false
+        }
+    DetectionParcelGeoJsonZoneResponse:
+      summary: Detection result for the parcel example with roof and vegetation
+      value:
+        {
+          "id": "<your-id>>",
+          "step": {
+            "name": "MACHINE_DETECTION",
+            "status": {
+              "progression": "FINISHED",
+              "health": "SUCCEEDED",
+              "creationDatetime": "2026-01-01T00:00:00.00Z"
+            },
+            "statistics": [],
+            "updatedAt": "2026-02-27T07:38:05.668123660Z"
+          },
+          "geoJsonUrl": null,
+          "shapeUrl": null,
+          "excelUrl": null,
+          "imageUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg",
+          "imageTileInfoOrigin": {
+            "size": {
+              "width": 1024,
+              "height": 1024
+            },
+            "coordinates": {
+              "x": 533224,
+              "y": 352743,
+              "z": 20
+            }
+          },
+          "pdfUrl": null,
+          "vggUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+          "addresses": [],
+          "roofDelimiter": null,
+          "creationDatetime": "2026-02-27T07:37:11.816593Z",
+          "emailReceiver": "tech@birdia.fr",
+          "zoneName": "205 Bd des Roses, 06210 Mandelieu-la-Napoule, France",
+          "geoServerProperties": {
+            "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+            "geoServerParameter": {
+              "service": "WMS",
+              "request": "GetMap",
+              "layers": "Haut-de-france",
+              "styles": "",
+              "format": "image/jpeg",
+              "transparent": true,
+              "version": "1.3.0",
+              "width": 1024,
+              "height": 1024,
+              "srs": "EPSG:3857"
+            }
+          },
+          "detectableObjectModelList": [
+            {
+              "modelName": "BP_TOITURE"
+            },
+            {
+              "modelName": "BP_VEGETATION"
+            }
+          ],
+          "geoJsonZone": [
+            {
+              "type": "Feature",
+              "geometry": {
+                "coordinates": [
+                  3.068299423393144,
+                  50.63012080308718
+                ],
+                "type": "Point"
+              },
+              "properties": {
+                "feature_id": "c7854595-4d5f-4dfc-aac0-b64be0a9c91f",
+                "vgg_file_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+                "zoom": 20,
+                "original_image_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg"
+              }
+            }
+          ],
+          "geoJsonDelimitationType": "PARCEL_CONSTRAINED_DELIMITATION",
+          "geoJsonOutput": "GEO_JSON",
+          "needsImageOutput": true,
+          "toNotify": false
+        }
+    DetectionRevetementObstacleGeoJsonPolygon20cmResponse:
+      summary: Detection result for the revetement and obstacle example at 20 cm precision
+      value:
+          {
+            "id": "<your-id>",
+            "step": {
+              "name": "MACHINE_DETECTION",
+              "status": {
+                "progression": "FINISHED",
+                "health": "SUCCEEDED",
+                "message": null,
+                "creationDatetime": "2026-01-01T00:00:00.00Z"
+              },
+              "statistics": [],
+              "updatedAt": "2026-01-01T00:00:00.00Z"
+            },
+            "geoJsonUrl": null,
+            "shapeUrl": null,
+            "excelUrl": null,
+            "imageUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/image/revetement_obstacle_polygon_20cm.jpg",
+            "imageProperties": {
+              "width": 1024,
+              "height": 1024
+            },
+            "imageTileInfoOrigin": {
+              "size": {
+                "width": 1024,
+                "height": 1024
+              },
+              "coordinates": {
+                "x": 265656,
+                "y": 184267,
+                "z": 19
+              }
+            },
+            "pdfUrl": null,
+            "vggUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/vgg/revetement_obstacle_polygon_20cm.json",
+            "addresses": [],
+            "roofDelimiter": {
+              "roofSlopeInDegree": null,
+              "roofHeightInMeter": null,
+              "polygon": [
+                [
+                  2.4119102672653323,
+                  47.064610035601
+                ],
+                [
+                  2.411931509304379,
+                  47.064534070630415
+                ],
+                [
+                  2.4120377194994185,
+                  47.06454854015698
+                ],
+                [
+                  2.4120164774604107,
+                  47.06462450510693
+                ],
+                [
+                  2.4119102672653323,
+                  47.064610035601
+                ]
+              ]
+            },
+            "creationDatetime": "2026-01-01T00:00:00.00Z",
+            "emailReceiver": "your.email@mail.com",
+            "zoneName": "your.zone.name",
+            "geoServerProperties": {
+              "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+              "geoServerParameter": {
+                "service": "WMS",
+                "request": "GetMap",
+                "layers": "FLUX_IGN_2025_20CM",
+                "precisionLevelInCm": 20,
+                "styles": "",
+                "format": "image/jpeg",
+                "transparent": true,
+                "version": "1.3.0",
+                "width": 1024,
+                "height": 1024,
+                "srs": "EPSG:3857"
+              }
+            },
+            "detectableObjectModelList": [
+              {
+                "modelName": "BP_REVETEMENT_OBSTACLE"
+              }
+            ],
+            "geoJsonZone": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "coordinates": [
+                    [
+                      [
+                        2.4119102672653323,
+                        47.064610035601
+                      ],
+                      [
+                        2.411931509304379,
+                        47.064534070630415
+                      ],
+                      [
+                        2.4120377194994185,
+                        47.06454854015698
+                      ],
+                      [
+                        2.4120164774604107,
+                        47.06462450510693
+                      ],
+                      [
+                        2.4119102672653323,
+                        47.064610035601
+                      ]
+                    ]
+                  ],
+                  "type": "Polygon"
+                },
+                "properties": {
+                  "feature_id": "<random-uuid>",
+                  "vgg_file_url": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/vgg/revetement_obstacle_polygon_20cm.json",
+                  "original_image_url": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/image/revetement_obstacle_polygon_20cm.jpg",
+                  "zoom": 20
+                }
+              }
+            ],
+            "geoJsonDelimitationType": "USER_DEFINED_DELIMITATION",
+            "geoJsonOutput": "ZIP",
+            "needsImageOutput": true,
+            "toNotify": false
+          }
+    DetectionSyncRoofGeoJsonPolygonResponse:
+      summary: Synchronous detection result for the roof GeoJSON polygon example
+      value:
+        {
+          "id": "<random-uuid>",
+          "step": {
+            "name": "MACHINE_DETECTION",
+            "status": {
+              "progression": "FINISHED",
+              "health": "SUCCEEDED",
+              "message": null,
+              "creationDatetime": "2026-09-17T07:49:24.944534264Z"
+            },
+            "statistics": [],
+            "updatedAt": "2026-09-17T07:49:24.944547839Z"
+          },
+          "geoJsonUrl": null,
+          "shapeUrl": null,
+          "excelUrl": null,
+          "imageUrl": "detection-sync-toiture-vgg-response-example.jpg",
+          "imageProperties": {
+            "width": 1024,
+            "height": 2048
+          },
+          "imageTileInfoOrigin": {
+            "size": {
+              "width": 1024,
+              "height": 1024
+            },
+            "coordinates": {
+              "x": 523561,
+              "y": 370292,
+              "z": 20
+            }
+          },
+          "pdfUrl": null,
+          "vggUrl": "detection-sync-toiture-vgg-response-example.json",
+          "addresses": [],
+          "roofDelimiter": {
+            "roofSlopeInDegree": null,
+            "roofHeightInMeter": null,
+            "polygon": [
+              [
+                -0.2494458,
+                46.65203
+              ],
+              [
+                -0.2494733,
+                46.6519681
+              ],
+              [
+                -0.2494903,
+                46.6519052
+              ],
+              [
+                -0.2494236,
+                46.6518819
+              ],
+              [
+                -0.2493072,
+                46.6518756
+              ],
+              [
+                -0.2493046,
+                46.6519124
+              ],
+              [
+                -0.2492693,
+                46.6519465
+              ],
+              [
+                -0.2492627,
+                46.6519923
+              ],
+              [
+                -0.2493046,
+                46.6520013
+              ],
+              [
+                -0.2493451,
+                46.6520094
+              ],
+              [
+                -0.2494458,
+                46.65203
+              ]
+            ]
+          },
+          "creationDatetime": "2026-09-17T07:40:40.995209Z",
+          "emailReceiver": "your.email@mail.com",
+          "zoneName": "your.zone.name",
+          "geoServerProperties": {
+            "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+            "geoServerParameter": {
+              "service": "WMS",
+              "request": "GetMap",
+              "layers": "PCRS",
+              "precisionLevelInCm": 5,
+              "styles": "",
+              "format": "image/jpeg",
+              "transparent": true,
+              "version": "1.3.0",
+              "width": 1024,
+              "height": 1024,
+              "srs": "EPSG:3857"
+            }
+          },
+          "detectableObjectModelList": [
+            {
+              "modelName": "BP_TOITURE"
+            }
+          ],
+          "geoJsonZone": [
+            {
+              "type": "Feature",
+              "geometry": {
+                "coordinates": [
+                  [
+                    [
+                      -0.2494458,
+                      46.65203
+                    ],
+                    [
+                      -0.2494733,
+                      46.6519681
+                    ],
+                    [
+                      -0.2494903,
+                      46.6519052
+                    ],
+                    [
+                      -0.2494236,
+                      46.6518819
+                    ],
+                    [
+                      -0.2493072,
+                      46.6518756
+                    ],
+                    [
+                      -0.2493046,
+                      46.6519124
+                    ],
+                    [
+                      -0.2492693,
+                      46.6519465
+                    ],
+                    [
+                      -0.2492627,
+                      46.6519923
+                    ],
+                    [
+                      -0.2493046,
+                      46.6520013
+                    ],
+                    [
+                      -0.2493451,
+                      46.6520094
+                    ],
+                    [
+                      -0.2494458,
+                      46.65203
+                    ]
+                  ]
+                ],
+                "type": "Polygon"
+              },
+              "properties": {
+                "feature_id": "<random-uuid>",
+                "vgg_file_url": "detection-sync-toiture-vgg-response-example.json",
+                "original_image_url": "detection-sync-toiture-vgg-response-example.jpg",
+                "zoom": 20
+              }
+            }
+          ],
+          "geoJsonDelimitationType": "USER_DEFINED_DELIMITATION",
+          "geoJsonOutput": "ZIP",
+          "needsImageOutput": true,
+          "toNotify": false
+        }
+    DetectionListResponse:
+      summary: List of detections combining the roof, parcel and synchronous examples
+      value:
+        -
+          {
+            "id": "<random-uuid>",
+            "step": {
+              "name": "POST_PROCESSING",
+              "status": {
+                "progression": "FINISHED",
+                "health": "SUCCEEDED",
+                "message": null,
+                "creationDatetime": "2026-01-01T00:00:00.00Z"
+              },
+              "statistics": [],
+              "updatedAt": "2026-01-01T00:00:00.00Z"
+            },
+            "geoJsonUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/geojson/detection-toiture-multi-polygon-geojson-response-example.geojson",
+            "shapeUrl": null,
+            "excelUrl": null,
+            "imageUrl": null,
+            "imageProperties": null,
+            "imageTileInfoOrigin": {
+              "size": {
+                "width": 1024,
+                "height": 1024
+              },
+              "coordinates": {
+                "x": 544677,
+                "y": 383097,
+                "z": 20
+              }
+            },
+            "pdfUrl": null,
+            "vggUrl": null,
+            "addresses": [],
+            "creationDatetime": "2026-01-01T00:00:00.00Z",
+            "emailReceiver": "your.email@mail.com",
+            "zoneName": "your.zone.name",
+            "geoServerProperties": {
+              "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+              "geoServerParameter": {
+                "service": "WMS",
+                "request": "GetMap",
+                "layers": "ALPES_MARITIMES_5cm",
+                "precisionLevelInCm": 5,
+                "styles": "",
+                "format": "image/jpeg",
+                "transparent": true,
+                "version": "1.3.0",
+                "width": 1024,
+                "height": 1024,
+                "srs": "EPSG:3857"
+              }
+            },
+            "detectableObjectModel": {
+              "modelName": "BP_TOITURE"
+            },
+            "detectableObjectModelList": [
+              {
+                "modelName": "BP_TOITURE"
+              }
+            ],
+            "geoJsonZone": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "coordinates": [
+                    [
+                      [
+                        [
+                          7.000240685066785,
+                          43.549830291126
+                        ],
+                        [
+                          7.0005827691924765,
+                          43.549830291126
+                        ],
+                        [
+                          7.0005827691924765,
+                          43.5495320142542
+                        ],
+                        [
+                          7.000240685066785,
+                          43.5495320142542
+                        ],
+                        [
+                          7.000240685066785,
+                          43.549830291126
+                        ]
+                      ]
+                    ],
+                    [
+                      [
+                        [
+                          7.001070281966349,
+                          43.55023083628538
+                        ],
+                        [
+                          7.001654545570688,
+                          43.55023083628538
+                        ],
+                        [
+                          7.001654545570688,
+                          43.54951011361388
+                        ],
+                        [
+                          7.001070281966349,
+                          43.54951011361388
+                        ],
+                        [
+                          7.001070281966349,
+                          43.55023083628538
+                        ]
+                      ]
+                    ]
+                  ],
+                  "type": "MultiPolygon"
+                },
+                "properties": {
+                  "feature_id": "<random-uuid>"
+                }
+              }
+            ],
+            "geoJsonDelimitationType": "PARCEL_FREE_DELIMITATION",
+            "geoJsonOutput": "GEO_JSON",
+            "needsImageOutput": false
+          }
+        -
+          {
+            "id": "<your-id>>",
+            "step": {
+              "name": "MACHINE_DETECTION",
+              "status": {
+                "progression": "FINISHED",
+                "health": "SUCCEEDED",
+                "creationDatetime": "2026-01-01T00:00:00.00Z"
+              },
+              "statistics": [],
+              "updatedAt": "2026-02-27T07:38:05.668123660Z"
+            },
+            "geoJsonUrl": null,
+            "shapeUrl": null,
+            "excelUrl": null,
+            "imageUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg",
+            "imageTileInfoOrigin": {
+              "size": {
+                "width": 1024,
+                "height": 1024
+              },
+              "coordinates": {
+                "x": 533224,
+                "y": 352743,
+                "z": 20
+              }
+            },
+            "pdfUrl": null,
+            "vggUrl": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+            "addresses": [],
+            "roofDelimiter": null,
+            "creationDatetime": "2026-02-27T07:37:11.816593Z",
+            "emailReceiver": "tech@birdia.fr",
+            "zoneName": "205 Bd des Roses, 06210 Mandelieu-la-Napoule, France",
+            "geoServerProperties": {
+              "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+              "geoServerParameter": {
+                "service": "WMS",
+                "request": "GetMap",
+                "layers": "Haut-de-france",
+                "styles": "",
+                "format": "image/jpeg",
+                "transparent": true,
+                "version": "1.3.0",
+                "width": 1024,
+                "height": 1024,
+                "srs": "EPSG:3857"
+              }
+            },
+            "detectableObjectModelList": [
+              {
+                "modelName": "BP_TOITURE"
+              },
+              {
+                "modelName": "BP_VEGETATION"
+              }
+            ],
+            "geoJsonZone": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "coordinates": [
+                    3.068299423393144,
+                    50.63012080308718
+                  ],
+                  "type": "Point"
+                },
+                "properties": {
+                  "feature_id": "c7854595-4d5f-4dfc-aac0-b64be0a9c91f",
+                  "vgg_file_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/vgg/238_Rue_Pierre_Mauroy.json",
+                  "zoom": 20,
+                  "original_image_url": "https://github.com/b-partners/geo-jobs/raw/refs/heads/prod/examples/detection/image/238_Rue_Pierre_Mauroy.jpg"
+                }
+              }
+            ],
+            "geoJsonDelimitationType": "PARCEL_CONSTRAINED_DELIMITATION",
+            "geoJsonOutput": "GEO_JSON",
+            "needsImageOutput": true,
+            "toNotify": false
+          }
+        -
+          {
+            "id": "<random-uuid>",
+            "step": {
+              "name": "MACHINE_DETECTION",
+              "status": {
+                "progression": "FINISHED",
+                "health": "SUCCEEDED",
+                "message": null,
+                "creationDatetime": "2026-09-17T07:49:24.944534264Z"
+              },
+              "statistics": [],
+              "updatedAt": "2026-09-17T07:49:24.944547839Z"
+            },
+            "geoJsonUrl": null,
+            "shapeUrl": null,
+            "excelUrl": null,
+            "imageUrl": "detection-sync-toiture-vgg-response-example.jpg",
+            "imageProperties": {
+              "width": 1024,
+              "height": 2048
+            },
+            "imageTileInfoOrigin": {
+              "size": {
+                "width": 1024,
+                "height": 1024
+              },
+              "coordinates": {
+                "x": 523561,
+                "y": 370292,
+                "z": 20
+              }
+            },
+            "pdfUrl": null,
+            "vggUrl": "detection-sync-toiture-vgg-response-example.json",
+            "addresses": [],
+            "roofDelimiter": {
+              "roofSlopeInDegree": null,
+              "roofHeightInMeter": null,
+              "polygon": [
+                [
+                  -0.2494458,
+                  46.65203
+                ],
+                [
+                  -0.2494733,
+                  46.6519681
+                ],
+                [
+                  -0.2494903,
+                  46.6519052
+                ],
+                [
+                  -0.2494236,
+                  46.6518819
+                ],
+                [
+                  -0.2493072,
+                  46.6518756
+                ],
+                [
+                  -0.2493046,
+                  46.6519124
+                ],
+                [
+                  -0.2492693,
+                  46.6519465
+                ],
+                [
+                  -0.2492627,
+                  46.6519923
+                ],
+                [
+                  -0.2493046,
+                  46.6520013
+                ],
+                [
+                  -0.2493451,
+                  46.6520094
+                ],
+                [
+                  -0.2494458,
+                  46.65203
+                ]
+              ]
+            },
+            "creationDatetime": "2026-09-17T07:40:40.995209Z",
+            "emailReceiver": "your.email@mail.com",
+            "zoneName": "your.zone.name",
+            "geoServerProperties": {
+              "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+              "geoServerParameter": {
+                "service": "WMS",
+                "request": "GetMap",
+                "layers": "PCRS",
+                "precisionLevelInCm": 5,
+                "styles": "",
+                "format": "image/jpeg",
+                "transparent": true,
+                "version": "1.3.0",
+                "width": 1024,
+                "height": 1024,
+                "srs": "EPSG:3857"
+              }
+            },
+            "detectableObjectModelList": [
+              {
+                "modelName": "BP_TOITURE"
+              }
+            ],
+            "geoJsonZone": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "coordinates": [
+                    [
+                      [
+                        -0.2494458,
+                        46.65203
+                      ],
+                      [
+                        -0.2494733,
+                        46.6519681
+                      ],
+                      [
+                        -0.2494903,
+                        46.6519052
+                      ],
+                      [
+                        -0.2494236,
+                        46.6518819
+                      ],
+                      [
+                        -0.2493072,
+                        46.6518756
+                      ],
+                      [
+                        -0.2493046,
+                        46.6519124
+                      ],
+                      [
+                        -0.2492693,
+                        46.6519465
+                      ],
+                      [
+                        -0.2492627,
+                        46.6519923
+                      ],
+                      [
+                        -0.2493046,
+                        46.6520013
+                      ],
+                      [
+                        -0.2493451,
+                        46.6520094
+                      ],
+                      [
+                        -0.2494458,
+                        46.65203
+                      ]
+                    ]
+                  ],
+                  "type": "Polygon"
+                },
+                "properties": {
+                  "feature_id": "<random-uuid>",
+                  "vgg_file_url": "detection-sync-toiture-vgg-response-example.json",
+                  "original_image_url": "detection-sync-toiture-vgg-response-example.jpg",
+                  "zoom": 20
+                }
+              }
+            ],
+            "geoJsonDelimitationType": "USER_DEFINED_DELIMITATION",
+            "geoJsonOutput": "ZIP",
+            "needsImageOutput": true,
+            "toNotify": false
+          }
     ThreeDRequestUsingPointAndRoofTypeAndParcelFreeExample:
       summary: 3D request payload template using Point geometry
       value:
@@ -691,6 +1748,19 @@ components:
         cityJsonFileUrls: null
         delimitationObjectType: "BUILDING_ROOF"
         delimitationType: "PARCEL_FREE_DELIMITATION"
+  responses:
+    400:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BadRequestException'
+    403:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotAuthorizedException'
   parameters:
     IdentifierParameter:
       in: path
@@ -796,6 +1866,9 @@ components:
             - FAILED
             - UNKNOWN
             - RETRYING
+        message:
+          type: string
+          description: Optional detail about the current status, mainly provided on failure.
         creationDatetime:
           type: string
           format: date-time
@@ -813,6 +1886,9 @@ components:
           type: string
         layers:
           type: string
+        precisionLevelInCm:
+          type: integer
+          description: Ground precision of the served imagery, in centimeters.
         styles:
           type: string
         format:
@@ -903,6 +1979,9 @@ components:
 
     CreateDetection:
       type: object
+      required:
+        - emailReceiver
+        - zoneName
       properties:
         emailReceiver:
           type: string
@@ -913,27 +1992,38 @@ components:
           description: |
             Name that consumers provide to identify the zone
         geoServerProperties:
-          $ref: '#/components/schemas/GeoServerProperties'
-          description: Optional Configuration properties for the GeoServer.
+          allOf:
+            - $ref: '#/components/schemas/GeoServerProperties'
+          description: |
+            Optional configuration properties for the geoserver.
+            By default, API attributes automatically a default geoserver.
         detectableObjectModel:
-          $ref: '#/components/schemas/DetectableObjectModel'
+          allOf:
+            - $ref: '#/components/schemas/DetectableObjectModel'
+          deprecated: true
+          description: |
+            DEPRECATED. Detection process could be done with multiple detectable object models now.
+            To process detection with unique detectable object model, pass it through `detectableObjectModelList`.
         detectableObjectModelList:
           type: array
           items:
             $ref: '#/components/schemas/DetectableObjectModel'
           description: |
-            List of model to be processed use for the detection. 
-            If empty or null, detection model will be retrieved from detectableObjectModel attribute.
+            List of detectable object model to be processed, use for the detection.
         geoJsonZone:
           type: array
           items:
             $ref: '#/components/schemas/Feature'
           description: |
             Optional. If so, must provide zone by shape or excel file through its specific endpoint.
-        GeoJsonOutput:
+        geoJsonOutput:
           $ref: '#/components/schemas/GeoJsonOutput'
         geoJsonDelimitationType:
           $ref: '#/components/schemas/DelimitationType'
+        needsImageOutput:
+          type: boolean
+          description: |
+            When true, each detected address feature exposes its image and detection result through `original_image_url` and `vgg_url`.
     DelimitationType:
       type: string
       description: |
@@ -972,12 +2062,16 @@ components:
           type: string
         pdfUrl:
           type: string
+        vggUrl:
+          type: string
         addresses:
           type: array
           items:
             type: string
         imageProperties:
           $ref: '#/components/schemas/ImageProperties'
+        imageTileInfoOrigin:
+          $ref: '#/components/schemas/ImageTileInfo'
         roofDelimiter:
           $ref: '#/components/schemas/RoofDelimiter'
         creationDatetime:
@@ -1015,6 +2109,7 @@ components:
           - **BP_TAMPONS** : Tampons de voiries, avaloirs, tampons hydroliques
           - **BP_CIMETIERE** : Cimetière, espace arboré, espace vert, tombe simple, tombe double, tombe non géométrique
           - **BP_STATIONNEMENT** : Parking
+          - **BP_REVETEMENT_OBSTACLE** : Obstacle, cheminee, velux, panneau photovoltaique, lumineux
       enum:
         - BP_TOITURE
         - BP_LOM
@@ -1029,6 +2124,7 @@ components:
         - BP_TAMPONS
         - BP_CIMETIERE
         - BP_STATIONNEMENT
+        - BP_REVETEMENT_OBSTACLE
     DetectionStep:
       properties:
         name:
@@ -1069,6 +2165,14 @@ components:
           type: integer
         height:
           type: integer
+    ImageTileInfo:
+      type: object
+      description: Tile information of the origin image the detection was processed on.
+      properties:
+        size:
+          $ref: '#/components/schemas/ImageProperties'
+        coordinates:
+          $ref: '#/components/schemas/TileCoordinates'
     RoofDelimiter:
       type: object
       description: |
@@ -1096,6 +2200,82 @@ components:
           $ref: '#/components/schemas/GeoPosition'
         zoomLevel:
           $ref: '#/components/schemas/ImageZoomLevel'
+    CoverageType:
+      type: string
+      enum:
+        - IMAGERY
+        - LIDAR
+    CoverageImageryLayer:
+      type: object
+      properties:
+        name:
+          type: string
+        year:
+          type: integer
+        source:
+          type: string
+        precisionInCm:
+          type: integer
+    ImageryCoverage:
+      type: object
+      properties:
+        covered:
+          type: boolean
+        hd:
+          type: boolean
+          description: True when the layer precision is 5 cm
+        layer:
+          $ref: '#/components/schemas/CoverageImageryLayer'
+        supportedDetectableModels:
+          type: array
+          description: |
+            Detectable object models that can run on the location, according to the precision of its imagery layer.
+            A model is listed when all the object types it detects are supported at that precision.
+            Unless the API key has the admin role, only the models it is authorized to use are listed.
+          items:
+            $ref: '#/components/schemas/DetectableObjectModel'
+    LidarCoverage:
+      type: object
+      properties:
+        covered:
+          type: boolean
+        region:
+          type: string
+          description: Region the lidar data comes from, e.g. FRANCE, SWITZERLAND or WALLONIA
+        crs:
+          type: string
+          description: EPSG code of the coordinate reference system local to the region
+        fileCount:
+          type: integer
+          description: Number of lidar files found for the location
+    AreaCoverage:
+      type: object
+      properties:
+        position:
+          $ref: '#/components/schemas/GeoPosition'
+        imagery:
+          $ref: '#/components/schemas/ImageryCoverage'
+        lidar:
+          $ref: '#/components/schemas/LidarCoverage'
+    RestException:
+      type: object
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+    BadRequestException:
+      allOf:
+        - $ref: '#/components/schemas/RestException'
+      example:
+        type: BadRequestException
+        message: Bad request
+    NotAuthorizedException:
+      allOf:
+        - $ref: '#/components/schemas/RestException'
+      example:
+        type: NotAuthorizedException
+        message: Not authorized
     GeoPosition:
       type: object
       properties:

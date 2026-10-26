@@ -16,6 +16,7 @@ import app.bpartners.geojobs.service.cityjson.model.BuildingData;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.PointsExtractionResult;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
+import app.bpartners.geojobs.service.lidar.api.WalloniaBoundaryChecker;
 import app.bpartners.geojobs.service.lidar.model.geometry.GeometryWithProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.Building3DProperties;
 import app.bpartners.geojobs.service.lidar.model.geometry.roof.RoofPlane3D;
@@ -37,6 +38,7 @@ public class LidarDataToCityJsonProcessor
   private final CityJsonFactory cityJsonFactory;
   private final Plane3DExtractionStepExporter exporter;
   private final SwissBoundaryChecker swissBoundaryChecker;
+  private final WalloniaBoundaryChecker walloniaBoundaryChecker;
 
   private static final String AREA_KEY = "area_in_square_meters";
   private static final String PLANE_SLOPE_KEY = "slope_in_degrees";
@@ -44,10 +46,13 @@ public class LidarDataToCityJsonProcessor
 
   @Autowired
   public LidarDataToCityJsonProcessor(
-      CityJsonFactory cityJsonFactory, SwissBoundaryChecker swissBoundaryChecker) {
+      CityJsonFactory cityJsonFactory,
+      SwissBoundaryChecker swissBoundaryChecker,
+      WalloniaBoundaryChecker walloniaBoundaryChecker) {
     this.exporter = null;
     this.cityJsonFactory = cityJsonFactory;
     this.swissBoundaryChecker = swissBoundaryChecker;
+    this.walloniaBoundaryChecker = walloniaBoundaryChecker;
   }
 
   @Deprecated
@@ -149,10 +154,15 @@ public class LidarDataToCityJsonProcessor
 
   private String getCrs(PointsExtractionResult result) {
     var firstRoof = result.data().values().stream().findFirst();
-    if (firstRoof.isPresent()
-        && swissBoundaryChecker.isGeometryInSwiss(
-            firstRoof.get().getOriginalInEPSG4336())) { // TODO: EPSG4326 ?
+    if (firstRoof.isEmpty()) {
+      return "EPSG:2154";
+    }
+    var geometryWGS84 = firstRoof.get().getOriginalInEPSG4336();
+    if (swissBoundaryChecker.isGeometryInSwiss(geometryWGS84)) {
       return "EPSG:2056";
+    }
+    if (walloniaBoundaryChecker.isGeometryInWallonia(geometryWGS84)) {
+      return "EPSG:3812";
     }
     return "EPSG:2154";
   }

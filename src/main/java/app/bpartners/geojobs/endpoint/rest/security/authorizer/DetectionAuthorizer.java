@@ -1,5 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.security.authorizer;
 
+import static app.bpartners.geojobs.monitoring.StepDurationLogger.logDurationOf;
+
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectType;
@@ -54,10 +56,18 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
 
   public CommunityAuthorization authorizeCommunity(String detectionId, Principal principal) {
     var communityAuthorization =
-        caRepository.findByApiKey(principal.getPassword()).orElseThrow(ForbiddenException::new);
+        logDurationOf(
+            "authorizer: community lookup by api key",
+            () ->
+                caRepository
+                    .findByApiKey(principal.getPassword())
+                    .orElseThrow(ForbiddenException::new));
     var optionalDetection =
-        detectionRepository.findByEndToEndIdAndCommunityOwnerId(
-            detectionId, communityAuthorization.getId());
+        logDurationOf(
+            "authorizer: detection lookup",
+            () ->
+                detectionRepository.findByEndToEndIdAndCommunityOwnerId(
+                    detectionId, communityAuthorization.getId()));
     optionalDetection.ifPresent(
         detection -> detectionOwnerAuthorizer.accept(communityAuthorization, detection));
     return communityAuthorization;
@@ -71,15 +81,22 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
       var featuresHasPolygonOrMultiPolygonInstance =
           featureTypeChecker.applySome(features, MultiPolygon.class, Polygon.class);
       if (principal.isCommunity() && featuresHasPolygonOrMultiPolygonInstance) {
-        communityZoneSurfaceAuthorizer.accept(communityAuthorization, features);
-        communityZoneAuthorizer.accept(communityAuthorization, features, principal);
+        logDurationOf(
+            "authorizer: used surface check",
+            () -> communityZoneSurfaceAuthorizer.accept(communityAuthorization, features));
+        logDurationOf(
+            "authorizer: authorized zones check",
+            () -> communityZoneAuthorizer.accept(communityAuthorization, features, principal));
       }
     }
     var detectableObjects = getDetectableObjectTypes(createDetection, communityAuthorization);
-    detectableObjects.forEach(
-        candidateObjectType ->
-            communityDetectableObjectTypeAuthorizer.accept(
-                communityAuthorization, candidateObjectType));
+    logDurationOf(
+        "authorizer: detectable object types check",
+        () ->
+            detectableObjects.forEach(
+                candidateObjectType ->
+                    communityDetectableObjectTypeAuthorizer.accept(
+                        communityAuthorization, candidateObjectType)));
   }
 
   private List<DetectableObjectType> getDetectableObjectTypes(

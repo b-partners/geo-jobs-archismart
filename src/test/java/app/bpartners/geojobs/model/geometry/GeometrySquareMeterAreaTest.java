@@ -1,8 +1,16 @@
 package app.bpartners.geojobs.model.geometry;
 
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.EPSG_2056;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.EPSG_3812;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.LAMBERT_93;
+import static app.bpartners.geojobs.service.GeometrySquareMeterArea.WGS84;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
+import static app.bpartners.geojobs.service.model.SwissBoundaryCheckerTest.auvergneRhoneAlpes;
+import static app.bpartners.geojobs.service.model.SwissBoundaryCheckerTest.switzerland_coords;
+import static app.bpartners.geojobs.service.model.WalloniaBoundaryCheckerTest.liege_coords;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
@@ -21,6 +29,40 @@ import org.locationtech.jts.geom.Polygon;
 @Slf4j
 class GeometrySquareMeterAreaTest {
   GeometrySquareMeterArea subject = new GeometrySquareMeterArea();
+
+  @Test
+  void geometry_in_switzerland_is_projected_with_epsg_2056() {
+    var geometry = switzerland_coords();
+    var expectedArea = subject.project(geometry, WGS84, EPSG_2056).getArea();
+    var lambert93Area = subject.project(geometry, WGS84, LAMBERT_93).getArea();
+
+    var actual = subject.apply(geometry);
+
+    assertEquals(expectedArea, actual, 1e-9);
+    assertNotEquals(lambert93Area, actual);
+  }
+
+  @Test
+  void geometry_in_wallonia_is_projected_with_epsg_3812() {
+    var geometry = liege_coords();
+    var expectedArea = subject.project(geometry, WGS84, EPSG_3812).getArea();
+    var lambert93Area = subject.project(geometry, WGS84, LAMBERT_93).getArea();
+
+    var actual = subject.apply(geometry);
+
+    assertEquals(expectedArea, actual, 1e-9);
+    assertNotEquals(lambert93Area, actual);
+  }
+
+  @Test
+  void geometry_outside_switzerland_and_wallonia_is_projected_with_lambert_93() {
+    var geometry = auvergneRhoneAlpes();
+    var expectedArea = subject.project(geometry, WGS84, LAMBERT_93).getArea();
+
+    var actual = subject.apply(geometry);
+
+    assertEquals(expectedArea, actual, 1e-9);
+  }
 
   @SneakyThrows
   @Test

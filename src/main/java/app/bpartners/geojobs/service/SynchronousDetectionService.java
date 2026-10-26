@@ -7,6 +7,8 @@ import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.concurrency.Workers;
+import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.DetectionTrackingRegistrationRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureImageRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionFromStatisticRestMapper;
@@ -54,6 +56,7 @@ public class SynchronousDetectionService
   private final EntityManager entityManager;
   private final DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedService;
   private final DetectionPropertiesService detectionPropertiesService;
+  private final EventProducer eventProducer;
 
   @SneakyThrows
   @Override
@@ -183,13 +186,18 @@ public class SynchronousDetectionService
         Duration.between(vggRequestAndGeoJsonEventTriggerStart, now()).toSeconds(),
         detection.getEndToEndId());
 
-    return detectionWithResultProperties.hasToitureModelName()
-        ? attemptVggFileKeyRetrieve(detectionWithResultProperties)
-        : detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
-            detectionRepository.findById(detection.getId()).orElseThrow(),
-            FINISHED,
-            SUCCEEDED,
-            MACHINE_DETECTION);
+    var machineSucceededDetection =
+        detectionWithResultProperties.hasRoofBasedModelName()
+            ? attemptVggFileKeyRetrieve(detectionWithResultProperties)
+            : detectionFromStatisticRestMapper.computeEmptyStatisticFromStep(
+                detectionRepository.findById(detection.getId()).orElseThrow(),
+                FINISHED,
+                SUCCEEDED,
+                MACHINE_DETECTION);
+
+    eventProducer.accept(List.of(new DetectionTrackingRegistrationRequested(detection.getId())));
+
+    return machineSucceededDetection;
   }
 
   private List<ParcelTilingTask> computeTilingTasks(String zoneTilingJobId) {

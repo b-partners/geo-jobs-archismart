@@ -1,0 +1,128 @@
+{
+  "id": "<your-id>",
+  "step": {
+    "name": "MACHINE_DETECTION",
+    "status": {
+      "progression": "FINISHED",
+      "health": "SUCCEEDED",
+      "message": null,
+      "creationDatetime": "2026-01-01T00:00:00.00Z"
+    },
+    "statistics": [],
+    "updatedAt": "2026-01-01T00:00:00.00Z"
+  },
+  "geoJsonUrl": null,
+  "shapeUrl": null,
+  "excelUrl": null,
+  "imageUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/image/revetement_obstacle_polygon_20cm.jpg",
+  "imageProperties": {
+    "width": 1024,
+    "height": 1024
+  },
+  "imageTileInfoOrigin": {
+    "size": {
+      "width": 1024,
+      "height": 1024
+    },
+    "coordinates": {
+      "x": 265656,
+      "y": 184267,
+      "z": 19
+    }
+  },
+  "pdfUrl": null,
+  "vggUrl": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/vgg/revetement_obstacle_polygon_20cm.json",
+  "addresses": [],
+  "roofDelimiter": {
+    "roofSlopeInDegree": null,
+    "roofHeightInMeter": null,
+    "polygon": [
+      [
+        2.4119102672653323,
+        47.064610035601
+      ],
+      [
+        2.411931509304379,
+        47.064534070630415
+      ],
+      [
+        2.4120377194994185,
+        47.06454854015698
+      ],
+      [
+        2.4120164774604107,
+        47.06462450510693
+      ],
+      [
+        2.4119102672653323,
+        47.064610035601
+      ]
+    ]
+  },
+  "creationDatetime": "2026-01-01T00:00:00.00Z",
+  "emailReceiver": "your.email@mail.com",
+  "zoneName": "your.zone.name",
+  "geoServerProperties": {
+    "geoServerUrl": "https://<geoserver-host>/geoserver/cite/wms",
+    "geoServerParameter": {
+      "service": "WMS",
+      "request": "GetMap",
+      "layers": "FLUX_IGN_2025_20CM",
+      "precisionLevelInCm": 20,
+      "styles": "",
+      "format": "image/jpeg",
+      "transparent": true,
+      "version": "1.3.0",
+      "width": 1024,
+      "height": 1024,
+      "srs": "EPSG:3857"
+    }
+  },
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_REVETEMENT_OBSTACLE"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              2.4119102672653323,
+              47.064610035601
+            ],
+            [
+              2.411931509304379,
+              47.064534070630415
+            ],
+            [
+              2.4120377194994185,
+              47.06454854015698
+            ],
+            [
+              2.4120164774604107,
+              47.06462450510693
+            ],
+            [
+              2.4119102672653323,
+              47.064610035601
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "feature_id": "<random-uuid>",
+        "vgg_file_url": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/vgg/revetement_obstacle_polygon_20cm.json",
+        "original_image_url": "https://raw.githubusercontent.com/b-partners/geo-jobs/refs/heads/preprod/examples/detection/image/revetement_obstacle_polygon_20cm.jpg",
+        "zoom": 20
+      }
+    }
+  ],
+  "geoJsonDelimitationType": "USER_DEFINED_DELIMITATION",
+  "geoJsonOutput": "ZIP",
+  "needsImageOutput": true,
+  "toNotify": false
+}

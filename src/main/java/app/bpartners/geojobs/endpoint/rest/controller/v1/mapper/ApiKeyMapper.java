@@ -46,6 +46,7 @@ public class ApiKeyMapper {
         .id(newCommunityId)
         .name(createApiKey.getConsumerName())
         .email(createApiKey.getConsumerEmail())
+        .dashboardApiKey(createApiKey.getDashboardApiKey())
         .detectableObjectTypes(null) // deprecated
         .detectableModels(getDetectableModels(createApiKey))
         .maxSurface(maxSurface == null ? 0 : maxSurface.doubleValue())

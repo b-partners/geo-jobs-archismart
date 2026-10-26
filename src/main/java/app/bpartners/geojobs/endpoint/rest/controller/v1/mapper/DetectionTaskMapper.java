@@ -132,6 +132,7 @@ public class DetectionTaskMapper {
       case HUMIDITE -> HUMIDITE;
       case RISQUE_FEU -> RISQUE_FEU;
       case VELUX -> VELUX;
+      case LUMINEUX -> LUMINEUX;
       case TOMBE -> null;
       case ESPACE_VERT_PARKING -> ESPACE_VERT_PARKING;
       case BACKGROUND -> BACKGROUND;
@@ -148,8 +149,9 @@ public class DetectionTaskMapper {
       case TOMBE_SIMPLE -> TOMBE_SIMPLE;
       case TOMBE_DOUBLE -> TOMBE_DOUBLE;
       case POINTILLE -> null;
-      case FLECHE_DIRECTIONNELLE -> null;
+      case FLECHE_DIRECTIONNELLE -> FLECHE_DIRECTIONNELLE;
       case TOMBE_NON_GEOMETRIQUE -> TOMBE_NON_GEOMETRIQUE;
+      case NOT_BUILDING -> null;
     };
   }
 }

@@ -2,6 +2,7 @@ package app.bpartners.geojobs.service;
 
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.REVETEMENT_OBSTACLE;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFactory;
 import static app.bpartners.geojobs.service.geojson.GeometryConverter.unifyMultiPolygon;
@@ -91,7 +92,7 @@ public class DetectionZoneToProcessProvider implements Function<Detection, Multi
               var geometryType = geometry.getActualInstance();
               return switch (geometryType) {
                 case Point point -> {
-                  if (modelNames.contains(TOITURE)) {
+                  if (modelNames.contains(TOITURE) || modelNames.contains(REVETEMENT_OBSTACLE)) {
                     if (PARCEL.equals(geoJsonDelimitationType)
                         || PARCEL_CONSTRAINED_DELIMITATION.equals(geoJsonDelimitationType)) {
                       try {

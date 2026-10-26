@@ -157,7 +157,9 @@ Snapshots live under [`doc/version/`](version/). Current published history:
 
 | Version  | Date       | Kind of change            | Status       |
 |----------|------------|---------------------------|--------------|
-| v1.3.5   | 2026-05-12 | additive (lidar options)  | **current**  |
+| v1.4.0   | 2026-10-26 | minor (`GET /coverage`)   | **current**  |
+| v1.3.6   | 2026-09-17 | patch                     |              |
+| v1.3.5   | 2026-05-12 | additive (lidar options)  |              |
 | v1.3.4   | 2026-03-31 | additive                  |              |
 | v1.3.3   | 2026-03-11 | additive + editorial      |              |
 | v1.3.2   | 2026-02-25 | editorial / additive      |              |

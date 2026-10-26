@@ -235,7 +235,7 @@ class ZoneDetectionJobSucceededServiceTest {
     var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
     var detectionMock = mock(Detection.class);
     when(detectionMock.getId()).thenReturn(detectionId);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(succeededJobId))
         .thenReturn(0L);
     when(zoneDetectionJobServiceMock.findById(succeededJobId)).thenReturn(zoneDetectionJobMock);
@@ -265,7 +265,7 @@ class ZoneDetectionJobSucceededServiceTest {
     var succeededJobId = randomUUID().toString();
     var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
     var detectionMock = mock(Detection.class);
-    when(detectionMock.hasToitureModelName()).thenReturn(false);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(false);
     when(zoneDetectionJobServiceMock.countInDoubtDetectedTileToDeliveryById(succeededJobId))
         .thenReturn(0L);
     when(zoneDetectionJobServiceMock.findById(succeededJobId)).thenReturn(zoneDetectionJobMock);

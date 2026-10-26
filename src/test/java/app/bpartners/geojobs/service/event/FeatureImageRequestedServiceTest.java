@@ -55,6 +55,7 @@ class FeatureImageRequestedServiceTest {
   TileDuplicationRemover tileDuplicationRemoverMock = mock();
   DetectionPolygonProcessedRetriever detectionPolygonProcessedRetrieverMock = mock();
   DetectionFileObjectRepository detectionFileObjectRepositoryMock = mock();
+  DetectionImageZoomResolver detectionImageZoomResolverMock = mock();
   FeatureImageRequestedService subject =
       new FeatureImageRequestedService(
           detectionRepositoryMock,
@@ -69,10 +70,12 @@ class FeatureImageRequestedServiceTest {
           mock(),
           tileDuplicationRemoverMock,
           detectionPolygonProcessedRetrieverMock,
-          detectionFileObjectRepositoryMock);
+          detectionFileObjectRepositoryMock,
+          detectionImageZoomResolverMock);
 
   @BeforeEach
   void setUp() {
+    when(detectionImageZoomResolverMock.apply(any())).thenReturn(20);
     when(tileImageBlurMock.apply(any(Geometry.class), anyList()))
         .thenAnswer(invocation -> invocation.getArgument(1));
     when(whiteImageDetectorMock.apply(any())).thenReturn(false);
@@ -136,6 +139,7 @@ class FeatureImageRequestedServiceTest {
 
     MockedStatic<ImageIO> imageIOMockedStatic = mockStatic(ImageIO.class);
     imageIOMockedStatic.when(() -> read(any(File.class))).thenReturn(mock(BufferedImage.class));
+    when(detectionImageZoomResolverMock.apply(detectionMock)).thenReturn(21);
     when(detectionMock.getId()).thenReturn(detectionIdentifier);
     when(detectionMock.getZtjId()).thenReturn(tilingJobIdentifier);
     when(detectionMock.getZoneName()).thenReturn(randomZoneName);
@@ -181,6 +185,7 @@ class FeatureImageRequestedServiceTest {
         () ->
             subject.accept(new FeatureImageRequested(detectionIdentifier, getFeature(featureId))));
 
+    verify(tileFinderMock).getFromGeoJsonPolygon(polygonGeometryMock, 21);
     verify(tilingTaskRepositoryMock).findAllByJobId(tilingJobIdentifier);
     verify(bucketComponentMock).download(randomBucketPath);
     verify(tileImageAssemblerMock).apply(tilesWithImagesMock);

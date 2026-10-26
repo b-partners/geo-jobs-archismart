@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.endpoint.rest.controller.v1;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toRestFeature;
+import static app.bpartners.geojobs.validator.AddressOrPointValidator.isAddressRequest;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 import app.bpartners.geojobs.endpoint.rest.V1RestController;
@@ -31,25 +32,11 @@ public class GeoCodeController {
       @RequestParam(value = "address", required = false) String address,
       @RequestParam(required = false) Double latitude,
       @RequestParam(required = false) Double longitude) {
-    var hasAddress = address != null && !address.isBlank();
-    var hasCoordinates = latitude != null || longitude != null;
-    if (hasAddress && hasCoordinates) {
-      throw new BadRequestException(
-          "Both address and point coordinates (longitude,latitude) can not be provided");
+    if (isAddressRequest(address, longitude, latitude)) {
+      return toRestFeature(service.geocode(address));
     }
-    if (!hasAddress && !hasCoordinates) {
-      throw new BadRequestException(
-          "Either address or point coordinates (longitude,latitude) is required");
-    }
-    if (!hasAddress) {
-      if (longitude == null || latitude == null) {
-        throw new BadRequestException(
-            "Both longitude and latitude are required to geocode from point coordinates");
-      }
-      return toRestFeature(
-          service.geocode(null, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)));
-    }
-    return toRestFeature(service.geocode(address));
+    return toRestFeature(
+        service.geocode(null, BigDecimal.valueOf(longitude), BigDecimal.valueOf(latitude)));
   }
 
   @GetMapping("/geoCodingJobs/{id}")

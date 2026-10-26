@@ -1,6 +1,5 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.repository.model.ArcgisImageZoom.HOUSES_0;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFileType.ASSEMBLE_IMAGE;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
@@ -44,6 +43,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
   private final TileDuplicationRemover tileDuplicationRemover;
   private final DetectionPolygonProcessedRetriever polygonProcessedRetriever;
   private final DetectionFileObjectRepository detectionFileObjectRepository;
+  private final DetectionImageZoomResolver detectionImageZoomResolver;
 
   @SneakyThrows
   @Override
@@ -52,11 +52,7 @@ public class FeatureImageRequestedService implements Consumer<FeatureImageReques
     var feature = event.getFeature();
     var detectionIdentifier = event.getDetectionIdentifier();
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
-    var providedGeoJsonZone = detection.getProvidedGeoJsonZone();
-    var zoom =
-        providedGeoJsonZone.getFirst().getProperties().get("zoom") == null
-            ? HOUSES_0.getZoomLevel()
-            : (Integer) providedGeoJsonZone.getFirst().getProperties().get("zoom");
+    var zoom = detectionImageZoomResolver.apply(detection);
 
     var zonePolygonGeometryProcessed =
         polygonProcessedRetriever.apply(feature, detection.getGeoJsonDelimitationType());

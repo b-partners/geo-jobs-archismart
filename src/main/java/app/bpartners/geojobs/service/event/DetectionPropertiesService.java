@@ -12,17 +12,19 @@ import app.bpartners.geojobs.model.geometry.PolygonObjectType;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.service.FeatureRoofResultPropertiesComputer;
+import app.bpartners.geojobs.service.area.mutation.MutationContextFactory;
+import app.bpartners.geojobs.service.area.mutation.model.MutationContext;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geojson.GeometryCorrector;
 import java.util.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DetectionPropertiesService {
   private static final int DEFAULT_IMAGE_SIZE = 1024;
   private final DetectionRepository detectionRepository;
@@ -30,12 +32,31 @@ public class DetectionPropertiesService {
   private final GeometryConverter geometryConverter;
   private final MachineDetectedTileRepository machineDetectedTileRepository;
   private final GeometryCorrector geometryCorrector;
+  private final MutationContextFactory mutationContextFactory;
+  private final boolean mutationEnabled;
+
+  public DetectionPropertiesService(
+      DetectionRepository detectionRepository,
+      FeatureRoofResultPropertiesComputer featureRoofResultPropertiesComputer,
+      GeometryConverter geometryConverter,
+      MachineDetectedTileRepository machineDetectedTileRepository,
+      GeometryCorrector geometryCorrector,
+      MutationContextFactory mutationContextFactory,
+      @Value("${detection.mutation.enabled:false}") boolean mutationEnabled) {
+    this.detectionRepository = detectionRepository;
+    this.featureRoofResultPropertiesComputer = featureRoofResultPropertiesComputer;
+    this.geometryConverter = geometryConverter;
+    this.machineDetectedTileRepository = machineDetectedTileRepository;
+    this.geometryCorrector = geometryCorrector;
+    this.mutationContextFactory = mutationContextFactory;
+    this.mutationEnabled = mutationEnabled;
+  }
 
   public app.bpartners.geojobs.repository.model.detection.Detection apply(
       app.bpartners.geojobs.repository.model.detection.Detection detection,
       Feature currentFeature,
       List<Feature> delimitationsFeature) {
-    if (!detection.hasToitureModelName()) {
+    if (!detection.hasRoofBasedModelName()) {
       log.error("Only BP_TOITURE model is supported to generated VGG from now");
       return detection;
     }
@@ -55,7 +76,8 @@ public class DetectionPropertiesService {
                           delimitationFeature,
                           latLonRoofGeometry,
                           latLonRoofGeometry,
-                          detectedObjectPolygonGeometriesUsedForRateComputing);
+                          detectedObjectPolygonGeometriesUsedForRateComputing,
+                          tryCreateMutationContext(detection, latLonRoofGeometry));
 
                   HashMap<String, Object> actualProperties = new HashMap<>();
                   var featureProperties = delimitationFeature.getProperties();
@@ -76,6 +98,27 @@ public class DetectionPropertiesService {
         toDomainFeature(currentFeature), delimitationFeatureWithResultProperties);
 
     return detectionRepository.save(detection);
+  }
+
+  @Nullable
+  private MutationContext tryCreateMutationContext(
+      app.bpartners.geojobs.repository.model.detection.Detection detection,
+      Geometry latLonRoofGeometry) {
+    if (!mutationEnabled) {
+      return null;
+    }
+    try {
+      return mutationContextFactory.create(detection, latLonRoofGeometry);
+    } catch (RuntimeException e) {
+      // Mutation detection needs 2 distinct-date images and reachable geodata/mutation APIs -
+      // any of that can legitimately be unavailable for a given roof. Skip it rather than
+      // aborting the rest of this detection's properties over an optional enrichment.
+      log.warn(
+          "Could not build mutation context for detection {}: {}",
+          detection.getId(),
+          e.getMessage());
+      return null;
+    }
   }
 
   private List<PolygonObjectType> getDetectedObjectPolygonGeometriesUsedForRateComputing(

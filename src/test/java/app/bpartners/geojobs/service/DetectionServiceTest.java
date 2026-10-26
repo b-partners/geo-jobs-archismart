@@ -47,6 +47,7 @@ import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotFoundException;
 import app.bpartners.geojobs.repository.*;
+import app.bpartners.geojobs.repository.CachedAreaPictureMapLayerRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.GeoJobType;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
@@ -55,11 +56,15 @@ import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
-import app.bpartners.geojobs.service.dashboard.component.AreaPictureMapLayer;
-import app.bpartners.geojobs.service.dashboard.component.Zoom;
 import app.bpartners.geojobs.service.detection.*;
+import app.bpartners.geojobs.service.detection.DefaultResolutionModelValidator;
 import app.bpartners.geojobs.service.detection.DetectionCreationMapper;
+import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import app.bpartners.geojobs.service.event.FeatureVggRequestedService;
+import app.bpartners.geojobs.service.geodata.GeodataMapLayerClient;
+import app.bpartners.geojobs.service.geodata.MapLayerResolver;
+import app.bpartners.geojobs.service.geodata.model.GeodataMapLayer;
+import app.bpartners.geojobs.service.geodata.model.MapLayerActual;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
@@ -164,13 +169,15 @@ class DetectionServiceTest {
           tilingJobMapperMock,
           tilingJobServiceMock,
           detectionRepositoryMock,
-          detectionTilingStatisticsComputerMock);
+          detectionTilingStatisticsComputerMock,
+          new ModelCardResolver(mock(), mock()));
   DetectionMachineDetectionStatisticsComputer detectionMachineDetectionStatisticsComputerMock =
       new DetectionMachineDetectionStatisticsComputer(
           detectionFromStatisticRestMapper, zoneDetectionJobServiceMock);
   DetectionAddressConsumer detectionAddressConsumerMock = mock();
   GeometryConverter geometryConverterMock = mock();
   AreaPictureApi areaPictureApiMock = mock();
+  GeodataMapLayerClient mapLayerClientMock = mock();
   SynchronousDetectionService synchronousDetectionServiceMock = mock();
   SynchronousDetectionValidator synchronousDetectionValidatorMock = mock();
   TileMultiPolygonFrame tileMultiPolygonFrameMock = mock();
@@ -217,14 +224,22 @@ class DetectionServiceTest {
               new DetectionCreationMapper(
                   detectableObjectTypeMapper,
                   featureTypeChecker,
-                  communityAuthRepositoryMock,
-                  areaPictureApiMock,
+                  new MapLayerResolver(
+                      mapLayerClientMock, mock(CachedAreaPictureMapLayerRepository.class)),
+                  new ModelCardResolver(mock(), mock()),
                   geoServerConfiguration,
                   geometryConverterMock,
-                  buildingFinderMock),
+                  buildingFinderMock,
+                  new DefaultResolutionModelValidator()),
               fileWriterMock,
               detectionRoofSlopeValidatorMock,
               featureVggRequestedServiceMock));
+
+  private static MapLayerActual latestDefaultLayer() {
+    return new MapLayerActual(
+        "https://wms",
+        new GeodataMapLayer("id", LATEST_DEFAULT_LAYER, 2024, "GEOSERVER", null, null, 5));
+  }
 
   @BeforeEach
   void setUp() {
@@ -245,10 +260,8 @@ class DetectionServiceTest {
         .thenReturn(featureCreator.defaultFeatures().getFirst());
     when(imageTileInfoOriginRetrieverMock.apply(any())).thenReturn(null);
 
-    var areaPictureMapLayerMock = mock(AreaPictureMapLayer.class);
-    when(areaPictureMapLayerMock.name()).thenReturn(LATEST_DEFAULT_LAYER);
-    when(areaPictureApiMock.getAreaPictureMapLayers(anyDouble(), anyDouble(), eq(e2ApiKey)))
-        .thenReturn(List.of(areaPictureMapLayerMock));
+    when(mapLayerClientMock.getActualMapLayer(anyDouble(), anyDouble()))
+        .thenReturn(Optional.of(latestDefaultLayer()));
 
     doNothing().when(detectionAreaValidatorMock).accept(any());
   }
@@ -277,9 +290,8 @@ class DetectionServiceTest {
         .thenReturn(
             Optional.<CommunityAuthorization>of(
                 new CommunityAuthorization().builder().dashboardApiKey("apiKey").build()));
-    when(areaPictureApiMock.getAreaPictureMapLayers(anyDouble(), anyDouble(), anyString()))
-        .thenReturn(
-            List.of(new AreaPictureMapLayer("id", LATEST_DEFAULT_LAYER, new Zoom("level", 24), 5)));
+    when(mapLayerClientMock.getActualMapLayer(anyDouble(), anyDouble()))
+        .thenReturn(Optional.of(latestDefaultLayer()));
 
     var actual =
         detectionRestMapper.toRest(

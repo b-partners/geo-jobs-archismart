@@ -82,7 +82,10 @@ public class CityJSONRequestMapper {
         .id(cityJSONRequest.getId())
         .delimitations(restDelimitations)
         .step(step)
-        .status(CityJSONRequestStatusMapper.toGenericStatusRest(cityJSONRequest.getStatus()))
+        .status(
+            CityJSONRequestStatusMapper.toGenericStatusRest(
+                cityJSONRequest.getStatus(), cityJSONRequest.getMessage()))
+        .warnings(cityJSONRequest.getWarnings())
         .delimitationObjectType(
             toRestDelimitationObjectType(cityJSONRequest.getDelimitationObjectType()))
         .delimitationType(cityJSONRequest.getDelimitationType())
@@ -91,6 +94,8 @@ public class CityJSONRequestMapper {
                 ? null
                 : BigDecimal.valueOf(cityJSONRequest.getComplexityFactor()).setScale(2, HALF_UP))
         .knn(cityJSONRequest.getKnn())
+        .lidarProcessorType(
+            CityJSONRequestLidarProcessorMapper.toRest(cityJSONRequest.getLidarProcessorType()))
         .cityJsonFileUrls(restCityJsons);
   }
 

@@ -20,30 +20,35 @@ public class CityJSONRequestStatusMapper {
 
   // TODO: bad static method
   public static Status toGenericStatusRest(
-      app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus status) {
+      app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus status,
+      String message) {
     switch (status) {
       case FINISHED -> {
         return new Status()
             .progression(Status.ProgressionEnum.FINISHED)
             .health(Status.HealthEnum.SUCCEEDED)
+            .message(message)
             .creationDatetime(Instant.now());
       }
       case UNAVAILABLE, FAILED -> {
         return new Status()
             .progression(Status.ProgressionEnum.FINISHED)
             .health(Status.HealthEnum.FAILED)
+            .message(message)
             .creationDatetime(Instant.now());
       }
       case PROCESSING -> {
         return new Status()
             .progression(Status.ProgressionEnum.PROCESSING)
             .health(Status.HealthEnum.UNKNOWN)
+            .message(message)
             .creationDatetime(Instant.now());
       }
       default -> {
         return new Status()
             .progression(Status.ProgressionEnum.PENDING)
             .health(Status.HealthEnum.UNKNOWN)
+            .message(message)
             .creationDatetime(Instant.now());
       }
     }

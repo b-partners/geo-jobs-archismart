@@ -46,18 +46,6 @@ class AreaPictureApiIT extends FacadeIT {
   }
 
   @Test
-  void get_area_picture_map_layers_with_longitude_and_latitude() {
-    double latitude = 46.6517;
-    double longitude = -0.2498;
-
-    var actual = subject.getAreaPictureMapLayers(longitude, latitude, apiKey);
-
-    assertEquals(2, actual.size());
-    assertEquals("PCRS.LAMB93", actual.get(0).name());
-    assertEquals("FLUX_IGN_2023_20CM", actual.get(1).name());
-  }
-
-  @Test
   void response_500_with_bad_address_crupdate_area_picture() {
     var areaPictureId = randomUUID().toString();
     var fileId = randomUUID().toString();

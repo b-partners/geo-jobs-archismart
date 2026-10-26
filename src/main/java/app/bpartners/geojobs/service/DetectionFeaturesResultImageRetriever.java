@@ -44,7 +44,7 @@ public class DetectionFeaturesResultImageRetriever implements Function<Detection
       return providedGeoJsonZone;
     }
 
-    if (detection.hasToitureModelName()) {
+    if (detection.hasRoofBasedModelName()) {
       if (detection.getGeoServerProperties() == null) {
         return providedGeoJsonZone;
       }

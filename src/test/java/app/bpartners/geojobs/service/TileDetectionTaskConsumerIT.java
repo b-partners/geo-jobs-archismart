@@ -25,6 +25,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectedObject;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.*;
+import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.tiling.TileValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,10 +82,18 @@ class TileDetectionTaskConsumerIT {
           detectionFileObjectRepositoryMock,
           bucketComponentMock,
           fileWriterMock,
-          objectMapperMock);
+          objectMapperMock,
+          new RestTemplate(),
+          mock(),
+          new ModelCardResolver(mock(), mock()));
   RoofCoveringDetector roofCoveringDetector =
       new RoofCoveringDetector(
-          objectMapper, restTemplateMock, "dummyUrl", customBucketComponentMock);
+          objectMapper,
+          restTemplateMock,
+          "dummyUrl",
+          customBucketComponentMock,
+          mock(),
+          new ModelCardResolver(mock(), mock()));
   DetectionFileObjectRepository detectionObjectHistoryRepositoryMock = mock();
   TileCoordinatesPolygonIntersection tileCoordinatesPolygonIntersection =
       new TileCoordinatesPolygonIntersection(geometryPixelProjector, geometryConverter);
@@ -129,7 +138,8 @@ class TileDetectionTaskConsumerIT {
     var detectionMock = mock(Detection.class);
 
     when(detectionMock.getId()).thenReturn(detectionIdentifier);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
+    when(detectionMock.spatialResolutionInCm()).thenReturn(null);
     when(detectionMock.getDetectableObjectConfigurations())
         .thenReturn(createDetectableObjectConfigurations(detectionIdentifier, detectionJobId));
     when(detectionMock.getFeatureWithDelimitations())

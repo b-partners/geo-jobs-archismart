@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -59,6 +60,7 @@ public class DetectionMapper {
   public static final String OBSTACLE_STRING_VALUE = "OBSTACLE";
   public static final String CHEMINEE_STRING_VALUE = "CHEMINEE";
   public static final String VELUX_STRING_VALUE = "VELUX";
+  public static final String LUMINEUX_STRING_VALUE = "LUMINEUX";
 
   public static final String USURE_IMPORTANTE_ARDOISE_STRING_VALUE = "USURE_IMPORTANTE_ARDOISE";
   public static final String USURE_IMPORTANTE_TUILES_STRING_VALUE = "USURE_IMPORTANTE_TUILES";
@@ -77,6 +79,20 @@ public class DetectionMapper {
   public static final String ROOF_ARDOISE_STRING_VALUE = "ROOF_ARDOISE";
   public static final String ROOF_AUTRES_STRING_VALUE = "ROOF_AUTRES";
   public static final String ROOF_TUILES_STRING_VALUE = "ROOF_TUILES";
+  public static final String ROOF_ASPHALTE_BITUME_STRING_VALUE = "ROOF_ASPHALTE_BITUME";
+  public static final String ROOF_BAC_ACIER_STRING_VALUE = "ROOF_BAC_ACIER";
+  public static final String ROOF_BETON_BRUT_STRING_VALUE = "ROOF_BETON_BRUT";
+  public static final String ROOF_FIBRO_CIMENT_STRING_VALUE = "ROOF_FIBRO_CIMENT";
+  public static final String ROOF_GRAVIER_STRING_VALUE = "ROOF_GRAVIER";
+  public static final String ROOF_MEMBRANE_SYNTHETIQUE_STRING_VALUE = "ROOF_MEMBRANE_SYNTHETIQUE";
+  public static final String ROOF_TOLE_ONDULEE_STRING_VALUE = "ROOF_TOLE_ONDULEE";
+  public static final String ROOF_ZINC_STRING_VALUE = "ROOF_ZINC";
+  public static final String ZINC_STRING_VALUE = "ZINC";
+  public static final String TOLE_ONDULEE_STRING_VALUE = "TOLE_ONDULEE";
+  public static final String BAC_ACIER_STRING_VALUE = "BAC_ACIER";
+  public static final String ASPHALTE_BITUME_STRING_VALUE = "ASPHALTE_BITUME";
+  public static final String FIBRE_CIMENT_STRING_VALUE = "FIBRE_CIMENT";
+  public static final String BETON_BRUT_STRING_VALUE = "BETON_BRUT";
 
   public static final String SOLAR_PANEL_STRING_VALUE = "SOLAR_PANEL";
   public static final String PV_STRING_VALUE = "PV";
@@ -86,6 +102,7 @@ public class DetectionMapper {
   public static final String POOL_STRING_VALUE = "POOL";
   public static final String BATI_STRING_VALUE = "BATI";
   public static final String SIDEWALK_STRING_VALUE = "SIDEWALK";
+  public static final String NOT_BUILDING_STRING_VALUE = "NOT_BUILDING";
 
   private final TileValidator tileValidator;
 
@@ -109,6 +126,7 @@ public class DetectionMapper {
           machineDetectedObjects.addAll(
               regions.stream()
                   .map(region -> toDetectedObject(region, detectedTileId, tileCoordinates.getZ()))
+                  .filter(Objects::nonNull)
                   .toList());
         });
 
@@ -128,6 +146,11 @@ public class DetectionMapper {
       DetectionResponseV2.ImageData.Region region, String detectedTileId, Integer zoom) {
     var regionAttributes = region.getRegionAttributes();
     var label = regionAttributes.get(REGION_LABEL_PROPERTY);
+    var detectableType = toDetectableType(label);
+    if (detectableType == null) {
+      log.warn("Ignoring region with unknown label {}", label);
+      return null;
+    }
     Double confidence = null;
     try {
       if (regionAttributes.containsKey(REGION_CONFIDENCE_PROPERTY)) {
@@ -146,7 +169,7 @@ public class DetectionMapper {
             DetectableObjectType.builder()
                 .id(randomUUID().toString())
                 .objectId(objectId)
-                .detectableType(toDetectableType(label))
+                .detectableType(detectableType)
                 .build())
         .feature(toFeature(polygon, zoom))
         .computedConfidence(confidence)
@@ -154,6 +177,9 @@ public class DetectionMapper {
   }
 
   private DetectableType toDetectableType(String label) {
+    if (label == null) {
+      return null;
+    }
     return switch (label.toUpperCase()) {
       case ROOF_STRING_VALUE, TOITURE_REVETEMENT_STRING_VALUE -> DetectableType.TOITURE_REVETEMENT;
       case SOLAR_PANEL_STRING_VALUE, PV_STRING_VALUE, PANNEAU_PHOTOVOLTAIQUE_STRING_VALUE ->
@@ -163,9 +189,24 @@ public class DetectionMapper {
       case POOL_STRING_VALUE, PISCINE_STRING_VALUE -> DetectableType.PISCINE;
       case BATI_STRING_VALUE -> DetectableType.BATI;
       case BATI_TUILES_STRING_VALUE, ROOF_TUILES_STRING_VALUE -> DetectableType.BATI_TUILES;
-      case BATI_BETON_STRING_VALUE -> DetectableType.BATI_BETON;
+      case BATI_BETON_STRING_VALUE, ROOF_BETON_BRUT_STRING_VALUE, BETON_BRUT_STRING_VALUE ->
+          DetectableType.BATI_BETON;
       case BATI_ARDOISE_STRING_VALUE, ROOF_ARDOISE_STRING_VALUE -> DetectableType.BATI_ARDOISE;
-      case BATI_AUTRES_STRING_VALUE, ROOF_AUTRES_STRING_VALUE -> DetectableType.BATI_AUTRES;
+      case BATI_AUTRES_STRING_VALUE,
+              ROOF_AUTRES_STRING_VALUE,
+              ROOF_ASPHALTE_BITUME_STRING_VALUE,
+              ROOF_BAC_ACIER_STRING_VALUE,
+              ROOF_FIBRO_CIMENT_STRING_VALUE,
+              ROOF_GRAVIER_STRING_VALUE,
+              ROOF_MEMBRANE_SYNTHETIQUE_STRING_VALUE,
+              ROOF_TOLE_ONDULEE_STRING_VALUE,
+              ROOF_ZINC_STRING_VALUE,
+              ZINC_STRING_VALUE,
+              TOLE_ONDULEE_STRING_VALUE,
+              BAC_ACIER_STRING_VALUE,
+              ASPHALTE_BITUME_STRING_VALUE,
+              FIBRE_CIMENT_STRING_VALUE ->
+          DetectableType.BATI_AUTRES;
       case LINE_STRING_VALUE -> DetectableType.LINE;
       case TROTTOIR_STRING_VALUE, SIDEWALK_STRING_VALUE -> DetectableType.TROTTOIR;
       case PARKING_STRING_VALUE -> DetectableType.PARKING;
@@ -173,6 +214,7 @@ public class DetectionMapper {
       case OBSTACLE_STRING_VALUE -> DetectableType.OBSTACLE;
       case CHEMINEE_STRING_VALUE -> DetectableType.CHEMINEE;
       case VELUX_STRING_VALUE -> DetectableType.VELUX;
+      case LUMINEUX_STRING_VALUE -> DetectableType.LUMINEUX;
       case USURE_IMPORTANTE_ARDOISE_STRING_VALUE, USURE_IMPORTANTE_TUILES_STRING_VALUE ->
           DetectableType.USURE_IMPORTANTE;
       case USURE_LEGERE_ARDOISE_STRING_VALUE, USURE_LEGERE_AUTRES_STRING_VALUE ->
@@ -184,7 +226,8 @@ public class DetectionMapper {
       case HUMIDITE_CLAIR_AUTRES_STRING_VALUE -> DetectableType.HUMIDITE_CLAIR;
       case HUMIDITE_INTENSE_AUTRES_STRING_VALUE -> DetectableType.HUMIDITE_INTENSE;
       case PLACE_STANDARD_STRING_VALUE -> DetectableType.PLACE_STANDARD;
-      default -> throw new IllegalStateException("Unexpected value: " + label.toLowerCase());
+      case NOT_BUILDING_STRING_VALUE -> DetectableType.NOT_BUILDING;
+      default -> null;
     };
   }
 

@@ -47,7 +47,7 @@ public class DetectionRoofPropertiesRequestedService
   public void accept(DetectionRoofPropertiesRequested event) {
     var detectionIdentifier = event.getDetectionIdentifier();
     var detectionWithCovering = apply(detectionIdentifier);
-    if (detectionWithCovering.hasToitureModelName()) {
+    if (detectionWithCovering.hasRoofBasedModelName()) {
       var providedFeatures = detectionWithCovering.getProvidedGeoJsonZone();
       var detectionWithResultProperties = detectionWithCovering;
       if (providedFeatures != null) {
@@ -73,7 +73,7 @@ public class DetectionRoofPropertiesRequestedService
 
   public Detection apply(String detectionIdentifier) {
     var detection = detectionRepository.findById(detectionIdentifier).orElseThrow();
-    if (!detection.hasToitureModelName()) {
+    if (!detection.hasRoofBasedModelName()) {
       log.info("Only BP_TOITURE model is supporting roof properties computing");
       return detection;
     }

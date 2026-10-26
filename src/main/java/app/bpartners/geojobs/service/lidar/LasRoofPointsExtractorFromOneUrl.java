@@ -42,43 +42,49 @@ public class LasRoofPointsExtractorFromOneUrl
   @Override
   public Set<DelimitedRoofPoints> apply(String fileUrl, Set<DelimitedRoofPoints> delimitations) {
     var lasDirectory = createTempDirectory();
-    var result = copy(delimitations);
-    var optionalFile = downloadLasAndIndexFiles(fileUrl, lasDirectory);
-    if (optionalFile.isEmpty()) return Set.of();
+    File file = null;
+    try {
+      var result = copy(delimitations);
+      var optionalFile = downloadLasAndIndexFiles(fileUrl, lasDirectory);
+      if (optionalFile.isEmpty()) return Set.of();
 
-    var file = optionalFile.get();
-    var lasReader = new LASReader(file);
-    var lasHeader = lasReader.getHeader();
-    var union = union(delimitations).buffer(2);
-    var subReader = getSubReader(union, lasReader);
+      file = optionalFile.get();
+      var lasReader = new LASReader(file);
+      var lasHeader = lasReader.getHeader();
+      var union = union(delimitations).buffer(2);
+      var subReader = getSubReader(union, lasReader);
 
-    log.info("Reading lasPoints from file url: {}", file.getPath());
-    for (var point : subReader.getPoints()) {
-      var pointClassification = point.getClassification();
+      log.info("Reading lasPoints from file url: {}", file.getPath());
+      for (var point : subReader.getPoints()) {
+        var pointClassification = point.getClassification();
 
-      switch (pointClassification) {
-        case GROUND_LIDAR_CLASS_VALUE:
-          var groundPoint = new LasPointGeometry(point, lasHeader);
-          handleGroundPoint(groundPoint, result);
-          break;
-        case ROOF_LIDAR_CLASS_VALUE,
-            DIVERS_BATI_LIDAR_CLASS_VALUE,
-            NOT_CLASSIFIED_LIDAR_CLASS_VALUE:
-          var roofPoint = new LasPointGeometry(point, lasHeader);
-          handleRoofPoint(roofPoint, result);
-          break;
-        default:
-          break;
+        switch (pointClassification) {
+          case GROUND_LIDAR_CLASS_VALUE:
+            var groundPoint = new LasPointGeometry(point, lasHeader);
+            handleGroundPoint(groundPoint, result);
+            break;
+          case ROOF_LIDAR_CLASS_VALUE,
+              DIVERS_BATI_LIDAR_CLASS_VALUE,
+              NOT_CLASSIFIED_LIDAR_CLASS_VALUE:
+            var roofPoint = new LasPointGeometry(point, lasHeader);
+            handleRoofPoint(roofPoint, result);
+            break;
+          default:
+            break;
+        }
       }
+      log.info("Finished reading lasPoints from: {}", file.getPath());
+      return result;
+    } finally {
+      clean(file, lasDirectory);
     }
-    log.info("Finished reading lasPoints from: {}", file.getPath());
-    clean(file, lasDirectory);
-    return result;
   }
 
   private void clean(File file, File directory) {
     try {
-      Files.deleteIfExists(file.toPath());
+      if (file != null) {
+        Files.deleteIfExists(file.toPath());
+      }
       this.lasFileCleaner.clean(directory);
     } catch (Exception e) {
       log.error("Failed to clean", e);

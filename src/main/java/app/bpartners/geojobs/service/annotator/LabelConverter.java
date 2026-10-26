@@ -39,6 +39,7 @@ public class LabelConverter implements Function<DetectableType, Label> {
       case HUMIDITE, HUMIDITE_CLAIR, HUMIDITE_INTENSE -> "#f2f538";
       case RISQUE_FEU -> "#361c1b";
       case VELUX -> "#c71497";
+      case LUMINEUX -> "#f2a900";
       case BATI_TUILES -> "#47e66c";
       case BATI_BETON -> "#425c20";
       case BATI_ARDOISE -> "#5299bf";

@@ -17,6 +17,7 @@ import app.bpartners.geojobs.endpoint.rest.model.Geometry;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.repository.model.Feature;
+import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.DetectionMapper;
 import app.bpartners.geojobs.service.detection.DetectionResponseV2;
@@ -27,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class DetectionMapperTest {
   TileValidator tileValidator = new TileValidator();
@@ -78,6 +81,91 @@ class DetectionMapperTest {
     assertEquals(parcelId, actual.getParcelId());
     assertEquals(zoneJobId, actual.getZdjJobId());
     assertEquals(parcelJobId, actual.getParcelJobId());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "roof_ardoise,BATI_ARDOISE",
+    "roof_asphalte_bitume,BATI_AUTRES",
+    "roof_bac_acier,BATI_AUTRES",
+    "roof_beton_brut,BATI_BETON",
+    "roof_fibro_ciment,BATI_AUTRES",
+    "roof_gravier,BATI_AUTRES",
+    "roof_membrane_synthetique,BATI_AUTRES",
+    "roof_tole_ondulee,BATI_AUTRES",
+    "roof_tuiles,BATI_TUILES",
+    "roof_zinc,BATI_AUTRES",
+    "zinc,BATI_AUTRES",
+    "tole_ondulee,BATI_AUTRES",
+    "bac_acier,BATI_AUTRES",
+    "asphalte_bitume,BATI_AUTRES",
+    "fibre_ciment,BATI_AUTRES",
+    "beton_brut,BATI_BETON"
+  })
+  void map_every_toiture_revetements_and_revets_fp_model_class_to_a_detectable_type(
+      String modelClass, DetectableType expected) {
+    var tile =
+        Tile.builder()
+            .id("tile_id")
+            .coordinates(new TileCoordinates().x(5000).y(2000).z(20))
+            .build();
+    var response =
+        DetectionResponseV2.builder()
+            .images(
+                Map.of(
+                    "filename",
+                    DetectionResponseV2.ImageData.builder()
+                        .regions(
+                            Map.of(
+                                "regions",
+                                DetectionResponseV2.ImageData.Region.builder()
+                                    .regionAttributes(Map.of("label", modelClass))
+                                    .shapeAttributes(shapes())
+                                    .build()))
+                        .build()))
+            .build();
+
+    var actual = subject.toDetectedTile(response, tile, "parcel", "zdj", "parcelJob");
+
+    assertEquals(
+        expected,
+        actual.getDetectedObjects().getFirst().getDetectedObjectType().getDetectableType());
+  }
+
+  @Test
+  void ignore_regions_with_unknown_label_instead_of_failing() {
+    var tile =
+        Tile.builder()
+            .id("tile_id")
+            .coordinates(new TileCoordinates().x(5000).y(2000).z(20))
+            .build();
+    var response =
+        DetectionResponseV2.builder()
+            .images(
+                Map.of(
+                    "filename",
+                    DetectionResponseV2.ImageData.builder()
+                        .regions(
+                            Map.of(
+                                "known",
+                                DetectionResponseV2.ImageData.Region.builder()
+                                    .regionAttributes(Map.of("label", "PISCINE"))
+                                    .shapeAttributes(shapes())
+                                    .build(),
+                                "unknown",
+                                DetectionResponseV2.ImageData.Region.builder()
+                                    .regionAttributes(Map.of("label", "not_a_known_label"))
+                                    .shapeAttributes(shapes())
+                                    .build()))
+                        .build()))
+            .build();
+
+    var actual = subject.toDetectedTile(response, tile, "parcel", "zdj", "parcelJob");
+
+    assertEquals(1, actual.getDetectedObjects().size());
+    assertEquals(
+        PISCINE,
+        actual.getDetectedObjects().getFirst().getDetectedObjectType().getDetectableType());
   }
 
   @Test

@@ -1,28 +1,23 @@
 package app.bpartners.geojobs.service.event;
 
+import static app.bpartners.geojobs.endpoint.event.model.DashboardApiKeyCheckTriggered.LANES;
 import static app.bpartners.geojobs.service.dashboard.component.UserApiKeyType.DASHBOARD;
 
+import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DashboardApiKeyCheckTriggered;
-import app.bpartners.geojobs.mail.Email;
-import app.bpartners.geojobs.mail.Mailer;
+import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.service.dashboard.UserAccountsApi;
 import app.bpartners.geojobs.service.dashboard.component.User;
 import app.bpartners.geojobs.service.dashboard.component.UserApiKey;
-import app.bpartners.geojobs.template.HTMLTemplateParser;
-import jakarta.mail.internet.InternetAddress;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
-import org.thymeleaf.context.Context;
 
 @Service
 @Slf4j
@@ -30,33 +25,60 @@ public class DashboardApiKeyCheckTriggeredService
     implements Consumer<DashboardApiKeyCheckTriggered> {
   private static final String FAILURE_LOG_PREFIX = "[DAKC F] ";
   private static final String SUCCESS_LOG_PREFIX = "[DAKC S] ";
-  private static final String DASHBOARD_API_KEY_VERIFICATION_TEMPLATE =
-      "dashboard_api_key_verification_template";
-  public static final String EUROPE_PARIS = "Europe/Paris";
-  public static final String EMAIL_NOTIFICATION_RECEIVER = "tech@birdia.fr";
+  private static final String HANDLER_LOG_PREFIX = "[DAKC H] ";
   private final UserAccountsApi userAccountsApi;
   private final String adminApiKey;
-  private final Mailer mailer;
-  private final HTMLTemplateParser htmlTemplateParser;
+  private final CommunityAuthorizationRepository communityAuthorizationRepository;
+  private final EventProducer<DashboardApiKeyCheckTriggered> eventProducer;
 
   public DashboardApiKeyCheckTriggeredService(
       UserAccountsApi userAccountsApi,
       @Value("${admin.api.key}") String adminApiKey,
-      Mailer mailer,
-      HTMLTemplateParser htmlTemplateParser) {
+      CommunityAuthorizationRepository communityAuthorizationRepository,
+      EventProducer<DashboardApiKeyCheckTriggered> eventProducer) {
     this.userAccountsApi = userAccountsApi;
     this.adminApiKey = adminApiKey;
-    this.mailer = mailer;
-    this.htmlTemplateParser = htmlTemplateParser;
+    this.communityAuthorizationRepository = communityAuthorizationRepository;
+    this.eventProducer = eventProducer;
   }
 
   @Override
   public void accept(DashboardApiKeyCheckTriggered event) {
-    var email = event.getEmail();
+    try {
+      check(event);
+    } catch (RuntimeException e) {
+      log.error(FAILURE_LOG_PREFIX + "Unable to check {}", event.getCommunityAuthorizationId(), e);
+    }
+    triggerNext(event);
+  }
+
+  private void triggerNext(DashboardApiKeyCheckTriggered event) {
+    if (event.getIndex() == null) {
+      return;
+    }
+    var ids = communityAuthorizationRepository.findAllIdsByIntegrationTestUsageFalse();
+    for (int next = event.getIndex() + LANES; next < ids.size(); next += LANES) {
+      var authorization = communityAuthorizationRepository.findById(ids.get(next));
+      if (authorization.isPresent()) {
+        try {
+          eventProducer.accept(
+              List.of(DashboardApiKeyCheckTriggered.of(authorization.get(), next)));
+        } catch (RuntimeException e) {
+          log.error(FAILURE_LOG_PREFIX + "Unable to trigger next check at index {}", next, e);
+          throw e;
+        }
+        return;
+      }
+    }
+    log.info("End of lane after index {}", event.getIndex());
+  }
+
+  private void check(DashboardApiKeyCheckTriggered event) {
+    var userEmail = event.getEmail();
     var userId = event.getCommunityAuthorizationId();
     List<String> collectedErrors = new ArrayList<>();
 
-    var retrievedUsers = userAccountsApi.getUsersByCriteria(email, null, null, adminApiKey);
+    var retrievedUsers = userAccountsApi.getUsersByCriteria(userEmail, null, null, adminApiKey);
     var retrievedUserIds = retrievedUsers.stream().map(User::id).toList();
 
     if (retrievedUsers.isEmpty()) {
@@ -96,6 +118,7 @@ public class DashboardApiKeyCheckTriggeredService
     if (userApiKeys.isEmpty()) {
       var exceptionMessage = "No api key found for users : " + retrievedUserIds;
       log.error(FAILURE_LOG_PREFIX + "{}", exceptionMessage);
+      handleNoKey(userEmail, userId);
       return;
     }
 
@@ -111,6 +134,7 @@ public class DashboardApiKeyCheckTriggeredService
               + retrievedUserIds
               + " in the user account api.";
       log.error(FAILURE_LOG_PREFIX + "{}", exceptionMessage);
+      handleNoKey(userEmail, userId);
       return;
     }
 
@@ -120,8 +144,9 @@ public class DashboardApiKeyCheckTriggeredService
           "Actual dashboard api "
               + actualDashboardApiKey
               + " key doesn't match any of the api keys in the users account api for : "
-              + formIdList(retrievedUserIds);
+              + formatIdList(retrievedUserIds);
       log.error(FAILURE_LOG_PREFIX + "{}", exceptionMessage);
+      updateCommunityAuthorizationDashboardApiKey(userId, dashboardApiKeys.getFirst());
     }
 
     if (collectedErrors.isEmpty()) {
@@ -130,40 +155,50 @@ public class DashboardApiKeyCheckTriggeredService
     }
   }
 
-  @SneakyThrows
-  private void notifyByEmail(List<String> idList, List<String> errorMessages) {
-    var subject = computeSubject(idList);
-    String combinedMessage = String.join("\n", errorMessages);
-    String emailBody = computeEmailBody(idList, combinedMessage);
+  private void handleNoKey(String communityAuthorizationEmail, String communityAuthorizationId) {
+    var newDashboardApiKey = UUID.randomUUID().toString();
 
-    mailer.accept(
-        new Email(
-            new InternetAddress(EMAIL_NOTIFICATION_RECEIVER),
-            List.of(),
-            List.of(),
-            subject,
-            emailBody,
-            List.of()));
+    var savedDashboardApiKey =
+        userAccountsApi.getOrGenerateApiKey(
+            communityAuthorizationEmail, newDashboardApiKey, adminApiKey);
+    updateCommunityAuthorizationDashboardApiKey(
+        communityAuthorizationId, savedDashboardApiKey.key());
+
+    if (newDashboardApiKey.equals(savedDashboardApiKey.key())) {
+      log.info(
+          HANDLER_LOG_PREFIX + "New Dashboard api key generated for user {}",
+          communityAuthorizationId);
+    } else {
+      log.info(
+          HANDLER_LOG_PREFIX
+              + "Dashboard api key for user {} already exists in the user account api. No new key"
+              + " generated.",
+          communityAuthorizationId);
+    }
   }
 
-  private String computeEmailBody(List<String> idList, String message) {
-    Context context = new Context();
-    context.setVariable("email", formIdList(idList));
-    context.setVariable("message", message);
-    return htmlTemplateParser.apply(DASHBOARD_API_KEY_VERIFICATION_TEMPLATE, context);
-  }
+  private void updateCommunityAuthorizationDashboardApiKey(
+      String communityAuthorizationId, String dashboardApiKey) {
+    var communityAuthorization =
+        communityAuthorizationRepository.findById(communityAuthorizationId);
 
-  private String computeSubject(List<String> idList) {
-    var nowInParisHour = ZonedDateTime.now(ZoneId.of(EUROPE_PARIS));
-    var formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    return "[geo-jobs] Erreur lors de la vérification automatique de la clé API du client "
-        + formIdList(idList)
-        + " le "
-        + formatter.format(nowInParisHour);
+    if (communityAuthorization.isEmpty()) {
+      log.error(
+          HANDLER_LOG_PREFIX
+              + "Failed to update dashboard api key for user {}. User not found in database.",
+          communityAuthorizationId);
+      return;
+    }
+
+    var auth = communityAuthorization.get();
+    auth.setDashboardApiKey(dashboardApiKey);
+    communityAuthorizationRepository.save(auth);
+    log.info(
+        HANDLER_LOG_PREFIX + "Dashboard api key updated for user {}", communityAuthorizationId);
   }
 
   @NotNull
-  private static String formIdList(List<String> idList) {
+  private static String formatIdList(List<String> idList) {
     return String.join("/", idList);
   }
 }

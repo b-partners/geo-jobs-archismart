@@ -188,6 +188,8 @@ dependencies {
     implementation 'com.amazonaws.serverless:aws-serverless-java-container-springboot3:2.1.0'
     implementation 'software.amazon.awssdk:aws-query-protocol:2.20.26'
 
+    implementation 'org.crac:crac:1.4.0'
+
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
     implementation 'com.amazonaws:aws-lambda-java-events:3.11.3'
     implementation 'software.amazon.awssdk:sqs:2.21.40'

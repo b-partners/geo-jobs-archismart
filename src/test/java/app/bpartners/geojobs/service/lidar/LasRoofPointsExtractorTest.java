@@ -10,7 +10,6 @@ import static org.mockito.Mockito.*;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.api.LasIndexApi;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
-import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import app.bpartners.geojobs.utils.lidar.LasRoofsPointsExtractorCreator;
 import java.util.Map;
 import java.util.Optional;
@@ -50,14 +49,14 @@ class LasRoofPointsExtractorTest {
     var processor =
         spy(
             new LasRoofsPointsExtractor(
-                apiMock,
-                new GeometrySquareMeterArea(),
-                swissBoundaryCheckerMock(),
-                fromOneUrl(apiMock)));
+                apiMock, new GeometrySquareMeterArea(), fromOneUrl(apiMock)));
 
     var roofGeometry1 = roofOutsideLidar();
     when(apiMock.getUniqueLidarFilesUrls(any()))
-        .thenReturn(Map.of("file.laz", Set.of(roofOutsideLidar())));
+        .thenReturn(
+            new LidarApiFacade.LidarFilesResult(
+                Map.of("file.laz", Set.of(roofOutsideLidar())),
+                GeometrySquareMeterArea.LAMBERT_93));
 
     var roofGeometries = Set.of(roofGeometry1);
     var error =
@@ -121,12 +120,6 @@ class LasRoofPointsExtractorTest {
 
     var roof1Points = result.extract(roof1);
     assertEquals(3487, roof1Points.getItems()[0].getPoints().size());
-  }
-
-  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
-    var swissBoundaryChecker = mock(SwissBoundaryChecker.class);
-    when(swissBoundaryChecker.isGeometryInSwiss(any())).thenReturn(false);
-    return swissBoundaryChecker;
   }
 
   private static Geometry roofOutsideLidar() {

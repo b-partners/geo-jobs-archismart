@@ -1,0 +1,28 @@
+{
+  "emailReceiver": "<your-email-to-be-notified>",
+  "zoneName": "<your-zone-name>",
+  "geoJsonDelimitationType": "PARCEL_CONSTRAINED_DELIMITATION",
+  "needsImageOutput": true,
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_TOITURE"
+    },
+    {
+      "modelName": "BP_VEGETATION"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.068299423393144,
+          50.63012080308718
+        ]
+      }
+    }
+  ],
+  "geoJsonOutput": "GEO_JSON"
+}

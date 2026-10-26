@@ -20,7 +20,7 @@ class DetectionRoofSlopeValidatorTest {
   void do_not_throws() {
     var detectionMock = mock(Detection.class);
     var featureWithDelimitationMock = mock(FeatureWithDelimitation.class);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.getFeatureWithDelimitations())
         .thenReturn(List.of(featureWithDelimitationMock));
 
@@ -32,7 +32,7 @@ class DetectionRoofSlopeValidatorTest {
     var detectionIdentifier = randomUUID().toString();
     var detectionMock = mock(Detection.class);
     when(detectionMock.getId()).thenReturn(detectionIdentifier);
-    when(detectionMock.hasToitureModelName()).thenReturn(false);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(false);
     when(detectionMock.getDetectableObjectModel())
         .thenReturn(new DetectableObjectModel().modelName(null));
 
@@ -50,12 +50,12 @@ class DetectionRoofSlopeValidatorTest {
     var detectionIdentifier = randomUUID().toString();
     var detectionMock = mock(Detection.class);
     when(detectionMock.getId()).thenReturn(detectionIdentifier);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.getFeatureWithDelimitations()).thenReturn(null);
     var detectionIdentifierTwo = randomUUID().toString();
     var detectionTwoMock = mock(Detection.class);
     when(detectionTwoMock.getId()).thenReturn(detectionIdentifierTwo);
-    when(detectionTwoMock.hasToitureModelName()).thenReturn(true);
+    when(detectionTwoMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionTwoMock.getFeatureWithDelimitations()).thenReturn(List.of());
 
     var actual = assertThrows(BadRequestException.class, () -> subject.accept(detectionMock));

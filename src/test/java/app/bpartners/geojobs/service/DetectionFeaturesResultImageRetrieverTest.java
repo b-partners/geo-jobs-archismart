@@ -63,7 +63,7 @@ class DetectionFeaturesResultImageRetrieverTest {
     var layer = "cite:PCRS";
     var features = List.of(somePoint(longitude, latitude, null));
     var randomZoneName = "random zone name " + currentTimeMillis();
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.isSucceeded()).thenReturn(true);
     when(detectionMock.getProvidedGeoJsonZone()).thenReturn(features);
     when(detectionMock.getDetectableObjectModel())
@@ -96,7 +96,7 @@ class DetectionFeaturesResultImageRetrieverTest {
     var features = List.of(somePoint(longitude, latitude, null));
     var randomZoneName = "random zone name " + currentTimeMillis();
     when(detectionMock.getZoneName()).thenReturn(randomZoneName);
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.isSucceeded()).thenReturn(true);
     when(detectionMock.getProvidedGeoJsonZone()).thenReturn(features);
     when(detectionMock.getDetectableObjectModel())
@@ -124,7 +124,7 @@ class DetectionFeaturesResultImageRetrieverTest {
     var features =
         List.of(
             new Feature().properties(properties).geometry(new FeatureGeometry(new MultiPolygon())));
-    when(detectionMock.hasToitureModelName()).thenReturn(true);
+    when(detectionMock.hasRoofBasedModelName()).thenReturn(true);
     when(detectionMock.isSucceeded()).thenReturn(true);
     when(detectionMock.getProvidedGeoJsonZone()).thenReturn(features);
     when(detectionMock.getGeoServerProperties())

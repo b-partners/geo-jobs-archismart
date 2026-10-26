@@ -34,6 +34,11 @@ public class ApiKeyService {
           communityAuthorizationRepository.findByEmail(auth.getEmail());
       if (optionalCommunityAuthorization.isPresent()) {
         var communityAuthorization = optionalCommunityAuthorization.get();
+        if (auth.getDashboardApiKey() != null
+            && !auth.getDashboardApiKey().equals(communityAuthorization.getDashboardApiKey())) {
+          communityAuthorization.setDashboardApiKey(auth.getDashboardApiKey());
+          communityAuthorizationRepository.save(communityAuthorization);
+        }
         return List.of(
             new ApiKey(
                 communityAuthorization.getMostRecentApiKey().getKeyValue(),
@@ -43,13 +48,15 @@ public class ApiKeyService {
 
     var communityAuthorizations = handleExistingCommunities(authorizations);
 
-    communityAuthorizations.forEach(
-        authorization -> {
-          var dashboardUserApiKeyList =
-              userAccountsApi.getOrGenerateApiKey(
-                  authorization.getEmail(), authorization.getApiKey(), adminApiKey);
-          authorization.setDashboardApiKey(dashboardUserApiKeyList.key());
-        });
+    communityAuthorizations.stream()
+        .filter(authorization -> authorization.getDashboardApiKey() == null)
+        .forEach(
+            authorization -> {
+              var dashboardUserApiKeyList =
+                  userAccountsApi.getOrGenerateApiKey(
+                      authorization.getEmail(), authorization.getApiKey(), adminApiKey);
+              authorization.setDashboardApiKey(dashboardUserApiKeyList.key());
+            });
 
     return communityAuthorizationRepository.saveAll(authorizations).stream()
         .map(

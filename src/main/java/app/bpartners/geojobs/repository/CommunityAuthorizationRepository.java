@@ -1,6 +1,7 @@
 package app.bpartners.geojobs.repository;
 
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -33,4 +34,11 @@ public interface CommunityAuthorizationRepository
       WHERE c.apiKey = :key OR c.dashboardApiKey = :key OR k.keyValue = :key
       """)
   Optional<CommunityAuthorization> findByDashboardApiKey(@Param("key") String actualKey);
+
+  List<CommunityAuthorization> findAllByIntegrationTestUsageFalse();
+
+  @Query(
+      "SELECT c.id FROM community_authorization c WHERE c.integrationTestUsage = false ORDER BY"
+          + " c.id")
+  List<String> findAllIdsByIntegrationTestUsageFalse();
 }

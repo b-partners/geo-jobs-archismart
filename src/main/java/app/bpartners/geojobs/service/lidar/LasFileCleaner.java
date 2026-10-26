@@ -2,8 +2,8 @@ package app.bpartners.geojobs.service.lidar;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 
 @Slf4j
 public class LasFileCleaner {
@@ -13,9 +13,9 @@ public class LasFileCleaner {
     }
 
     try {
-      Files.deleteIfExists(directory.toPath());
+      FileUtils.deleteDirectory(directory);
     } catch (IOException e) {
-      log.warn("Cannot delete folder {}", directory.getAbsolutePath());
+      log.warn("Cannot delete folder {}", directory.getAbsolutePath(), e);
     }
   }
 }

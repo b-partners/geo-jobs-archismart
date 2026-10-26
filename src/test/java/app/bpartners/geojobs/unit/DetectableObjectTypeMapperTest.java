@@ -50,6 +50,25 @@ class DetectableObjectTypeMapperTest {
   }
 
   @Test
+  void lumineux_is_exposed_in_both_directions() {
+    assertEquals(LUMINEUX, subject.toRest(DetectableType.LUMINEUX));
+    assertEquals(DetectableType.LUMINEUX, subject.toDomain(LUMINEUX));
+  }
+
+  @Test
+  void map_from_model_BP_Revetement_Obstacle_Model() {
+    assertEquals(
+        List.of(OBSTACLE, CHEMINEE, VELUX, PANNEAU_PHOTOVOLTAIQUE, LUMINEUX),
+        subject.mapFromModel(new DetectableObjectModel().modelName(REVETEMENT_OBSTACLE)));
+  }
+
+  @Test
+  void fleche_directionnelle_is_exposed_in_both_directions() {
+    assertEquals(FLECHE_DIRECTIONNELLE, subject.toRest(DetectableType.FLECHE_DIRECTIONNELLE));
+    assertEquals(DetectableType.FLECHE_DIRECTIONNELLE, subject.toDomain(FLECHE_DIRECTIONNELLE));
+  }
+
+  @Test
   void map_from_model_BP_Toiture_Model() {
     var object = new DetectableObjectModel().modelName(TOITURE);
 

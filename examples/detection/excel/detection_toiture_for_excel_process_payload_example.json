@@ -1,0 +1,12 @@
+{
+  "emailReceiver": "your.email@mail.com",
+  "zoneName": "your.zone.name",
+  "needsImageOutput": true,
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_TOITURE"
+    }
+  ],
+  "geoJsonDelimitationType": "PARCEL_FREE_DELIMITATION",
+  "geoJsonOutput": "ZIP"
+}

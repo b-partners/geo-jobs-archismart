@@ -44,7 +44,8 @@ class DetectionTrackingApiIT {
                     "zone from geo-jobs",
                     "address from geo-jobs",
                     now(),
-                    new DetectionInitiator("Ryan", "ryan@email.com", "0611223344"))));
+                    new DetectionInitiator("Ryan", "ryan@email.com", "0611223344"),
+                    "detection end to end id from geo-jobs")));
 
     assertNotNull(actual);
     log.info(actual.toString());

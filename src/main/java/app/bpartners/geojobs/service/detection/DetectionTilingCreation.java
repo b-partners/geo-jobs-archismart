@@ -2,7 +2,9 @@ package app.bpartners.geojobs.service.detection;
 
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.ZoneTilingJobMapper;
 import app.bpartners.geojobs.repository.DetectionRepository;
+import app.bpartners.geojobs.repository.model.ArcgisImageZoom;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import app.bpartners.geojobs.service.tiling.ZoneTilingJobService;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ public class DetectionTilingCreation
   private final ZoneTilingJobService zoneTilingJobService;
   private final DetectionRepository detectionRepository;
   private final DetectionTilingStatisticsComputer detectionTilingStatisticsComputer;
+  private final ModelCardResolver modelCardResolver;
 
   @Override
   public app.bpartners.geojobs.endpoint.rest.model.Detection apply(Detection detection) {
@@ -26,7 +29,14 @@ public class DetectionTilingCreation
   public Detection processTiling(Detection detection) {
     var createJob = zoneTilingJobMapper.from(detection);
     var job = zoneTilingJobMapper.toDomain(createJob, detection.isSynchronous());
-    var tilingTasks = zoneTilingJobService.getTilingTasks(createJob, job.getId());
+    var imageZooms =
+        modelCardResolver
+            .tilingZoomLevels(
+                detection.getDetectableObjectConfigurations(), detection.spatialResolutionInCm())
+            .stream()
+            .map(ArcgisImageZoom::fromZoomLevel)
+            .toList();
+    var tilingTasks = zoneTilingJobService.getTilingTasks(createJob, job.getId(), imageZooms);
     var ztj = zoneTilingJobService.create(job, tilingTasks);
 
     // /!\ From ZTJMapper.from detection.splitPolygonGeoJsonZone may be updated

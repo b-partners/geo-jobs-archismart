@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMa
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.PARCEL_CONSTRAINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.REVETEMENT_OBSTACLE;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.STATIONNEMENT;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
@@ -167,6 +168,13 @@ public class Detection implements Serializable {
 
   @Getter(AccessLevel.NONE)
   private Boolean debugMode;
+
+  @Column(name = "dashboard_registration_datetime")
+  private Instant dashboardRegistrationDatetime;
+
+  public boolean isDashboardRegistrationCompleted() {
+    return dashboardRegistrationDatetime != null;
+  }
 
   public boolean isAnnotationDeliveryEnable() {
     return false;
@@ -365,6 +373,18 @@ public class Detection implements Serializable {
             && TOITURE.equals(detectableObjectModel.getModelName()));
   }
 
+  public boolean hasRevetementObstacleModelName() {
+    return (detectableObjectModelList != null
+            && detectableObjectModelList.stream()
+                .anyMatch(model -> REVETEMENT_OBSTACLE.equals(model.getModelName())))
+        || (detectableObjectModel != null
+            && REVETEMENT_OBSTACLE.equals(detectableObjectModel.getModelName()));
+  }
+
+  public boolean hasRoofBasedModelName() {
+    return hasToitureModelName() || hasRevetementObstacleModelName();
+  }
+
   public boolean hasStationnementModelName() {
     return (detectableObjectModelList != null
             && detectableObjectModelList.stream()
@@ -381,6 +401,15 @@ public class Detection implements Serializable {
     return getMultiPolygonGeoJsonZone() == null
         || getMultiPolygonGeoJsonZone().isEmpty()
         || getGeoServerProperties() == null;
+  }
+
+  public Double spatialResolutionInCm() {
+    if (geoServerProperties == null
+        || geoServerProperties.getGeoServerParameter() == null
+        || geoServerProperties.getGeoServerParameter().getPrecisionLevelInCm() == null) {
+      return null;
+    }
+    return geoServerProperties.getGeoServerParameter().getPrecisionLevelInCm().doubleValue();
   }
 
   public boolean isStillOnTilingStep() {

@@ -9,6 +9,7 @@ import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.conf.FacadeIT;
@@ -73,6 +74,25 @@ class SecurityControllerIT extends FacadeIT {
             .build(),
         actualCommunity);
     assertTrue(actualCommunity.getAuthorizedZones().isEmpty());
+  }
+
+  @Transactional
+  @Test
+  void provided_dashboard_api_key_is_stored_as_is() {
+    var consumerEmail = "randomEmail" + randomUUID();
+    var providedDashboardApiKey = "provided-dashboard-" + randomUUID();
+
+    var actual =
+        subject.generateApiKeys(
+            List.of(someCreateApiKey(consumerEmail).dashboardApiKey(providedDashboardApiKey)));
+
+    assertEquals(1, actual.size());
+    var actualCommunity =
+        authorizationRepository.findByDashboardApiKey(providedDashboardApiKey).orElseThrow();
+    assertEquals(consumerEmail, actualCommunity.getEmail());
+    assertEquals(providedDashboardApiKey, actualCommunity.getDashboardApiKey());
+    assertEquals(actual.getFirst().getKey(), actualCommunity.getApiKey());
+    verifyNoInteractions(userAccountsApiMock);
   }
 
   @Test

@@ -90,6 +90,7 @@ public enum ObjectType {
               HUMIDITE_CLAIR,
               HUMIDITE_INTENSE,
               VELUX,
+              LUMINEUX,
               BATI_TUILES,
               BATI_BETON,
               BATI_ARDOISE,
@@ -105,6 +106,7 @@ public enum ObjectType {
               TOMBE_SIMPLE,
               TOMBE_DOUBLE,
               TOMBE_NON_GEOMETRIQUE,
+              FLECHE_DIRECTIONNELLE,
               ROAD ->
           throw new IllegalArgumentException("Unsupported continuation on " + detectableType);
     };

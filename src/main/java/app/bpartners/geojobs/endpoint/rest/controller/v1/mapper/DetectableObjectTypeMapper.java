@@ -50,6 +50,7 @@ public class DetectableObjectTypeMapper {
       case HUMIDITE -> DetectableType.HUMIDITE;
       case RISQUE_FEU -> DetectableType.RISQUE_FEU;
       case VELUX -> DetectableType.VELUX;
+      case LUMINEUX -> DetectableType.LUMINEUX;
       case BATI_TUILES -> DetectableType.BATI_TUILES;
       case BATI_BETON -> DetectableType.BATI_BETON;
       case BATI_ARDOISE -> DetectableType.BATI_ARDOISE;
@@ -67,6 +68,7 @@ public class DetectableObjectTypeMapper {
       case TOMBE_SIMPLE -> DetectableType.TOMBE_SIMPLE;
       case TOMBE_DOUBLE -> DetectableType.TOMBE_DOUBLE;
       case TOMBE_NON_GEOMETRIQUE -> DetectableType.TOMBE_NON_GEOMETRIQUE;
+      case FLECHE_DIRECTIONNELLE -> DetectableType.FLECHE_DIRECTIONNELLE;
     };
   }
 
@@ -97,6 +99,7 @@ public class DetectableObjectTypeMapper {
       case HUMIDITE -> HUMIDITE;
       case RISQUE_FEU -> RISQUE_FEU;
       case VELUX -> VELUX;
+      case LUMINEUX -> LUMINEUX;
       case BATI_TUILES -> BATI_TUILES;
       case PARKING -> PARKING;
       case BATI_BETON -> BATI_BETON;
@@ -119,8 +122,9 @@ public class DetectableObjectTypeMapper {
       case TOMBE_DOUBLE -> TOMBE_DOUBLE;
       case TOMBE_NON_GEOMETRIQUE -> TOMBE_NON_GEOMETRIQUE;
       case POINTILLE -> null;
-      case FLECHE_DIRECTIONNELLE -> null;
+      case FLECHE_DIRECTIONNELLE -> FLECHE_DIRECTIONNELLE;
       case PLACE_STANDARD -> PLACE_STANDARD;
+      case NOT_BUILDING -> null;
     };
   }
 
@@ -145,6 +149,8 @@ public class DetectableObjectTypeMapper {
       case TAMPONS -> objectTypes.addAll(detectableObjectTypeForTamponsModel());
       case CIMETIERE -> objectTypes.addAll(detectableObjectTypeForCimetiereModel());
       case STATIONNEMENT -> objectTypes.addAll(detectableObjectTypeForStationnementModel());
+      case REVETEMENT_OBSTACLE ->
+          objectTypes.addAll(detectableObjectTypeForRevetementObstacleModel());
     }
     return objectTypes;
   }
@@ -255,6 +261,10 @@ public class DetectableObjectTypeMapper {
     return objectTypes;
   }
 
+  public static List<DetectableObjectType> detectableObjectTypeForRevetementObstacleModel() {
+    return List.of(OBSTACLE, CHEMINEE, VELUX, PANNEAU_PHOTOVOLTAIQUE, LUMINEUX);
+  }
+
   private List<DetectableObjectType> detectableObjectTypeForStationnementModel() {
     var objectTypes = new ArrayList<DetectableObjectType>();
     objectTypes.add(PARKING);
@@ -319,7 +329,7 @@ public class DetectableObjectTypeMapper {
       case OBSTACLE -> {
         return 0.0;
       }
-      case CHEMINEE -> {
+      case CHEMINEE, LUMINEUX -> {
         return 0.0;
       }
       case HUMIDITE_CLAIR, HUMIDITE_INTENSE -> {

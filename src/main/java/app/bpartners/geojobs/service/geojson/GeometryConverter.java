@@ -465,7 +465,8 @@ public class GeometryConverter {
                 HUMIDITE_INTENSE,
                 HUMIDITE_CLAIR,
                 HUMIDITE,
-                VELUX)
+                VELUX,
+                LUMINEUX)
             .contains(detectableType)
         && isParcelDetection) {
       var parcelFetcher = new IgnCadastreFeatureFetcher(new RestTemplate());

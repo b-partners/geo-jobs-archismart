@@ -69,7 +69,7 @@ public class ZipGeoJsonAssembler implements Consumer<GeoJsonConversionJob> {
     List<Feature> roofFeatures = new ArrayList<>();
     org.locationtech.jts.geom.MultiPolygon providedZoneWithoutRoofMultiPolygon = null;
 
-    if (detection.hasToitureModelName()) {
+    if (detection.hasRoofBasedModelName()) {
       var featureWithDelimitationList = detection.getFeatureWithDelimitations();
       var delimitationFeatures =
           featureWithDelimitationList.stream()

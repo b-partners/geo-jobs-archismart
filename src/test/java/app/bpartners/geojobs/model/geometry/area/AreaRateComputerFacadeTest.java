@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import app.bpartners.geojobs.model.DetectedTile;
 import app.bpartners.geojobs.model.geometry.PolygonObjectType;
+import app.bpartners.geojobs.model.geometry.area.rate.AreaRateComputerFacade;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -66,10 +67,10 @@ class AreaRateComputerFacadeTest extends AreaRateComputerTest {
   void get_global_rate_returns_expected_value() {
     var roof = createSquare(10); // Area = 100
 
-    // Usure: (1*1 + 0) / 100 * 100 = 1.0. Global weight 0.4 -> 0.4
-    // Moisissure: (1*1 + 0 + 0) / 100 * 100 = 1.0. Global weight 0.8 -> 0.8
-    // Humidite: (1*1 + 0) / 100 * 100 = 1.0. Global weight 1.0 -> 1.0
-    // Total Global = 0.4 + 0.8 + 1.0 = 2.2
+    // Usure = 1.0, Moisissure = 1.0, Humidite = 1.0 (each a single 1m2 detection on a 100m2 roof)
+    // Moisissure amortie : mEff = 1 * (0.55 + 0.45 * 1/100) = 0.5545
+    // Humidite renforcee : hEff = 1 (<= 20, pas de renforcement)
+    // Score = 0.55 * 1 + 0.35 * 0.5545 + 0.65 * 1 = 0.55 + 0.194075 + 0.65 = 1.394075
 
     var polygonObjectTypes =
         List.of(
@@ -79,7 +80,7 @@ class AreaRateComputerFacadeTest extends AreaRateComputerTest {
 
     var subject = new AreaRateComputerFacade(roof, polygonObjectTypes);
 
-    assertEquals(2.2, subject.getGlobalRate());
+    assertEquals(1.39, subject.getGlobalRate());
   }
 
   @Test
@@ -119,59 +120,49 @@ class AreaRateComputerFacadeTest extends AreaRateComputerTest {
     assertEquals(10.0, subject.getMoisissureAreaRate());
     assertEquals(16.0, subject.getHumidityAreaRate());
 
-    // Penalty = 0.4 * 20 + 0.8 * 10 + 1.0 * 16 = 8 + 8 + 16 = 32
-    assertEquals(32.0, subject.getGlobalRate());
+    // Moisissure amortie : mEff = 10 * (0.55 + 0.45 * 10/100) = 5.95
+    // Humidite renforcee : hEff = 16 (<= 20, pas de renforcement)
+    // Score = 0.55 * 20 + 0.35 * 5.95 + 0.65 * 16 = 11 + 2.0825 + 10.4 = 23.4825
+    assertEquals(23.48, subject.getGlobalRate());
   }
 
   @Test
   void get_rate_returns_correct_enum_values() {
     var roof = createSquare(10);
 
-    // Rate A: global < 4
+    // Rate A: global < 6
     assertEquals(Rate.A, new AreaRateComputerFacade(roof, List.of()).getRate());
 
-    // Rate B: 4 <= global < 11
-    // Humidite 5% -> global 5.0
+    // Rate B: 6 <= global < 15
+    // Humidite 10% -> hEff = 10 (<= 20) -> global = 0.65 * 10 = 6.5
     assertEquals(
         Rate.B,
         new AreaRateComputerFacade(
-                roof,
-                List.of(
-                    new PolygonObjectType(createSquare(2.236), HUMIDITE_CLAIR) // Area ~ 5
-                    ))
+                roof, List.of(new PolygonObjectType(createSquare(Math.sqrt(10)), HUMIDITE_CLAIR)))
             .getRate());
 
-    // Rate C: 11 <= global < 21
-    // Humidite 15% -> global 15.0
+    // Rate C: 15 <= global < 39
+    // Humidite 25% -> hEff = 25 + 0.5 * (25 - 20) = 27.5 -> global = 0.65 * 27.5 = 17.875
     assertEquals(
         Rate.C,
         new AreaRateComputerFacade(
-                roof,
-                List.of(
-                    new PolygonObjectType(createSquare(3.873), HUMIDITE_CLAIR) // Area ~ 15
-                    ))
+                roof, List.of(new PolygonObjectType(createSquare(5), HUMIDITE_CLAIR)))
             .getRate());
 
-    // Rate D: 21 <= global < 41
-    // Humidite 30% -> global 30.0
+    // Rate D: 39 <= global < 69
+    // Humidite 50% -> hEff = 50 + 0.5 * (50 - 20) = 65 -> global = 0.65 * 65 = 42.25
     assertEquals(
         Rate.D,
         new AreaRateComputerFacade(
-                roof,
-                List.of(
-                    new PolygonObjectType(createSquare(5.477), HUMIDITE_CLAIR) // Area ~ 30
-                    ))
+                roof, List.of(new PolygonObjectType(createSquare(Math.sqrt(50)), HUMIDITE_CLAIR)))
             .getRate());
 
-    // Rate E: global >= 41
-    // Humidite 50% -> global 50.0
+    // Rate E: global >= 69
+    // Humidite 80% -> hEff = 80 + 0.5 * (80 - 20) = 110 -> global = 0.65 * 110 = 71.5
     assertEquals(
         Rate.E,
         new AreaRateComputerFacade(
-                roof,
-                List.of(
-                    new PolygonObjectType(createSquare(7.071), HUMIDITE_CLAIR) // Area ~ 50
-                    ))
+                roof, List.of(new PolygonObjectType(createSquare(Math.sqrt(80)), HUMIDITE_CLAIR)))
             .getRate());
   }
 
@@ -203,11 +194,13 @@ class AreaRateComputerFacadeTest extends AreaRateComputerTest {
     // Usure: (1 * 1) / 100 * 100 = 1.0
     // Moisissure: (1 * 4) / 100 * 100 = 4.0
     // Humidite: (1 * 9) / 100 * 100 = 9.0
-    // Global: (1.0 * 0.4) + (4.0 * 0.8) + (9.0 * 1.0) = 0.4 + 3.2 + 9.0 = 12.6
+    // Moisissure amortie : mEff = 4 * (0.55 + 0.45 * 4/100) = 2.272
+    // Humidite renforcee : hEff = 9 (<= 20, pas de renforcement)
+    // Score = 0.55 * 1 + 0.35 * 2.272 + 0.65 * 9 = 0.55 + 0.7952 + 5.85 = 7.1952
 
     assertEquals(1.0, subject.getUsureAreaRate());
     assertEquals(4.0, subject.getMoisissureAreaRate());
     assertEquals(9.0, subject.getHumidityAreaRate());
-    assertEquals(12.6, subject.getGlobalRate());
+    assertEquals(7.2, subject.getGlobalRate());
   }
 }

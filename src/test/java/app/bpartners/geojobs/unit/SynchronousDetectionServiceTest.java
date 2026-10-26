@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.concurrency.Workers;
+import app.bpartners.geojobs.endpoint.event.EventProducer;
+import app.bpartners.geojobs.endpoint.event.model.DetectionTrackingRegistrationRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionFromStatisticRestMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DetectionStep;
@@ -40,6 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class SynchronousDetectionServiceTest {
   DetectionRepository detectionRepositoryMock = mock();
@@ -57,6 +60,7 @@ class SynchronousDetectionServiceTest {
   EntityManager entityManagerMock = mock();
   DetectionRoofPropertiesRequestedService detectionRoofPropertiesRequestedServiceMock = mock();
   DetectionPropertiesService detectionPropertiesServiceMock = mock();
+  EventProducer eventProducerMock = mock(EventProducer.class);
   SynchronousDetectionService subject =
       new SynchronousDetectionService(
           detectionRepositoryMock,
@@ -73,7 +77,8 @@ class SynchronousDetectionServiceTest {
           featureImageRequestedServiceMock,
           entityManagerMock,
           detectionRoofPropertiesRequestedServiceMock,
-          detectionPropertiesServiceMock);
+          detectionPropertiesServiceMock,
+          eventProducerMock);
 
   @Test
   void return_succeeded_detection_and_trigger_geo_json_generation() {
@@ -142,6 +147,13 @@ class SynchronousDetectionServiceTest {
 
     var actual = subject.apply(detectionMock);
 
+    var listCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock, times(1)).accept(listCaptor.capture());
+    var detectionTrackingRegistrationRequested =
+        (DetectionTrackingRegistrationRequested) listCaptor.getValue().getFirst();
+    assertEquals(
+        new DetectionTrackingRegistrationRequested(detectionId),
+        detectionTrackingRegistrationRequested);
     verify(objectConfigurationRepositoryMock).saveAll(any());
     verify(geoJsonConversionJobServiceMock).getOrComputeGeoJsonConversionJob(any());
     assertEquals(MACHINE_DETECTION, actual.getStep().getName());

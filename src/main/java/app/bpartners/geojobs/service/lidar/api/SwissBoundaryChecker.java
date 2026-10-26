@@ -36,7 +36,7 @@ public class SwissBoundaryChecker {
         && swissBoundary.contains(fixed);
   }
 
-  private Geometry parseGeoJsonPolygon(String geoJson) throws JsonProcessingException {
+  public static Geometry parseGeoJsonPolygon(String geoJson) throws JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
     JsonNode root = mapper.readTree(geoJson);
     String coordinates = "coordinates";
@@ -66,7 +66,7 @@ public class SwissBoundaryChecker {
     };
   }
 
-  private Polygon parsePolygon(JsonNode coordinatesNode, GeometryFactory factory) {
+  public static Polygon parsePolygon(JsonNode coordinatesNode, GeometryFactory factory) {
     JsonNode outerRing = coordinatesNode.get(0);
     Coordinate[] coords = new Coordinate[outerRing.size()];
     for (int i = 0; i < outerRing.size(); i++) {

@@ -11,6 +11,7 @@ import app.bpartners.geojobs.model.lidar.planes.exporter.Plane3DExtractionStepEx
 import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
 import app.bpartners.geojobs.service.cityjson.factory.CityJsonFactory;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
+import app.bpartners.geojobs.service.lidar.api.WalloniaBoundaryChecker;
 import app.bpartners.geojobs.utils.lidar.LasRoofsPointsExtractorCreator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +37,10 @@ class CityJSONLocalTestWithoutSegmentationUtils {
     var exporter = new Plane3DExtractionStepExporter(OBJECT_MAPPER, outputFolder, "EPSG:2154", "1");
     var cityJsonProcessor =
         new LidarDataToCityJsonProcessor(
-            new CityJsonFactory(directoryOutput), exporter, new SwissBoundaryChecker());
+            new CityJsonFactory(directoryOutput),
+            exporter,
+            new SwissBoundaryChecker(),
+            new WalloniaBoundaryChecker());
     var lasRoofsPointsExtractor = LasRoofsPointsExtractorCreator.create(lasFiles, Set.of(geometry));
 
     var data = lasRoofsPointsExtractor.apply(ROOF_SEGMENT_FACE_DELIMITATION, Set.of(geometry));

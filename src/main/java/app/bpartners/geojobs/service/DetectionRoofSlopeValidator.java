@@ -10,7 +10,7 @@ public class DetectionRoofSlopeValidator implements Consumer<Detection> {
   @Override
   public void accept(Detection detection) {
     var detectionIdentifier = detection.getId();
-    if (!detection.hasToitureModelName()) {
+    if (!detection.hasRoofBasedModelName()) {
       throw new BadRequestException(
           "Only BP_TOITURE model handle roof slope and height computing, "
               + "otherwise Detection.id "

@@ -135,7 +135,7 @@ public class VggImageAnnotator {
 
       case USURE, USURE_IMPORTANTE, USURE_LEGER -> "#F44336"; // red
 
-      case OBSTACLE, VELUX, CHEMINEE -> "#000000"; // black
+      case OBSTACLE, VELUX, CHEMINEE, LUMINEUX -> "#000000"; // black
 
       case TOITURE_REVETEMENT -> "#db531d"; // maroon
 

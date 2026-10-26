@@ -34,11 +34,13 @@ import app.bpartners.geojobs.service.tiling.downloader.TilesDownloader;
 import app.bpartners.geojobs.sqs.EventProducerInvocationMock;
 import app.bpartners.geojobs.sqs.LocalEventQueue;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,9 +82,15 @@ public class ParcelParcelParcelTilingTaskCreatedServiceIT extends FacadeIT {
         .accept(any());
     when(tilesDownloader.apply(any()))
         .thenAnswer(
-            (i) ->
-                Paths.get(this.getClass().getClassLoader().getResource("mockData/lyon").toURI())
-                    .toFile());
+            i -> {
+              // the consumer deletes the downloaded tiles: give it a copy, not the test resources
+              var resources =
+                  Paths.get(this.getClass().getClassLoader().getResource("mockData/lyon").toURI())
+                      .toFile();
+              var downloaded = Files.createTempDirectory("tiles").resolve("lyon").toFile();
+              FileUtils.copyDirectory(resources, downloaded);
+              return downloaded;
+            });
     when(bucketComponent.upload(any(), any())).thenReturn(new FileHash(SHA256, "mock"));
     lyonFeature = defaultFeature();
   }

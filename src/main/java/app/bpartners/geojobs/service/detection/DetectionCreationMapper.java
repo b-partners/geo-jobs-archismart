@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.detection;
 import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
 import static app.bpartners.geojobs.endpoint.rest.model.Feature.TypeEnum.FEATURE;
 import static app.bpartners.geojobs.endpoint.rest.model.GeoJsonOutput.ZIP;
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.REVETEMENT_OBSTACLE;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.model.exception.ApiException.ExceptionType.SERVER_EXCEPTION;
 import static app.bpartners.geojobs.repository.model.detection.DetectionFeatureType.PROVIDED_FEATURE;
@@ -12,13 +13,15 @@ import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObject
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.model.exception.ApiException;
-import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
+import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.repository.model.Feature;
-import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
+import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.BuildingFinder;
-import app.bpartners.geojobs.service.dashboard.AreaPictureApi;
+import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
+import app.bpartners.geojobs.service.geodata.MapLayerResolver;
+import app.bpartners.geojobs.service.geodata.model.GeodataMapLayer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.geoserver.GeoServerConfiguration;
 import app.bpartners.geojobs.validator.FeatureTypeChecker;
@@ -26,23 +29,31 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @AllArgsConstructor
+@Slf4j
 public class DetectionCreationMapper {
+  private static final Set<DetectableType> TYPES_COVERED_BY_OBSTACLE_AT_DEFAULT_RESOLUTION =
+      Set.of(DetectableType.LUMINEUX);
+
   private final DetectableObjectTypeMapper detectableObjectTypeMapper;
   private final FeatureTypeChecker featureTypeChecker;
-  private final CommunityAuthorizationRepository communityAuthRepository;
-  private final AreaPictureApi areaPictureApi;
+  private final MapLayerResolver mapLayerResolver;
+  private final ModelCardResolver modelCardResolver;
   private final GeoServerConfiguration geoServerConfiguration;
   private final GeometryConverter geometryConverter;
   private final BuildingFinder buildingFinder;
+  private final DefaultResolutionModelValidator defaultResolutionModelValidator;
 
   public Detection apply(
       CreateDetection createDetection,
@@ -67,12 +78,14 @@ public class DetectionCreationMapper {
                 : List.of());
     var polygonGeoJsonZoneToBeProcessed =
         extractDetectionPolygonGeoJson(providedGeoJson, modelNames);
-    var finalGeoServerProperties =
+    var geoServerSelection =
         extractGeoServerProperties(
             createDetection.getGeoServerProperties(),
-            communityOwnerId,
             providedGeoJson,
-            domainProvidedGeoJsonZone);
+            domainProvidedGeoJsonZone,
+            detectableObjectConfigurations,
+            modelNames);
+    var finalGeoServerProperties = geoServerSelection.geoServerProperties();
     var detection =
         Detection.builder()
             .id(detectionId)
@@ -81,7 +94,7 @@ public class DetectionCreationMapper {
             .zoneName(createDetection.getZoneName())
             .isSynchronous(isSynchronous)
             .communityOwnerId(communityOwnerId)
-            .detectableObjectConfigurations(detectableObjectConfigurations)
+            .detectableObjectConfigurations(geoServerSelection.detectableObjectConfigurations())
             .geoServerProperties(finalGeoServerProperties)
             .providedGeoJsonZone(domainProvidedGeoJsonZone)
             .multiPolygonGeoJsonZone(domainProvidedGeoJsonZone)
@@ -154,42 +167,126 @@ public class DetectionCreationMapper {
     };
   }
 
-  private GeoServerProperties extractGeoServerProperties(
+  private GeoServerSelection extractGeoServerProperties(
       GeoServerProperties geoServerProperties,
-      String communityOwnerId,
       List<app.bpartners.geojobs.endpoint.rest.model.Feature> geoJsonZone,
-      List<app.bpartners.geojobs.repository.model.Feature> multiPolygonGeoJsonZone) {
-    var finalGeoServerProperties = geoServerProperties;
+      List<app.bpartners.geojobs.repository.model.Feature> multiPolygonGeoJsonZone,
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      List<ModelName> modelNames) {
     if (geoJsonZone != null
         && !multiPolygonGeoJsonZone.isEmpty()
         && (geoServerProperties == null
             || geoServerProperties.getGeoServerParameter() == null
             || geoServerProperties.getGeoServerParameter().getLayers() == null)) {
       var firstPoint = retrieveFirstPoint(geoJsonZone);
-      List<HashMap<String, String>> layers = retrieveLayers(firstPoint, communityOwnerId);
-      String layer = layers.getFirst().get("name");
-      int precisionLevelInCm = Integer.parseInt(layers.getFirst().get("precisionLevelInCm"));
-
-      if (precisionLevelInCm != 5) {
-        throw new ApiException(
-            SERVER_EXCEPTION,
-            String.format(
-                "Cannot process detection : image resolution must be 5 cm. Current layer = %s"
-                    + " (precisionLevelInCm = %d)",
-                layer, precisionLevelInCm));
-      }
+      var longitude = firstPoint.get(0).doubleValue();
+      var latitude = firstPoint.get(1).doubleValue();
+      var mapLayer =
+          mapLayerResolver
+              .apply(longitude, latitude)
+              .orElseThrow(
+                  () ->
+                      new BadRequestException(
+                          "Cannot process detection : no imagery layer available at longitude="
+                              + longitude
+                              + " and latitude="
+                              + latitude));
+      String layer = mapLayer.name();
+      var precisionLevelInCm = mapLayer.precisionLevelInCm();
+      defaultResolutionModelValidator.accept(modelNames, precisionLevelInCm, layer);
+      var requestedConfigurations =
+          requestedConfigurationsAt(detectableObjectConfigurations, precisionLevelInCm, layer);
 
       // TODO: save other layers to be used in failure case
-      finalGeoServerProperties =
-          geoServerConfiguration.defaultGeoServerProperties(layer, precisionLevelInCm);
+      return new GeoServerSelection(
+          geoServerConfiguration.defaultGeoServerProperties(layer, precisionLevelInCm),
+          requestedConfigurations);
     }
-    return finalGeoServerProperties;
+    var providedPrecisionLevelInCm =
+        providedOrDeducedPrecisionLevelInCm(
+            geoServerProperties, geoJsonZone, multiPolygonGeoJsonZone);
+    if (providedPrecisionLevelInCm == null) {
+      if (geoServerProperties != null
+          && geoServerProperties.getGeoServerParameter() != null
+          && geoServerProperties.getGeoServerParameter().getLayers() != null) {
+        defaultResolutionModelValidator.accept(
+            modelNames, null, geoServerProperties.getGeoServerParameter().getLayers());
+      }
+      return new GeoServerSelection(geoServerProperties, detectableObjectConfigurations);
+    }
+    defaultResolutionModelValidator.accept(
+        modelNames,
+        providedPrecisionLevelInCm,
+        geoServerProperties.getGeoServerParameter().getLayers());
+    return new GeoServerSelection(
+        geoServerProperties,
+        requestedConfigurationsAt(
+            detectableObjectConfigurations,
+            providedPrecisionLevelInCm,
+            geoServerProperties.getGeoServerParameter().getLayers()));
   }
+
+  private Integer providedOrDeducedPrecisionLevelInCm(
+      GeoServerProperties geoServerProperties,
+      List<app.bpartners.geojobs.endpoint.rest.model.Feature> geoJsonZone,
+      List<app.bpartners.geojobs.repository.model.Feature> multiPolygonGeoJsonZone) {
+    if (geoServerProperties == null || geoServerProperties.getGeoServerParameter() == null) {
+      return null;
+    }
+    var parameter = geoServerProperties.getGeoServerParameter();
+    if (parameter.getPrecisionLevelInCm() != null) {
+      return parameter.getPrecisionLevelInCm();
+    }
+    if (parameter.getLayers() == null || geoJsonZone == null || multiPolygonGeoJsonZone.isEmpty()) {
+      return null;
+    }
+    var firstPoint = retrieveFirstPoint(geoJsonZone);
+    var deducedPrecisionLevelInCm =
+        mapLayerResolver
+            .apply(firstPoint.get(0).doubleValue(), firstPoint.get(1).doubleValue())
+            .filter(mapLayer -> parameter.getLayers().equals(mapLayer.name()))
+            .map(GeodataMapLayer::precisionLevelInCm)
+            .orElse(null);
+    parameter.setPrecisionLevelInCm(deducedPrecisionLevelInCm);
+    return deducedPrecisionLevelInCm;
+  }
+
+  private List<DetectableObjectConfiguration> requestedConfigurationsAt(
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      Integer precisionLevelInCm,
+      String layer) {
+    var requestedConfigurations =
+        precisionLevelInCm != null
+                && precisionLevelInCm.doubleValue()
+                    == ModelCardResolver.DEFAULT_SPATIAL_RESOLUTION_IN_CM
+            ? detectableObjectConfigurations.stream()
+                .filter(
+                    configuration ->
+                        !TYPES_COVERED_BY_OBSTACLE_AT_DEFAULT_RESOLUTION.contains(
+                            configuration.getObjectType()))
+                .toList()
+            : detectableObjectConfigurations;
+    var supportedResolutions =
+        modelCardResolver.supportedSpatialResolutionsInCm(requestedConfigurations);
+    if (precisionLevelInCm == null
+        || !supportedResolutions.contains(precisionLevelInCm.doubleValue())) {
+      throw new ApiException(
+          SERVER_EXCEPTION,
+          String.format(
+              "Cannot process detection : %s. Current layer = %s (precisionLevelInCm = %s)",
+              describeRequiredResolution(supportedResolutions), layer, precisionLevelInCm));
+    }
+    return requestedConfigurations;
+  }
+
+  private record GeoServerSelection(
+      GeoServerProperties geoServerProperties,
+      List<DetectableObjectConfiguration> detectableObjectConfigurations) {}
 
   private app.bpartners.geojobs.repository.model.Feature extractDetectionPolygonGeoJson(
       List<app.bpartners.geojobs.endpoint.rest.model.Feature> providedGeoJsonZone,
       List<ModelName> modelNames) {
-    if (modelNames.contains(TOITURE)
+    if ((modelNames.contains(TOITURE) || modelNames.contains(REVETEMENT_OBSTACLE))
         && providedGeoJsonZone.size() == 1
         && providedGeoJsonZone.getFirst().getGeometry() != null
         && providedGeoJsonZone.getFirst().getGeometry().getActualInstance()
@@ -278,27 +375,15 @@ public class DetectionCreationMapper {
     throw new IllegalArgumentException("Unknown feature type: " + firstFeature);
   }
 
-  private List<HashMap<String, String>> retrieveLayers(
-      List<BigDecimal> firstPoint, String communityOwnerId) {
-    var longitude = firstPoint.get(0).doubleValue();
-    var latitude = firstPoint.get(1).doubleValue();
+  private static String describeRequiredResolution(Set<Double> supportedResolutions) {
+    return supportedResolutions.isEmpty()
+        ? "no image resolution is supported by all the requested objects"
+        : "image resolution must be " + formatResolutions(supportedResolutions) + " cm";
+  }
 
-    var e2ApiKey =
-        communityAuthRepository
-            .findById(communityOwnerId)
-            .map(CommunityAuthorization::getDashboardApiKey)
-            .orElseThrow();
-
-    var areaMapLayers = areaPictureApi.getAreaPictureMapLayers(longitude, latitude, e2ApiKey);
-
-    return areaMapLayers.stream()
-        .map(
-            layer -> {
-              HashMap<String, String> map = new HashMap<>();
-              map.put("name", layer.name());
-              map.put("precisionLevelInCm", String.valueOf(layer.precisionLevelInCm()));
-              return map;
-            })
-        .toList();
+  private static String formatResolutions(Set<Double> resolutions) {
+    return resolutions.stream()
+        .map(resolution -> BigDecimal.valueOf(resolution).stripTrailingZeros().toPlainString())
+        .collect(Collectors.joining(" or "));
   }
 }

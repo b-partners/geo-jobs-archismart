@@ -39,4 +39,14 @@ public class CoordinateTransformer implements Function<Geometry, Geometry> {
 
     return JTS.transform(geomWGS84, transform);
   }
+
+  @SneakyThrows
+  public Geometry convertToBelgiqueCRS(Geometry geomWGS84) {
+    CoordinateReferenceSystem sourceCRS = CRS.decode("EPSG:4326", true);
+    CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:3812");
+
+    MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+
+    return JTS.transform(geomWGS84, transform);
+  }
 }

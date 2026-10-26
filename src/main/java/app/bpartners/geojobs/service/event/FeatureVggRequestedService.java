@@ -11,7 +11,9 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.MachineDetectedTileRepository;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.repository.model.detection.MachineDetectedTile;
 import app.bpartners.geojobs.service.*;
+import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.util.List;
@@ -34,6 +36,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
   private final TiledPixelPolygonComputer tiledPixelPolygonComputer;
   private final FeaturePolygonRetriever featurePolygonRetriever;
   private final EventProducer eventProducer;
+  private final DetectionImageZoomResolver detectionImageZoomResolver;
 
   @Override
   public void accept(FeatureVggRequested event) {
@@ -47,7 +50,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
 
   public Detection apply(Detection detection, Feature currentFeature) {
     var featureVggComputationStart = now();
-    if (!detection.hasToitureModelName()) {
+    if (!detection.hasRoofBasedModelName()) {
       log.error("Only BP_TOITURE model is supported to generated VGG from now");
       return null;
     }
@@ -61,7 +64,11 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
         detection.getDetectableObjectConfigurations().stream()
             .map(DetectableObjectConfiguration::getObjectType)
             .toList();
-    var machineDetectedTiles = detectedTileRepository.findAllByZdjJobId(detection.getZdjId());
+    var imageZoom = detectionImageZoomResolver.apply(detection);
+    var machineDetectedTiles =
+        detectedTileRepository.findAllByZdjJobId(detection.getZdjId()).stream()
+            .filter(detectedTile -> zoomOf(detectedTile) == imageZoom)
+            .toList();
     var delimitationsFeatures = detection.getDelimitationOf(currentFeature);
     var tiledPixelPolygons =
         tiledPixelPolygonComputer.apply(
@@ -73,7 +80,7 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
 
     var completedQuadrilateralTileCoordinates =
         tileCoordinatesService.computeFeatureTileCoordinatesWithCompleteQuadrilateral(
-            currentFeature, geoJsonDelimitationType);
+            currentFeature, geoJsonDelimitationType, imageZoom);
 
     var vggMap = vggFactory.from(tiledPixelPolygons, completedQuadrilateralTileCoordinates);
 
@@ -98,6 +105,13 @@ public class FeatureVggRequestedService implements Consumer<FeatureVggRequested>
       eventProducer.accept(List.of(new FeatureAnnotatedImageRequested(savedDetection.getId())));
     }
     return savedDetection;
+  }
+
+  private static int zoomOf(MachineDetectedTile detectedTile) {
+    var tile = detectedTile.getTile();
+    return tile == null || tile.getCoordinates() == null || tile.getCoordinates().getZ() == null
+        ? ModelCardResolver.DEFAULT_TILING_ZOOM
+        : tile.getCoordinates().getZ();
   }
 
   private String retrieveId(Feature feature) {

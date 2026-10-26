@@ -88,7 +88,7 @@ public class ZoneDetectionJobSucceededService implements Consumer<ZoneDetectionJ
     if (zoneDetectionJobService.countInDoubtDetectedTileToDeliveryById(succeededJobId) == 0L
         || (detection != null && !detection.isAnnotationDeliveryEnable())) {
 
-      if (detection != null && detection.hasToitureModelName()) {
+      if (detection != null && detection.hasRoofBasedModelName()) {
         eventProducer.accept(List.of(new DetectionRoofPropertiesRequested(detection.getId())));
       } else {
         geoJsonConversionJobService.getOrComputeGeoJsonConversionJob(succeededZoneDetectionJob);

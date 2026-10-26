@@ -1,7 +1,7 @@
 package app.bpartners.geojobs.validator;
 
 import app.bpartners.geojobs.model.exception.BadRequestException;
-import app.bpartners.geojobs.model.geometry.area.RoofDamageRates;
+import app.bpartners.geojobs.model.geometry.area.rate.RoofDamageRates;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Component;
 

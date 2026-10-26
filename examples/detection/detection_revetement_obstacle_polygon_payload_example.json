@@ -1,0 +1,29 @@
+{
+  "emailReceiver": "your.email@mail.com",
+  "zoneName": "your.zone.name",
+  "detectableObjectModelList": [
+    {
+      "modelName": "BP_REVETEMENT_OBSTACLE"
+    }
+  ],
+  "geoJsonZone": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [2.4119102672653323, 47.064610035601],
+            [2.411931509304379, 47.064534070630415],
+            [2.4120377194994185, 47.06454854015698],
+            [2.4120164774604107, 47.06462450510693],
+            [2.4119102672653323, 47.064610035601]
+          ]
+        ]
+      }
+    }
+  ],
+  "geoJsonDelimitationType": "USER_DEFINED_DELIMITATION",
+  "needsImageOutput": true
+}

@@ -39,6 +39,7 @@ public class TileDetectionTask extends Task implements Serializable {
   @Transient private Feature point;
   @Transient private String detectionIdentifier;
   @Transient private Boolean debugMode;
+  @Transient private Double spatialResolutionInCm;
 
   public boolean isDebugMode() {
     return debugMode != null && debugMode;

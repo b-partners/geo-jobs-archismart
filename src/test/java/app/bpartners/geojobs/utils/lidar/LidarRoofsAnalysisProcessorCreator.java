@@ -15,7 +15,6 @@ import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
 import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
-import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.util.*;
@@ -35,18 +34,11 @@ public class LidarRoofsAnalysisProcessorCreator {
         geometries.stream().map(g -> projector.project(g, WGS84, LAMBERT_93)).collect(toSet());
     var lidarApiMock = lidarApiMock(projected, createTempFileFromResources(LARGE_LIDAR_FILE_PATH));
 
-    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector, swissBoundaryCheckerMock());
-  }
-
-  private static SwissBoundaryChecker swissBoundaryCheckerMock() {
-    var checker = mock(SwissBoundaryChecker.class);
-    when(checker.isGeometryInSwiss(any())).thenReturn(false);
-
-    return checker;
+    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
   }
 
   public LidarRoofsAnalysisProcessor create(LidarApiFacade lidarApi) {
-    return new LidarRoofsAnalysisProcessor(lidarApi, projector, swissBoundaryCheckerMock());
+    return new LidarRoofsAnalysisProcessor(lidarApi, projector);
   }
 
   public LidarRoofsAnalysisProcessor create(Geometry delimitation, List<String> files) {
@@ -57,7 +49,8 @@ public class LidarRoofsAnalysisProcessorCreator {
     Map<String, Set<Geometry>> data = new HashMap<>();
     files.forEach(file -> data.put(file, Set.of(projected)));
 
-    when(lidarApiMock.getUniqueLidarFilesUrls(any())).thenReturn(data);
+    when(lidarApiMock.getUniqueLidarFilesUrls(any()))
+        .thenReturn(new LidarApiFacade.LidarFilesResult(data, LAMBERT_93));
     when(lidarApiMock.download(any()))
         .thenAnswer(
             invocation -> {
@@ -65,7 +58,7 @@ public class LidarRoofsAnalysisProcessorCreator {
               return Optional.of(filesData.get(files.indexOf(filename)));
             });
 
-    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector, swissBoundaryCheckerMock());
+    return new LidarRoofsAnalysisProcessor(lidarApiMock, projector);
   }
 
   @SneakyThrows
@@ -82,7 +75,8 @@ public class LidarRoofsAnalysisProcessorCreator {
     LidarApiFacade lidarApiMock = mock();
 
     when(lidarApiMock.getUniqueLidarFilesUrls(any()))
-        .thenReturn(Map.of("url", lambert93Geometries));
+        .thenReturn(
+            new LidarApiFacade.LidarFilesResult(Map.of("url", lambert93Geometries), LAMBERT_93));
     when(lidarApiMock.download(any())).thenReturn(Optional.of(file));
 
     return lidarApiMock;
