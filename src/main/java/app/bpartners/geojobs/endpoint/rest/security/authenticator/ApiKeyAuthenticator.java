@@ -4,6 +4,7 @@ import app.bpartners.geojobs.endpoint.rest.security.authorizer.CommunityUserSubs
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
+import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import java.util.HashSet;
 import java.util.Objects;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -41,10 +42,18 @@ public class ApiKeyAuthenticator implements UsernamePasswordAuthenticator {
         caRepository
             .findByApiKey(candidateApiKey)
             .filter(authorization -> !authorization.isApiKeyRevoked())
+            .filter(authorization -> !isRevoked(authorization, candidateApiKey))
             .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
     // communityUserSubscriptionAuthorizer.accept(authenticatedCommunity); TODO: uncomment
     authorities.add(new Authority(authenticatedCommunity.getRole()));
     return authorities;
+  }
+
+  private static boolean isRevoked(CommunityAuthorization authorization, String apiKey) {
+    var revokedApiKeys = authorization.getRevokedApiKeys();
+    return revokedApiKeys != null
+        && revokedApiKeys.stream()
+            .anyMatch(revoked -> apiKey.equals(revoked.getRevokedApiKeyValue()));
   }
 
   private String getApiKeyFromHeader(

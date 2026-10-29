@@ -52,6 +52,7 @@ public enum ObjectType {
   humidite_clair(lengthOrWidth),
   humidite_intense(lengthOrWidth),
   velux(lengthOrWidth),
+  lumineux(lengthOrWidth),
   concession(lengthOrWidth),
   background(lengthOrWidth),
   pointilles(lengthOrWidth),
@@ -148,6 +149,7 @@ public enum ObjectType {
       case "obstacle" -> obstacle;
       case "cheminee", "cheminée" -> cheminee;
       case "velux" -> velux;
+      case "lumineux" -> lumineux;
       case "background" -> background;
       case "concession" -> concession;
       case "fleche_directionnelle" -> fleche_directionnelle;
