@@ -4,7 +4,9 @@ import static app.bpartners.geojobs.monitoring.StepDurationLogger.logDurationOf;
 
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectType;
+import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.model.MultiPolygon;
 import app.bpartners.geojobs.endpoint.rest.model.Polygon;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DetectionAuthorizer implements TriConsumer<String, CreateDetection, Principal> {
   private final CommunityDetectableObjectTypeAuthorizer communityDetectableObjectTypeAuthorizer;
+  private final CommunityDetectableModelAuthorizer communityDetectableModelAuthorizer;
   private final CommunityAuthorizationRepository caRepository;
   private final CommunityZoneAuthorizer communityZoneAuthorizer;
   private final CommunityZoneSurfaceAuthorizer communityZoneSurfaceAuthorizer;
@@ -89,6 +92,18 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
             () -> communityZoneAuthorizer.accept(communityAuthorization, features, principal));
       }
     }
+    var authorizedModels = communityAuthorization.getDetectableModels();
+    if (authorizedModels != null && !authorizedModels.isEmpty()) {
+      logDurationOf(
+          "authorizer: detectable models check",
+          () ->
+              getRequestedModels(createDetection)
+                  .forEach(
+                      requestedModel ->
+                          communityDetectableModelAuthorizer.accept(
+                              communityAuthorization, requestedModel)));
+      return;
+    }
     var detectableObjects = getDetectableObjectTypes(createDetection, communityAuthorization);
     logDurationOf(
         "authorizer: detectable object types check",
@@ -97,6 +112,17 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
                 candidateObjectType ->
                     communityDetectableObjectTypeAuthorizer.accept(
                         communityAuthorization, candidateObjectType)));
+  }
+
+  private List<ModelName> getRequestedModels(CreateDetection createDetection) {
+    var models = createDetection.getDetectableObjectModelList();
+    if (models == null || models.isEmpty()) {
+      models = List.of(Objects.requireNonNull(createDetection.getDetectableObjectModel()));
+    }
+    return models.stream()
+        .map(DetectableObjectModel::getModelName)
+        .filter(Objects::nonNull)
+        .toList();
   }
 
   private List<DetectableObjectType> getDetectableObjectTypes(

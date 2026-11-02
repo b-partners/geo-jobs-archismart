@@ -18,21 +18,30 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CityJSONSafeModeProcessor implements Function<CityJSONRequest, List<CityJSON>> {
   private final CityJSON3DBagRooferProcessor rooferProcessor;
-  private final CityJSONThreedProcessor internalProcessor;
+  private final CityJSONThreedProcessor threedProcessor;
   private final CityJSONRequestRepository cityJSONRequestRepository;
+
+  public record SafeModeResult(List<CityJSON> cityJsons, LidarProcessorType processorType) {}
 
   @Override
   public List<CityJSON> apply(CityJSONRequest request) {
-    List<CityJSON> cityJsons;
+    var result = generate(request);
+    setCityJSONProcessor(request, result.processorType());
+    return result.cityJsons();
+  }
+
+  /**
+   * Same generation as {@link #apply}, without recording the processor used on the request: the
+   * request does not need to be persisted, e.g. when the CityJSON is only generated to read roof
+   * metrics from it.
+   */
+  public SafeModeResult generate(CityJSONRequest request) {
     try {
-      cityJsons = rooferProcessor.apply(request);
-      setCityJSONProcessor(request, THREE_D_BAG_ROOFER);
+      return new SafeModeResult(rooferProcessor.apply(request), THREE_D_BAG_ROOFER);
     } catch (Exception e) {
-      log.error("Roofer CityJSON generation failed. Falling back to the internal processor.", e);
-      cityJsons = internalProcessor.apply(request);
-      setCityJSONProcessor(request, DEFAULT);
+      log.error("Roofer CityJSON generation failed. Falling back to threed.", e);
+      return new SafeModeResult(threedProcessor.apply(request), DEFAULT);
     }
-    return cityJsons;
   }
 
   private void setCityJSONProcessor(CityJSONRequest request, LidarProcessorType processorType) {

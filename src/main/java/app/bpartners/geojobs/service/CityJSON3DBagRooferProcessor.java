@@ -16,7 +16,6 @@ import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.service.cityjson.model.object.CityJsonIO;
-import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
@@ -61,7 +60,6 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
   private final FileWriter fileWriter;
   private final CoordinateTransformer coordinateTransformer;
   private final GeometryConverter geometryConverter;
-  private final CityJsonTextureComputer textureComputer;
   private final SwissBoundaryChecker swissBoundaryChecker;
   private final WalloniaBoundaryChecker walloniaBoundaryChecker;
   private final Roofer3DBagCityJSONValidator cityJSONValidator;
@@ -130,10 +128,7 @@ public class CityJSON3DBagRooferProcessor implements Function<CityJSONRequest, L
 
               cityJSONValidator.accept(cityJSONConvertedInJsonExtension);
 
-              var texturedCityJSON =
-                  textureComputer.applyTexture(request, cityJSONConvertedInJsonExtension);
-
-              bucketComponent.upload(texturedCityJSON, bucketFileKey);
+              bucketComponent.upload(cityJSONConvertedInJsonExtension, bucketFileKey);
 
               var cityJsonId = randomUUID().toString();
               return CityJSON.builder()

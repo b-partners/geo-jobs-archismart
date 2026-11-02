@@ -204,6 +204,8 @@ public class SecurityConf {
                     .authenticated()
                     .requestMatchers(POST, "/3d/*/addresses")
                     .authenticated()
+                    .requestMatchers(PUT, "/3d/*/intersections")
+                    .authenticated()
                     .requestMatchers(GET, "/roof/overallScore")
                     .authenticated()
                     .requestMatchers(GET, "/geocode")

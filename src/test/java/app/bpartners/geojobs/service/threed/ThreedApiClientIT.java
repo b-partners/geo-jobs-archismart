@@ -16,9 +16,11 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Disabled("Local only")
 class ThreedApiClientIT {
-  private final String apiUrl = System.getenv("CITY_JSON_PROCESSOR_API_URL");
+  private final String apiUrl = System.getenv("THREED_API_URL");
+  private final String apiKey = System.getenv("THREED_API_KEY");
   private final ThreedApiClient subject =
-      new ThreedApiClient(new RestTemplate(), new ThreedApiProperties(apiUrl), new ObjectMapper());
+      new ThreedApiClient(
+          new RestTemplate(), new ThreedApiProperties(apiUrl, apiKey), new ObjectMapper());
 
   @Test
   void process() {

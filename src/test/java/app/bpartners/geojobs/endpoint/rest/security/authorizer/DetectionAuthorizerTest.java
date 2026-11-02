@@ -14,7 +14,9 @@ import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectableObjectTypeMapper;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
@@ -34,6 +36,7 @@ class DetectionAuthorizerTest {
   CommunityZoneSurfaceAuthorizer communityZoneSurfaceAuthorizer = mock();
   CommunityZoneAuthorizer communityZoneAuthorizer = mock();
   CommunityDetectableObjectTypeAuthorizer communityDetectableObjectTypeAuthorizer = mock();
+  CommunityDetectableModelAuthorizer communityDetectableModelAuthorizer = mock();
   CommunityAuthorizationRepository communityAuthRepository = mock();
   DetectionRepository detectionRepository = mock();
   DetectionOwnerAuthorizer detectionOwnerAuthorizer = mock();
@@ -42,6 +45,7 @@ class DetectionAuthorizerTest {
   DetectionAuthorizer subject =
       new DetectionAuthorizer(
           communityDetectableObjectTypeAuthorizer,
+          communityDetectableModelAuthorizer,
           communityAuthRepository,
           communityZoneAuthorizer,
           communityZoneSurfaceAuthorizer,
@@ -80,6 +84,22 @@ class DetectionAuthorizerTest {
     assertDoesNotThrow(
         () -> subject.accept(randomUUID().toString(), createDetection, useRole(ROLE_COMMUNITY)));
     verify(detectionOwnerAuthorizer, never()).accept(any(), any());
+  }
+
+  @Test
+  void should_check_only_models_and_not_object_types_if_community_has_detectable_models() {
+    var model = mock(DetectableObjectModel.class);
+    when(model.getModelName()).thenReturn(ModelName.TOITURE);
+    when(createDetection.getDetectableObjectModel()).thenReturn(model);
+    communityAuthorization.setDetectableModels(List.of(ModelName.TOITURE));
+    when(detectionRepository.findByEndToEndIdAndCommunityOwnerId(any(), any()))
+        .thenReturn(Optional.empty());
+
+    assertDoesNotThrow(
+        () -> subject.accept(randomUUID().toString(), createDetection, useRole(ROLE_COMMUNITY)));
+
+    verify(communityDetectableModelAuthorizer).accept(communityAuthorization, ModelName.TOITURE);
+    verify(communityDetectableObjectTypeAuthorizer, never()).accept(any(), any());
   }
 
   @Test

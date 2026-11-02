@@ -18,7 +18,6 @@ import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
-import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.geojson.GeoJson;
 import app.bpartners.geojobs.service.threed.ThreedApiClient;
 import app.bpartners.geojobs.service.threed.exception.ThreedApiException;
@@ -50,7 +49,6 @@ public class CityJSONThreedProcessor implements Function<CityJSONRequest, List<C
 
   private final FileWriter fileWriter;
   private final BucketComponent bucketComponent;
-  private final CityJsonTextureComputer textureComputer;
   private final ThreedApiClient threedApiClient;
   private final CityJSONDownloader cityJSONDownloader;
   private final CommunityAuthorizationRepository communityRepository;
@@ -147,9 +145,7 @@ public class CityJSONThreedProcessor implements Function<CityJSONRequest, List<C
     var cityjsonFile = cityJSONDownloader.download(response.getFileUrl());
     cityjsonFile.deleteOnExit();
 
-    var textured = textureComputer.applyTexture(request, cityjsonFile);
-
-    bucketComponent.upload(textured, bucketFileKey);
+    bucketComponent.upload(cityjsonFile, bucketFileKey);
 
     var cityJsonId = randomUUID().toString();
     return CityJSON.builder().id(cityJsonId).request(request).s3FileKey(bucketFileKey).build();

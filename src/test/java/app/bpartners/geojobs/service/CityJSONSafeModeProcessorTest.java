@@ -57,4 +57,15 @@ class CityJSONSafeModeProcessorTest {
     verify(cityJSONRequestRepositoryMock, times(1)).save(captor.capture());
     assertEquals(LidarProcessorType.THREE_D_BAG_ROOFER, captor.getValue().getLidarProcessorType());
   }
+
+  @Test
+  void generate_does_not_save_the_request() {
+    when(rooferProcessorMock.apply(any())).thenThrow(new RuntimeException());
+    when(internalProcessorMock.apply(any())).thenReturn(mock());
+
+    var actual = subject.generate(CityJSONRequest.builder().build());
+
+    assertEquals(LidarProcessorType.DEFAULT, actual.processorType());
+    verify(cityJSONRequestRepositoryMock, never()).save(any());
+  }
 }

@@ -1601,6 +1601,46 @@ paths:
               examples:
                 3DResponseWithStatusSucceeded:
                   $ref: '#/components/examples/ThreeDResponseWithProcessingStatusExample'
+  '/3d/{id}/intersections':
+    put:
+      tags:
+        - ThreeD
+      operationId: putRoofIntersections
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Identifier chosen by the client
+          schema:
+            type: string
+      summary: Detect the roof planes and their intersections under a zone
+      description: |
+        ## Overview
+        Reads the lidar points of class building under the given zone, detects the roof planes, and
+        returns every line where two neighbour planes meet (ridge, hip, valley), each graded by six
+        criteria computed from the points. Rejected lines are returned too, with the criteria that failed.
+        ## Usage
+        Synchronous: the response carries the result directly. The zone is a single `Polygon` in WGS84.
+        Coordinates of the result are WGS84 (longitude, latitude); altitudes are those of the lidar, in meters.
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoofIntersections'
+      responses:
+        200:
+          description: Planes and intersections detected under the zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoofIntersections'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
   '/geocode':
     get:
       tags:
@@ -3499,6 +3539,191 @@ components:
         srs:
           type: string
 
+    CreateRoofIntersections:
+      type: object
+      description: The zone to read the roof under, a single Polygon in WGS84
+      required:
+        - feature
+      properties:
+        feature:
+          $ref: '#/components/schemas/Feature'
+    GeoPoint3D:
+      type: object
+      required:
+        - longitude
+        - latitude
+        - altitude
+      properties:
+        longitude:
+          type: number
+        latitude:
+          type: number
+        altitude:
+          type: number
+          description: Lidar altitude, in meters
+    RoofIntersectionsPlane:
+      type: object
+      description: A roof plane detected in the lidar points
+      required:
+        - index
+        - normal
+        - pointsCount
+        - rmseInMeters
+        - slopeInDegrees
+        - areaInSquareMeters
+      properties:
+        index:
+          type: integer
+        normal:
+          type: array
+          description: Unit normal (x, y, z) in the lidar's own projected CRS, pointing up
+          minItems: 3
+          maxItems: 3
+          items:
+            type: number
+        pointsCount:
+          type: integer
+        rmseInMeters:
+          type: number
+          description: Root mean square distance of the plane's points to the plane
+        slopeInDegrees:
+          type: number
+        areaInSquareMeters:
+          type: number
+        delimitation:
+          type: array
+          description: Outer ring of the plane, closed
+          items:
+            $ref: '#/components/schemas/GeoPoint3D'
+    RoofIntersectionKind:
+      type: string
+      description: >
+        RIDGE: horizontal and convex. HIP: sloped and convex. VALLEY: concave.
+        OTHER: the two planes do not both slope away from, nor both towards, the line.
+      enum:
+        - RIDGE
+        - HIP
+        - VALLEY
+        - OTHER
+    RoofIntersectionGrade:
+      type: string
+      description: >
+        The grade of the worst criterion. PERFECT and GOOD can be used as they are; TO_CHECK lies
+        between good and rejected and should be confirmed by the user; REJECTED should not be used.
+        A line shorter than 1 m is REJECTED (LENGTH); a line of kind OTHER is at best TO_CHECK (KIND).
+      enum:
+        - PERFECT
+        - GOOD
+        - TO_CHECK
+        - REJECTED
+    RoofIntersectionCriterion:
+      type: string
+      description: The six graded criteria, plus LENGTH (shorter than 1 m) and KIND (neither ridge, hip nor valley).
+      enum:
+        - POINTS
+        - PLANARITY
+        - POSITION
+        - SUPPORT
+        - CLOSURE
+        - PURITY
+        - LENGTH
+        - KIND
+    RoofIntersectionCriteria:
+      type: object
+      required:
+        - pointsCount
+        - rmseInMeters
+        - sigmaInMeters
+        - support
+        - purity
+      properties:
+        pointsCount:
+          type: integer
+          description: Points of the smaller of the two planes (perfect >= 40, good >= 25, rejected < 15)
+        rmseInMeters:
+          type: number
+          description: Worst planarity of the two planes (perfect <= 0.05, good <= 0.08, rejected > 0.15)
+        sigmaInMeters:
+          type: number
+          description: >
+            Predicted horizontal position error of the line, from the planes' height uncertainty
+            and how differently they slope across it (perfect <= 0.05, good <= 0.15, rejected > 0.30)
+        support:
+          type: number
+          description: Share of the line seen with points of both planes on each side (perfect >= 0.85, good >= 0.60, rejected < 0.40)
+        closureInMeters:
+          type: number
+          description: >
+            Gap, at the line's ends, to the lines it should meet (perfect <= 0.10, good <= 0.25,
+            rejected > 0.50). Absent when the line meets no other one.
+        purity:
+          type: number
+          description: >
+            Share of the points near the line that belong to one of its two planes, not to a
+            chimney, a dormer or vegetation (perfect >= 0.95, good >= 0.85, rejected < 0.70)
+    RoofIntersection:
+      type: object
+      required:
+        - index
+        - planes
+        - kind
+        - start
+        - end
+        - lengthInMeters
+        - criteria
+        - grade
+        - failedCriteria
+      properties:
+        index:
+          type: integer
+        planes:
+          type: array
+          description: Indices of the two planes meeting on the line
+          minItems: 2
+          maxItems: 2
+          items:
+            type: integer
+        kind:
+          $ref: '#/components/schemas/RoofIntersectionKind'
+        start:
+          $ref: '#/components/schemas/GeoPoint3D'
+        end:
+          $ref: '#/components/schemas/GeoPoint3D'
+        lengthInMeters:
+          type: number
+        criteria:
+          $ref: '#/components/schemas/RoofIntersectionCriteria'
+        grade:
+          $ref: '#/components/schemas/RoofIntersectionGrade'
+        failedCriteria:
+          type: array
+          description: Criteria that kept the line from being GOOD or better, worst first
+          items:
+            $ref: '#/components/schemas/RoofIntersectionCriterion'
+    RoofIntersections:
+      type: object
+      required:
+        - id
+        - pointsDensityPerSquareMeter
+        - planes
+        - intersections
+      properties:
+        id:
+          type: string
+        crs:
+          type: string
+          description: The lidar's own projected CRS the planes were fitted in, e.g. EPSG:2154
+        pointsDensityPerSquareMeter:
+          type: number
+          description: Building points per square meter of the zone
+        planes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoofIntersectionsPlane'
+        intersections:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoofIntersection'
     Feature:
       type: object
       properties:
@@ -3929,32 +4154,6 @@ components:
         knn:
           type: integer
 
-    ThreeDTextureInfo:
-      type: object
-      required:
-        - zoom
-        - imageUri
-        - imageWidth
-        - imageHeight
-        - tileX
-        - tileY
-        - tileImageSizePx
-      properties:
-        tileX:
-          type: integer
-        tileY:
-          type: integer
-        tileImageSizePx:
-          type: integer
-        imageWidth:
-          type: integer
-        imageHeight:
-          type: integer
-        zoom:
-          type: integer
-        imageUri:
-          type: string
-
     DelimitationObjectType:
       type: string
       description: |
@@ -3974,8 +4173,6 @@ components:
       properties:
         id:
           type: string
-        threeDTextureInfo:
-          $ref: "#/components/schemas/ThreeDTextureInfo"
     CityJSONRequestStatus:
       deprecated: true
       type: string

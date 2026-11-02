@@ -13,7 +13,9 @@ import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CityJSONRequestService;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
+import app.bpartners.geojobs.service.RoofIntersectionsService;
 import app.bpartners.geojobs.validator.CreateCityJSONRequestValidator;
+import app.bpartners.geojobs.validator.CreateRoofIntersectionsValidator;
 import app.bpartners.geojobs.validator.ThreeDAddressesRequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,8 @@ public class CityJSONController {
   private final CreateCityJSONRequestValidator createCityJSONRequestValidator;
   private final ThreeDAddressesRequestValidator threeDAddressesRequestValidator;
   private final FeatureAddressConverter featureAddressConverter;
+  private final CreateRoofIntersectionsValidator createRoofIntersectionsValidator;
+  private final RoofIntersectionsService roofIntersectionsService;
 
   @GetMapping("/3d/{id}")
   public ThreeDResponseStatus getRequested3DFileById(@PathVariable(name = "id") String requestId) {
@@ -100,6 +104,14 @@ public class CityJSONController {
             domainLidarProcessorType);
 
     return cityJSONRequestMapper.toRestThreeDResponseStatus(savedRequest);
+  }
+
+  @PutMapping("/3d/{id}/intersections")
+  public RoofIntersections putRoofIntersections(
+      @RequestBody CreateRoofIntersections createRoofIntersections,
+      @PathVariable(name = "id") String id) {
+    createRoofIntersectionsValidator.accept(createRoofIntersections);
+    return roofIntersectionsService.compute(id, createRoofIntersections);
   }
 
   @PutMapping("/city-jsons/{id}/process")

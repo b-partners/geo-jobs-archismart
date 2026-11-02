@@ -19,6 +19,7 @@ import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.service.threed.ThreedApiClient;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ class CityJSONControllerIT extends FacadeIT {
   @MockBean BucketComponent bucketComponentMock;
   @MockBean EventProducer<CityJSONRequestCreated> eventProducerMock;
   @MockBean EventBridgeClient eventBridgeClient;
+  @MockBean ThreedApiClient threedApiClientMock;
   private static final String ADMIN_KEY = randomUUID().toString();
 
   @BeforeEach
@@ -152,6 +154,40 @@ class CityJSONControllerIT extends FacadeIT {
     assertEquals(expected.getId(), actual.getId());
     assertEquals(expected.getCityJsons(), actual.getCityJsons());
     assertEquals(PROCESSING, actual.getStatus());
+  }
+
+  @Test
+  void should_relay_roof_intersections_to_threed() {
+    var expected = new RoofIntersections().id("zone-1");
+    when(threedApiClientMock.computeIntersections(eq("zone-1"), any())).thenReturn(expected);
+
+    var actual =
+        subject.putRoofIntersections(
+            new CreateRoofIntersections().feature(polygonFeature()), "zone-1");
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void should_refuse_roof_intersections_on_a_non_polygon_zone() {
+    assertThrows(
+        BadRequestException.class,
+        () ->
+            subject.putRoofIntersections(
+                new CreateRoofIntersections().feature(feature()), "zone-1"));
+    assertThrows(
+        BadRequestException.class,
+        () -> subject.putRoofIntersections(new CreateRoofIntersections(), "zone-1"));
+    verify(threedApiClientMock, never()).computeIntersections(any(), any());
+  }
+
+  private Feature polygonFeature() {
+    var multiPolygon = (MultiPolygon) feature().getGeometry().getActualInstance();
+    var polygon =
+        new Polygon()
+            .type(Polygon.TypeEnum.POLYGON)
+            .coordinates(multiPolygon.getCoordinates().getFirst());
+    return new Feature().type(Feature.TypeEnum.FEATURE).geometry(new FeatureGeometry(polygon));
   }
 
   private Feature feature() {

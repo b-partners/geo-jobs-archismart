@@ -4,45 +4,25 @@ import static app.bpartners.geojobs.model.geometry.GeometryFactory.geometryFacto
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import app.bpartners.geojobs.service.GeometrySquareMeterArea;
-import app.bpartners.geojobs.service.cacher.CacherApiClient;
-import java.net.URI;
-import java.net.URL;
 import java.util.List;
 import java.util.Set;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 class LidarApiFacadeTest {
-  RestTemplate restTemplateMock = mock();
-  CacherApiClient cacherApiClientMock = mock();
   GeodataLidarApiClient geodataLidarApiClientMock = mock();
   LidarApiFacade subject =
-      new LidarApiFacade(
-          geodataLidarApiClientMock,
-          new GeometrySquareMeterArea(),
-          restTemplateMock,
-          cacherApiClientMock);
+      new LidarApiFacade(geodataLidarApiClientMock, new GeometrySquareMeterArea());
 
   private static final String UPDATED_FILE_URL = "https://data.geopf.fr/dummy.laz";
-
-  @SneakyThrows
-  @BeforeEach
-  void setUp() {
-    when(cacherApiClientMock.getWithCache(any())).thenReturn(new URL(UPDATED_FILE_URL));
-  }
 
   @Test
   void groups_geometries_by_returned_url_and_projects_to_lambert93_for_france() {
@@ -91,26 +71,6 @@ class LidarApiFacadeTest {
 
     assertTrue(actual.filesUrls().isEmpty());
     verifyNoInteractions(geodataLidarApiClientMock);
-  }
-
-  @Test
-  void download_should_return_correct_file() {
-    when(restTemplateMock.getForObject(any(URI.class), eq(byte[].class)))
-        .thenReturn(new byte[] {1, 2, 3});
-
-    var actual = subject.download(UPDATED_FILE_URL);
-
-    assertTrue(actual.isPresent());
-  }
-
-  @Test
-  void download_should_return_empty_if_not_found() {
-    when(restTemplateMock.getForObject(any(URI.class), eq(byte[].class)))
-        .thenThrow(mock(HttpClientErrorException.NotFound.class));
-
-    var actual = subject.download(UPDATED_FILE_URL);
-
-    assertTrue(actual.isEmpty());
   }
 
   private static Geometry geometry1() {

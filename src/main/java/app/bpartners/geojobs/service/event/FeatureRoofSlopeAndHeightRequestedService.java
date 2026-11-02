@@ -1,24 +1,30 @@
 package app.bpartners.geojobs.service.event;
 
 import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper.toDomainFeature;
+import static app.bpartners.geojobs.model.lidar.LidarProcessorType.SAFE_MODE;
 import static app.bpartners.geojobs.service.event.DetectionRoofSlopeAndHeightRequestedService.*;
 import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.AVAILABLE;
-import static java.util.stream.Collectors.toSet;
+import static app.bpartners.geojobs.service.lidar.model.LidarDataStatus.UNAVAILABLE;
+import static java.util.UUID.randomUUID;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.FeatureRoofSlopeAndHeightRequested;
 import app.bpartners.geojobs.endpoint.event.model.FeatureVggRequested;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
-import app.bpartners.geojobs.model.lidar.planes.Plane3D;
+import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.DetectionRepository;
-import app.bpartners.geojobs.service.lidar.LidarRoofsAnalysisProcessor;
+import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
+import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.CityJSONSafeModeProcessor;
+import app.bpartners.geojobs.service.cityjson.CityJsonRoofMetrics;
+import app.bpartners.geojobs.service.threed.exception.ThreedApiException;
 import jakarta.persistence.EntityManager;
+import java.io.File;
 import java.util.*;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -29,8 +35,8 @@ public class FeatureRoofSlopeAndHeightRequestedService
   private static final String ROOF_SLOPE_DATA_STATUS_PROPERTY_NAME = "roof_slope_data_status";
   private static final String ROOF_HEIGHT_DATA_STATUS_PROPERTY_NAME = "roof_height_data_status";
   private final DetectionRepository detectionRepository;
-  private final LidarRoofsAnalysisProcessor lidarRoofsAnalysisProcessor;
-  private final FeatureMapper featureMapper;
+  private final CityJSONSafeModeProcessor cityJSONSafeModeProcessor;
+  private final BucketComponent bucketComponent;
   private final EventProducer eventProducer;
   private final EntityManager entityManager;
 
@@ -52,12 +58,8 @@ public class FeatureRoofSlopeAndHeightRequestedService
       return;
     }
 
-    var roofGeometries = toGeometries(delimitationFeatures);
-
-    var roofsAnalysesResult = lidarRoofsAnalysisProcessor.from(roofGeometries);
-
     var delimitationFeaturesWithHeightAndSlopeProperties =
-        computeHeightAndSlopeProperties(delimitationFeatures, roofsAnalysesResult);
+        computeHeightAndSlopeProperties(detection, delimitationFeatures);
 
     var domainDelimitationFeaturesWithHeightAndSlopeProperties =
         delimitationFeaturesWithHeightAndSlopeProperties.stream()
@@ -81,17 +83,8 @@ public class FeatureRoofSlopeAndHeightRequestedService
                         feature.getProperties().get(LIDAR_DATA_STATUS_PROPERTY_NAME)));
   }
 
-  private Set<Geometry> toGeometries(List<Feature> delimitationFeatures) {
-    Set<app.bpartners.geojobs.repository.model.Feature> flattedFeatures =
-        delimitationFeatures.stream()
-            .map(FeatureMapper::toDomainFeature)
-            .collect(java.util.stream.Collectors.toSet());
-    return flattedFeatures.stream().map(featureMapper::domainToGeometry).collect(toSet());
-  }
-
   private List<Feature> computeHeightAndSlopeProperties(
-      List<Feature> delimitationFeatures,
-      LidarRoofsAnalysisProcessor.RoofsAnalysisResult roofsAnalysisResult) {
+      Detection detection, List<Feature> delimitationFeatures) {
     return delimitationFeatures.stream()
         .map(
             delimitation -> {
@@ -99,15 +92,11 @@ public class FeatureRoofSlopeAndHeightRequestedService
               if (delimitation.getProperties() != null) {
                 actualProperties.putAll(delimitation.getProperties());
               }
-              var roofProperties =
-                  roofsAnalysisResult.getProperties(
-                      featureMapper.domainToGeometry(toDomainFeature(delimitation)));
+              var roofMetrics = computeRoofMetrics(detection, delimitation);
 
-              var planes = roofProperties.getRoofPlanes();
-              var firstPlane = planes.isEmpty() ? Plane3D.empty() : planes.getFirst();
-              var slopeValue = firstPlane.getSlopeInDegrees().getValue();
-              var heightValue = roofProperties.getHeightInMeters().getValue();
-              var lidarDataStatus = roofProperties.getData().status();
+              var slopeValue = roofMetrics.map(CityJsonRoofMetrics::slopeInDegrees).orElse(0d);
+              var heightValue = roofMetrics.map(CityJsonRoofMetrics::heightInMeters).orElse(0d);
+              var lidarDataStatus = roofMetrics.isPresent() ? AVAILABLE : UNAVAILABLE;
               actualProperties.put(ROOF_SLOPE_PROPERTY_NAME, slopeValue);
               actualProperties.put(ROOF_HEIGHT_PROPERTY_NAME, heightValue);
               actualProperties.put(LIDAR_DATA_STATUS_PROPERTY_NAME, lidarDataStatus);
@@ -120,5 +109,36 @@ public class FeatureRoofSlopeAndHeightRequestedService
                   .properties(actualProperties);
             })
         .toList();
+  }
+
+  /**
+   * Generates the roof CityJSON in safe mode (3DBag roofer, threed as fallback) and reads the slope
+   * and height from it. Empty when there is no lidar data for the roof; any other failure is
+   * rethrown so that the event is retried.
+   */
+  private Optional<CityJsonRoofMetrics> computeRoofMetrics(
+      Detection detection, Feature delimitation) {
+    var request =
+        CityJSONRequest.builder()
+            .id(randomUUID().toString())
+            .communityOwnerId(detection.getCommunityOwnerId())
+            .delimitations(List.of(toDomainFeature(delimitation)))
+            .lidarProcessorType(SAFE_MODE)
+            .build();
+    List<File> cityJsonFiles = new ArrayList<>();
+    try {
+      var cityJsons = cityJSONSafeModeProcessor.generate(request).cityJsons();
+      cityJsons.forEach(
+          cityJson -> cityJsonFiles.add(bucketComponent.download(cityJson.getS3FileKey())));
+      return CityJsonRoofMetrics.from(cityJsonFiles);
+    } catch (ThreedApiException e) {
+      if (e.isNoLidarDataFound()) {
+        log.warn("No lidar data found for detection(id={}) roof", detection.getId(), e);
+        return Optional.empty();
+      }
+      throw e;
+    } finally {
+      cityJsonFiles.forEach(File::delete);
+    }
   }
 }

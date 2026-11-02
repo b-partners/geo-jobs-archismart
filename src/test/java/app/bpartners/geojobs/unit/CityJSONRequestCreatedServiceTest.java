@@ -15,8 +15,6 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
-import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
-import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
@@ -29,10 +27,7 @@ import app.bpartners.geojobs.service.CityJSON3DBagRooferProcessor;
 import app.bpartners.geojobs.service.CityJSONSafeModeProcessor;
 import app.bpartners.geojobs.service.CityJSONThreedProcessor;
 import app.bpartners.geojobs.service.ThreedGenerationResult;
-import app.bpartners.geojobs.service.cityjson.LidarDataToCityJsonProcessor;
-import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.event.CityJSONRequestCreatedService;
-import app.bpartners.geojobs.service.lidar.LasRoofsPointsExtractor;
 import app.bpartners.geojobs.service.threed.exception.ThreedApiException;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -44,31 +39,21 @@ import org.springframework.http.HttpStatus;
 
 class CityJSONRequestCreatedServiceTest {
   CityJSONRequestRepository cityJSONRequestRepositoryMock = mock();
-  LasRoofsPointsExtractor lasRoofsPointsExtractorMock = mock();
-  LidarDataToCityJsonProcessor lidarDataToCityJsonProcessorMock = mock();
-  FeatureMapper featureMapperMock = mock();
   EntityManager entityManagerMock = mock();
-  BucketComponent bucketComponentMock = mock();
   EventProducer eventProducerMock = mock();
   CommunityAuthorizationRepository communityAuthorizationRepositoryMock = mock();
   CityJSON3DBagRooferProcessor cityJson3DBagRooferProcessorMock = mock();
   CityJSONSafeModeProcessor cityJSONSafeModeProcessor = mock();
-  CityJsonTextureComputer textureComputerMock = mock(CityJsonTextureComputer.class);
   CityJSONThreedProcessor cityJSONThreedProcessorMock = mock();
 
   CityJSONRequestCreatedService subject =
       new CityJSONRequestCreatedService(
           cityJSONRequestRepositoryMock,
-          lasRoofsPointsExtractorMock,
-          lidarDataToCityJsonProcessorMock,
-          featureMapperMock,
           entityManagerMock,
-          bucketComponentMock,
           eventProducerMock,
           communityAuthorizationRepositoryMock,
           cityJson3DBagRooferProcessorMock,
           cityJSONSafeModeProcessor,
-          textureComputerMock,
           cityJSONThreedProcessorMock);
 
   @BeforeEach
@@ -103,8 +88,6 @@ class CityJSONRequestCreatedServiceTest {
         .thenReturn(List.of(cityJSONMock));
     when(cityJSONRequestRepositoryMock.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
-    when(textureComputerMock.applyTexture(any(), any()))
-        .thenAnswer(invocation -> invocation.getArgument(1));
 
     assertDoesNotThrow(
         () ->

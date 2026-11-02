@@ -7,13 +7,11 @@ import static java.math.RoundingMode.HALF_UP;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson.CityJSONDelimitationObjectTypeMapper;
-import app.bpartners.geojobs.endpoint.rest.controller.mapper.cityjson.CityJSONTextureMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
-import app.bpartners.geojobs.repository.model.cityjson.CityJSONTexture;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +21,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CityJSONRequestMapper {
   private final BucketComponent bucketComponent;
-  private final CityJSONTextureMapper textureMapper;
 
   public CityJSONRequest toRest(
       app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest cityJSONRequest) {
@@ -41,10 +38,6 @@ public class CityJSONRequestMapper {
                 })
             .toList();
 
-    var textures = cityJSONRequest.getTextures();
-    var texture =
-        textures != null && !textures.isEmpty() ? textureMapper.toRest(textures.getFirst()) : null;
-
     return new CityJSONRequest()
         .id(cityJSONRequest.getId())
         .delimitations(restDelimitations)
@@ -52,7 +45,6 @@ public class CityJSONRequestMapper {
             toRestDelimitationObjectType(cityJSONRequest.getDelimitationObjectType()))
         .status(CityJSONRequestStatusMapper.toRest(cityJSONRequest.getStatus()))
         .delimitationType(cityJSONRequest.getDelimitationType())
-        .threeDTextureInfo(texture)
         .cityJsons(restCityJsons);
   }
 
@@ -123,16 +115,6 @@ public class CityJSONRequestMapper {
     }
   }
 
-  private List<CityJSONTexture> getDomainTexture(
-      ThreeDTextureInfo texture,
-      app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest request) {
-    if (texture == null) {
-      return List.of();
-    }
-    // TODO: handle multiple textures if possible
-    return List.of(textureMapper.toDomain(texture, request));
-  }
-
   public app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest
       createToDomainFromDeprecatedDTO(
           String requestIdentifier,
@@ -143,20 +125,17 @@ public class CityJSONRequestMapper {
             ? List.of()
             : createCityJSONRequest.getDelimitations();
     var domainDelimitations = delimitations.stream().map(FeatureMapper::toDomainFeature).toList();
-    var domain =
-        app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
-            .id(requestIdentifier)
-            .creationDatetime(now())
-            .communityOwnerId(communityOwnerId)
-            .delimitations(domainDelimitations)
-            .lidarProcessorType(THREE_D_BAG_ROOFER)
-            .delimitationObjectType(
-                CityJSONDelimitationObjectTypeMapper.fromRestDelimitationObjectType(
-                    createCityJSONRequest.getDelimitationObjectType()))
-            .delimitationType(USER_DEFINED_DELIMITATION)
-            .build();
-    var textures = getDomainTexture(createCityJSONRequest.getThreeDTextureInfo(), domain);
-    return domain.toBuilder().textures(textures).build();
+    return app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest.builder()
+        .id(requestIdentifier)
+        .creationDatetime(now())
+        .communityOwnerId(communityOwnerId)
+        .delimitations(domainDelimitations)
+        .lidarProcessorType(THREE_D_BAG_ROOFER)
+        .delimitationObjectType(
+            CityJSONDelimitationObjectTypeMapper.fromRestDelimitationObjectType(
+                createCityJSONRequest.getDelimitationObjectType()))
+        .delimitationType(USER_DEFINED_DELIMITATION)
+        .build();
   }
 
   public app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest createToDomain(

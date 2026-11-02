@@ -18,7 +18,6 @@ import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorizationApiKey;
-import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.threed.ThreedApiClient;
 import app.bpartners.geojobs.service.threed.exception.ThreedApiException;
 import app.bpartners.geojobs.service.threed.model.GenerationStatus;
@@ -30,12 +29,10 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.stubbing.Answer;
 
 class CityJSONThreedProcessorTest {
   private final BucketComponent bucketComponentMock = mock();
   private final ThreedApiClient apiClientMock = mock();
-  private final CityJsonTextureComputer textureComputerMock = mock();
   private final CityJSONThreedProcessor.CityJSONDownloader cityJSONDownloaderMock = mock();
   private final CommunityAuthorizationRepository caRepositoryMock = mock();
 
@@ -43,7 +40,6 @@ class CityJSONThreedProcessorTest {
       new CityJSONThreedProcessor(
           new FileWriter(new ObjectMapper(), new ExtensionGuesser()),
           bucketComponentMock,
-          textureComputerMock,
           apiClientMock,
           cityJSONDownloaderMock,
           caRepositoryMock);
@@ -53,13 +49,11 @@ class CityJSONThreedProcessorTest {
     FileHash uploadedFileHash = mock();
     URL presignedUrl = mock();
     Lrg generatedLrg = mock();
-    Answer<File> textureAnswer = mock();
     File downloadedFile = mock();
 
     when(bucketComponentMock.upload(any(), any())).thenReturn(uploadedFileHash);
     when(bucketComponentMock.presign(any(), any())).thenReturn(presignedUrl);
     when(apiClientMock.generate(any(), any())).thenReturn(generatedLrg);
-    when(textureComputerMock.applyTexture(any(), any())).then(textureAnswer);
     when(cityJSONDownloaderMock.download(any())).thenReturn(downloadedFile);
 
     var communityApiKey =

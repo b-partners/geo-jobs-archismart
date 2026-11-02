@@ -21,7 +21,6 @@ import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.service.CityJSON3DBagRooferProcessor;
 import app.bpartners.geojobs.service.CoordinateTransformer;
 import app.bpartners.geojobs.service.cityjson.model.object.CityJsonIO;
-import app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputer;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import app.bpartners.geojobs.service.lidar.api.LidarApiFacade;
 import app.bpartners.geojobs.service.lidar.api.SwissBoundaryChecker;
@@ -57,7 +56,6 @@ class CityJSON3DBagRooferProcessorTest {
   FileWriter fileWriterMock = mock(FileWriter.class);
   CoordinateTransformer coordinateTransformer = new CoordinateTransformer();
   GeometryConverter geometryConverter = new GeometryConverter();
-  CityJsonTextureComputer textureComputerMock = mock(CityJsonTextureComputer.class);
   SwissBoundaryChecker swissBoundaryCheckerMock = mock(SwissBoundaryChecker.class);
   WalloniaBoundaryChecker walloniaBoundaryCheckerMock = mock(WalloniaBoundaryChecker.class);
   Roofer3DBagCityJSONValidator roofer3DBagCityJSONValidatorMock =
@@ -72,7 +70,6 @@ class CityJSON3DBagRooferProcessorTest {
           fileWriterMock,
           coordinateTransformer,
           geometryConverter,
-          textureComputerMock,
           swissBoundaryCheckerMock,
           walloniaBoundaryCheckerMock,
           roofer3DBagCityJSONValidatorMock,
@@ -131,8 +128,6 @@ class CityJSON3DBagRooferProcessorTest {
             (mock, ctx) -> {
               Mockito.when(mock.toURL()).thenReturn(rooferCityJsonURLMock);
             });
-    when(textureComputerMock.applyTexture(any(), any()))
-        .thenAnswer(invocation -> invocation.getArgument(1));
 
     var cityJsonDocMock = mock(CityJsonIO.Doc.class);
     MockedStatic<CityJsonIO> cityJsonIOMockedStatic = mockStatic(CityJsonIO.class);

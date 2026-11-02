@@ -11,11 +11,14 @@ public class ThreedApiProperties {
   private static final int READ_TIMEOUT_MS = 300_000;
 
   private final String baseUrl;
+  private final String apiKey;
   private final int readTimeoutMs;
   private final int connectTimeoutMs;
 
-  public ThreedApiProperties(@Value("${city-json-processor.api.url}") String baseUrl) {
+  public ThreedApiProperties(
+      @Value("${threed.api.url}") String baseUrl, @Value("${threed.api.key}") String apiKey) {
     this.baseUrl = baseUrl;
+    this.apiKey = apiKey;
     this.readTimeoutMs = READ_TIMEOUT_MS;
     this.connectTimeoutMs = CONNECT_TIMEOUT_MS;
   }
