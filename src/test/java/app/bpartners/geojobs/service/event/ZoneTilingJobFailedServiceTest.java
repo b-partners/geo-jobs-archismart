@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.conf.EnvConf;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneTilingJobFailed;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,7 +23,10 @@ class ZoneTilingJobFailedServiceTest {
   HTMLTemplateParser htmlTemplateParser = new HTMLTemplateParser();
   ZoneTilingJobFailedService subject =
       new ZoneTilingJobFailedService(
-          detectionFinishedMailerMock, detectionRepositoryMock, htmlTemplateParser);
+          detectionFinishedMailerMock,
+          detectionRepositoryMock,
+          new PassThroughEmailRecipientResolver(),
+          htmlTemplateParser);
 
   @Test
   void trigger_email_containing_detection_id() {
@@ -60,7 +65,7 @@ class ZoneTilingJobFailedServiceTest {
     var stringCaptor = ArgumentCaptor.forClass(String.class);
     verify(detectionFinishedMailerMock, only())
         .accept(
-            eq(emailReceiver),
+            eq(EnvConf.ADMIN_EMAIL),
             eq("Erreur survenue lors du traitement du pavage (ZTJ.id=" + jobId + ")"),
             stringCaptor.capture());
     assertEquals(getEmailBody(zoneTilingJob), stringCaptor.getValue());

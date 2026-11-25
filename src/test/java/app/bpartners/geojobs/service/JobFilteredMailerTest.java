@@ -11,6 +11,7 @@ import app.bpartners.geojobs.mail.Mailer;
 import app.bpartners.geojobs.repository.model.FilteredJob;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,7 +22,8 @@ public class JobFilteredMailerTest {
   Mailer mailerMock = mock();
   HTMLTemplateParser htmlTemplateParserMock = mock();
   JobFilteredMailer<ZoneDetectionJob> detectionSubject =
-      new JobFilteredMailer<>(mailerMock, htmlTemplateParserMock);
+      new JobFilteredMailer<>(
+          mailerMock, htmlTemplateParserMock, new PassThroughEmailRecipientResolver());
 
   @Test
   void accept_ok() {

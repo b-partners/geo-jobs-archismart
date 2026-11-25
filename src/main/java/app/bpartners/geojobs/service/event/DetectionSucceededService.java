@@ -1,5 +1,9 @@
 package app.bpartners.geojobs.service.event;
 
+import static app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED;
+import static app.bpartners.geojobs.job.model.Status.ProgressionStatus.FINISHED;
+import static java.time.Instant.now;
+
 import app.bpartners.geojobs.endpoint.event.model.DetectionSucceeded;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.job.model.JobStatus;
@@ -9,6 +13,7 @@ import app.bpartners.geojobs.repository.ZoneDetectionJobRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +35,7 @@ public class DetectionSucceededService implements Consumer<DetectionSucceeded> {
   private final DetectionRepository detectionRepository;
   private final BucketComponent bucketComponent;
   private final ZoneDetectionJobRepository zoneDetectionJobRepository;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   @Override
   @Transactional
@@ -82,7 +88,30 @@ public class DetectionSucceededService implements Consumer<DetectionSucceeded> {
         String.format("Analyse sur la zone %s terminée le %s", zoneName, formattedCreationDatetime);
     var emailBody = apply(zoneDetectionJobId, detectionJobStatus);
 
-    mailer.accept(emailReceiver, emailSubject, emailBody);
+    var recipient =
+        emailRecipientResolver.resolveByZoneDetectionJobId(zoneDetectionJobId, emailReceiver);
+    mailer.accept(recipient, emailSubject, emailBody);
+  }
+
+  public void acceptReused(Detection detection) {
+    if (detection.isIntegrationTest()) {
+      log.info(
+          "Detection(e2Id={}) reused from another detection. Email will not be sent.",
+          detection.getEndToEndId());
+      return;
+    }
+    var succeededStatus =
+        JobStatus.builder().health(SUCCEEDED).progression(FINISHED).creationDatetime(now()).build();
+    var formattedSucceededDatetime =
+        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+            .format(succeededStatus.getCreationDatetime().atZone(ZoneId.of("Europe/Paris")));
+    var emailSubject =
+        String.format(
+            "Analyse sur la zone %s terminée le %s",
+            detection.getZoneName(), formattedSucceededDatetime);
+    var emailBody = render(detection, null, null, succeededStatus);
+    var recipient = emailRecipientResolver.resolve(detection, detection.getEmailReceiver());
+    mailer.accept(recipient, emailSubject, emailBody);
   }
 
   private String apply(String zoneDetectionJobId, JobStatus detectionJobStatus) {
@@ -91,19 +120,28 @@ public class DetectionSucceededService implements Consumer<DetectionSucceeded> {
             ? Optional.empty()
             : zoneDetectionJobRepository.findById(zoneDetectionJobId);
     var optionalDetection = detectionRepository.findByZdjId(zoneDetectionJobId);
-    var machineZoneDetectionJob = optionalZoneDetectionJob.orElse(null);
+    return render(
+        optionalDetection.orElse(null),
+        optionalZoneDetectionJob.orElse(null),
+        zoneDetectionJobId,
+        detectionJobStatus);
+  }
+
+  private String render(
+      Detection detection,
+      ZoneDetectionJob machineZoneDetectionJob,
+      String zoneDetectionJobId,
+      JobStatus detectionJobStatus) {
     var machineZoneDetectionJobStatus =
         machineZoneDetectionJob != null ? machineZoneDetectionJob.getStatus() : null;
 
     Context context = new Context();
     context.setVariable("zoneDetectionJobId", zoneDetectionJobId);
     context.setVariable("zoneDetectionJob", machineZoneDetectionJob);
-    context.setVariable("detection", optionalDetection.orElse(null));
+    context.setVariable("detection", detection);
     context.setVariable(
         "geojsonUrl",
-        optionalDetection
-            .map(detection -> bucketComponent.presign(detection.getGeojsonS3FileKey()))
-            .orElse(null));
+        detection == null ? null : bucketComponent.presign(detection.getGeojsonS3FileKey()));
     context.setVariable(
         "detectionSucceededDatetime",
         DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")

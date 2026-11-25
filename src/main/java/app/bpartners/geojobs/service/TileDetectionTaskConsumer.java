@@ -7,6 +7,7 @@ import static java.awt.Color.MAGENTA;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.DetectedTile;
@@ -161,8 +162,13 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
                 .build());
       }
     }
+    var detectableObjectModels =
+        detection == null
+            ? List.<DetectableObjectModel>of()
+            : detection.getDetectableObjectModels();
     var detectionResponse =
-        objectsDetector.apply(tileDetectionTask, mask, detectableObjectConfigurations);
+        objectsDetector.apply(
+            tileDetectionTask, mask, detectableObjectConfigurations, detectableObjectModels);
 
     var roofCoveringResponse =
         roofCoveringDetector.apply(
@@ -170,7 +176,10 @@ public class TileDetectionTaskConsumer implements TaskConsumer<TileDetectionTask
                 .detectionE2Id(detection != null ? detection.getEndToEndId() : null)
                 .build(),
             mask,
-            tileDetectionTask.getSpatialResolutionInCm());
+            tileDetectionTask.getSpatialResolutionInCm(),
+            detectableObjectModels,
+            detectableObjectConfigurations,
+            detectionResponse);
     var machineDetectedTile =
         detectionMapper.toDetectedTile(
             detectionResponse,

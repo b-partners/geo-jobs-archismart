@@ -22,6 +22,8 @@ import software.amazon.awssdk.transfer.s3.model.FileDownload;
 @Component
 @AllArgsConstructor
 public class CustomBucketComponent {
+  private static final int MIN_TEMP_FILE_PREFIX_LENGTH = 3;
+
   private final BucketConf bucketConf;
 
   public URL presign(String bucketKey, Duration expiration, Optional<String> fileName) {
@@ -83,7 +85,8 @@ public class CustomBucketComponent {
   }
 
   private String prefixFromBucketKey(String bucketKey) {
-    return lastNameSplitByDot(bucketKey)[0];
+    var prefix = lastNameSplitByDot(bucketKey)[0];
+    return prefix.length() < MIN_TEMP_FILE_PREFIX_LENGTH ? "tmp-" + prefix : prefix;
   }
 
   private String suffixFromBucketKey(String bucketKey) {

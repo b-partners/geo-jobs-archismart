@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.conf.EnvConf;
 import app.bpartners.geojobs.endpoint.event.model.zone.ZoneDetectionJobFailed;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
@@ -13,6 +14,7 @@ import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,7 +26,11 @@ class ZoneDetectionJobFailedServiceTest {
   HTMLTemplateParser htmlTemplateParser = new HTMLTemplateParser();
   ZoneDetectionJobFailedService subject =
       new ZoneDetectionJobFailedService(
-          mailerMock, zoneDetectionJobServiceMock, detectionRepositoryMock, htmlTemplateParser);
+          mailerMock,
+          zoneDetectionJobServiceMock,
+          detectionRepositoryMock,
+          new PassThroughEmailRecipientResolver(),
+          htmlTemplateParser);
 
   @Test
   void send_email_with_detection_e2Id() {
@@ -55,7 +61,7 @@ class ZoneDetectionJobFailedServiceTest {
   void send_email_with_zdj_id() {
     var jobId = randomUUID().toString();
     var emailReceiver = "emailReceiver";
-    var adminEmail = "tech@birdia.fr";
+    var adminEmail = EnvConf.ADMIN_EMAIL;
     var zoneDetectionJobMock = mock(ZoneDetectionJob.class);
     when(zoneDetectionJobMock.getId()).thenReturn(jobId);
     when(zoneDetectionJobMock.getEmailReceiver()).thenReturn(emailReceiver);

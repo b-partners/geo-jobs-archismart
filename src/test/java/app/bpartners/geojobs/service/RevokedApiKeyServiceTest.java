@@ -4,7 +4,9 @@ import static app.bpartners.geojobs.service.RevokedApiKeyService.hide;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -95,6 +97,40 @@ class RevokedApiKeyServiceTest {
     assertEquals(communityAuthorization.getApiKey(), actual.getRevokedApiKeyValue());
     verify(revokedApiKeyRepositoryMock, times(1)).save(any(RevokedApiKey.class));
     verify(communityAuthRepositoryMock, times(1)).save(communityAuthorization(true));
+  }
+
+  @Test
+  void revoking_the_dashboard_key_records_that_key_and_keeps_the_consumer_active() {
+    var communityAuthorization = communityAuthorization(false);
+    communityAuthorization.setDashboardApiKey("dashboardApiKey");
+    when(communityAuthRepositoryMock.findByApiKey("dashboardApiKey"))
+        .thenReturn(Optional.of(communityAuthorization));
+
+    var actual = subject.revokeCommunityApiKey(communityAuthorization, "dashboardApiKey");
+
+    assertEquals("dashboardApiKey", actual.getRevokedApiKeyValue());
+    assertFalse(communityAuthorization.isApiKeyRevoked(), "the legacy key must stay valid");
+    verify(revokedApiKeyRepositoryMock).save(actual);
+  }
+
+  @Test
+  void revoking_the_legacy_key_flags_the_consumer_as_revoked() {
+    var communityAuthorization = communityAuthorization(false);
+    when(communityAuthRepositoryMock.findByApiKey("communityApiKey"))
+        .thenReturn(Optional.of(communityAuthorization));
+
+    var actual = subject.revokeCommunityApiKey(communityAuthorization, "communityApiKey");
+
+    assertEquals("communityApiKey", actual.getRevokedApiKeyValue());
+    assertTrue(communityAuthorization.isApiKeyRevoked());
+  }
+
+  @Test
+  void hide_never_throws_on_short_keys() {
+    for (int length = 1; length <= 40; length++) {
+      var key = "k".repeat(length);
+      assertEquals(key.length(), hide(key).length(), "length " + length);
+    }
   }
 
   CommunityAuthorization communityAuthorization(boolean isApiKeyRevoked) {

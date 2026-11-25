@@ -1,0 +1,31 @@
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; color: #333; margin: 0; padding: 2rem; }
+        .email-content { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 10px; padding: 2rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #1a202c; }
+        .info p { margin: 0.5rem 0; line-height: 1.6; }
+        pre { background: #f4f6f8; padding: 1rem; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+<div class="email-content">
+    <h1>bpartners-api injoignable : enregistrement à rejouer</h1>
+    <div class="info">
+        <p>La détection ou la modélisation a été livrée, mais son enregistrement dans le projet d'analyse du dashboard a échoué.</p>
+        <p><strong>Environnement :</strong> <span th:text="${env}"></span></p>
+        <p><strong>Type :</strong> <span th:text="${failure.type}"></span></p>
+        <p><strong>Identifiant concerné :</strong> <span th:text="${failure.subjectId}"></span></p>
+        <p><strong>Communauté :</strong> <span th:text="${failure.communityOwnerId}"></span></p>
+        <p><strong>Clé de projet :</strong> <span th:text="${failure.projectKey}"></span></p>
+        <p><strong>Tentatives :</strong> <span th:text="${failure.attempts}"></span></p>
+        <p><strong>Erreur :</strong> <span th:text="${failure.errorMessage}"></span></p>
+        <p><strong>Enregistrement prévu :</strong></p>
+        <pre th:text="${failure.payload}"></pre>
+        <p>Pour rejouer, une fois bpartners-api de nouveau disponible :
+            <code>PUT /dashboardRegistrationFailures/<span th:text="${failure.id}"></span>/reprocess</code> (ADMIN).</p>
+    </div>
+</div>
+</body>
+</html>

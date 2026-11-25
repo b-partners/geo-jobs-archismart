@@ -398,4 +398,35 @@ class DashboardApiKeyCheckTriggeredServiceTest {
     verifyNoInteractions(eventProducerMock);
     verify(communityAuthorizationRepository, never()).findAllIdsByIntegrationTestUsageFalse();
   }
+
+  @Test
+  void revoked_dashboard_key_is_replaced_by_a_new_one() {
+    String adminApiKey = randomUUID().toString();
+    String email = "revoked@" + randomUUID();
+    String authId = randomUUID().toString();
+    User user = new User(randomUUID().toString(), "a", "b", email);
+    CommunityAuthorization authorization = new CommunityAuthorization();
+    authorization.setId(authId);
+    authorization.setDashboardApiKey("old-key");
+    when(userAccountsApiMock.getUsersByCriteria(eq(email), eq(null), eq(null), anyString()))
+        .thenReturn(List.of(user));
+    when(userAccountsApiMock.getUserApiKey(user.id(), adminApiKey))
+        .thenReturn(List.of(new UserApiKey(null, DASHBOARD)));
+    when(userAccountsApiMock.getOrGenerateApiKey(eq(email), anyString(), eq(adminApiKey)))
+        .thenReturn(new UserApiKey("new-key", DASHBOARD));
+    when(communityAuthorizationRepository.findById(authId)).thenReturn(Optional.of(authorization));
+    subject =
+        new DashboardApiKeyCheckTriggeredService(
+            userAccountsApiMock, adminApiKey, communityAuthorizationRepository, eventProducerMock);
+
+    subject.accept(
+        DashboardApiKeyCheckTriggered.builder()
+            .email(email)
+            .dashboardApiKey("old-key")
+            .communityAuthorizationId(authId)
+            .build());
+
+    assertEquals("new-key", authorization.getDashboardApiKey());
+    verify(communityAuthorizationRepository).save(authorization);
+  }
 }

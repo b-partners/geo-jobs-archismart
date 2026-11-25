@@ -7,6 +7,7 @@ import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.conf.EnvConf;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.DetectionRoofPropertiesRequested;
 import app.bpartners.geojobs.endpoint.event.model.annotation.AnnotationDeliveryJobRequested;
@@ -25,6 +26,7 @@ import app.bpartners.geojobs.service.DetectionFinishedMailer;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -57,7 +59,8 @@ class ZoneDetectionJobSucceededServiceTest {
           detectableObjectConfigurationRepositoryMock,
           detectionFinishedMailerMock,
           htmlTemplateParser,
-          detectionRepositoryMock);
+          detectionRepositoryMock,
+          new PassThroughEmailRecipientResolver());
 
   @BeforeEach
   void setUp() {
@@ -110,7 +113,7 @@ class ZoneDetectionJobSucceededServiceTest {
 
     var emailBodyCaptor = ArgumentCaptor.forClass(String.class);
     verify(detectionFinishedMailerMock, only())
-        .accept(eq(emailReceiver), eq(emailSubject), emailBodyCaptor.capture());
+        .accept(eq(EnvConf.ADMIN_EMAIL), eq(emailSubject), emailBodyCaptor.capture());
     verify(configurationRepositoryMock, never()).findLatestConfiguration();
     verify(eventProducerMock, never()).accept(any());
     assertEquals(

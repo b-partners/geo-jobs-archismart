@@ -18,6 +18,7 @@ import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.DetectionStep;
 import app.bpartners.geojobs.service.event.DetectionSucceededService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,8 @@ class DetectionSucceededServiceTest {
           htmlTemplateParserMock,
           detectionRepositoryMock,
           bucketComponentMock,
-          zoneDetectionJobRepositoryMock);
+          zoneDetectionJobRepositoryMock,
+          new PassThroughEmailRecipientResolver());
 
   @Test
   void throw_not_implemented_when_detection_step_not_persisted() {

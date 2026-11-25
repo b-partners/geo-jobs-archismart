@@ -92,6 +92,8 @@ public class DetectionService {
   private final FileWriter fileWriter;
   private final DetectionRoofSlopeValidator detectionRoofSlopeValidator;
   private final FeatureVggRequestedService featureVggRequestedService;
+  private final DetectionCreditGuard detectionCreditGuard;
+  private final DetectionReuseService detectionReuseService;
 
   public Detection getByZoneDetectionJob(ZoneDetectionJob zoneDetectionJob) {
     ZoneDetectionJob machineZDJ =
@@ -212,6 +214,8 @@ public class DetectionService {
 
   public Detection configureDetectionAddresses(String detectionId, List<String> addresses) {
     var detection = getDetectionByE2IdOrId(detectionId);
+    detectionCreditGuard.accept(
+        detection.getCommunityOwnerId(), detectionId, detection.getProjectKey(), List.of());
     var savedDetection =
         detectionRepository.save(detection.toBuilder().convertedAddresses(addresses).build());
 
@@ -387,11 +391,17 @@ public class DetectionService {
     var savedDetectionToBeProcessed =
         logDurationOf("detection saving", () -> detectionRepository.save(detectionToSave));
 
-    try {
-      synchronousDetectionService.apply(savedDetectionToBeProcessed);
-    } catch (RuntimeException e) {
-      markSynchronousDetectionFailed(savedDetectionToBeProcessed.getId(), e);
-      throw e;
+    var alreadyProcessed =
+        savedDetectionToBeProcessed.isReusedFromAnotherDetection()
+            && savedDetectionToBeProcessed.isSucceeded();
+    if (!alreadyProcessed
+        && detectionReuseService.reuseResultsOf(savedDetectionToBeProcessed).isEmpty()) {
+      try {
+        synchronousDetectionService.apply(savedDetectionToBeProcessed);
+      } catch (RuntimeException e) {
+        markSynchronousDetectionFailed(savedDetectionToBeProcessed.getId(), e);
+        throw e;
+      }
     }
     var processedDetection =
         detectionRepository.findById(savedDetectionToBeProcessed.getId()).orElseThrow();
@@ -469,6 +479,10 @@ public class DetectionService {
       if (savedDetection.isStillOnConfiguringStep()) {
         return withComputedStep(savedDetection, PENDING, UNKNOWN, REQUEST_ACCEPTED);
       }
+      var reusedDetection = detectionReuseService.reuseResultsOf(savedDetection);
+      if (reusedDetection.isPresent()) {
+        return withComputedStep(reusedDetection.get(), FINISHED, SUCCEEDED, POST_PROCESSING);
+      }
       eventProducer.accept(List.of(new DetectionTilingRequested(savedDetection.getId())));
       return withComputedStep(savedDetection, PROCESSING, UNKNOWN, REQUEST_ACCEPTED);
     }
@@ -476,6 +490,9 @@ public class DetectionService {
   }
 
   public Detection processDetectionSteps(Detection detection) {
+    if (detection.isReusedFromAnotherDetection() && detection.isSucceeded()) {
+      return withComputedStep(detection, FINISHED, SUCCEEDED, POST_PROCESSING);
+    }
     var tilingJobId = detection.getZtjId();
     var detectionJobId = detection.getZdjId();
     if (detection.isStillOnConfiguringStep()) {
@@ -537,7 +554,19 @@ public class DetectionService {
             createDetection, detectionE2Id, communityOwnerId, isSynchronous, debugMode);
     List<Feature> geoJsonZone =
         createDetection.getGeoJsonZone() == null ? List.of() : createDetection.getGeoJsonZone();
-    var detectionToSaveBuilder = detectionToSave.toBuilder();
+    var fingerprint = detectionReuseService.fingerprintOf(detectionToSave);
+    var detectionToSaveBuilder =
+        detectionToSave.toBuilder()
+            .zoneHash(fingerprint.zoneHash())
+            .inferenceSignature(fingerprint.inferenceSignature());
+    var zoneBounds = fingerprint.zoneBounds();
+    if (zoneBounds != null) {
+      detectionToSaveBuilder
+          .zoneMinLon(zoneBounds.minLon())
+          .zoneMinLat(zoneBounds.minLat())
+          .zoneMaxLon(zoneBounds.maxLon())
+          .zoneMaxLat(zoneBounds.maxLat());
+    }
     if (communityOwnerId != null) {
       var communityOwner = communityAuthRepository.findById(communityOwnerId).orElseThrow();
       if (communityOwner.isIntegrationTestUsage()) {

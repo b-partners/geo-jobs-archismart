@@ -113,6 +113,8 @@ public class SecurityConf {
                     .hasAuthority(ROLE_ADMIN.name())
                     .requestMatchers(PUT, "/tilingJobs/*/retry")
                     .hasAuthority(ROLE_ADMIN.name())
+                    .requestMatchers(PUT, "/dashboardRegistrationFailures/*/reprocess")
+                    .hasAuthority(ROLE_ADMIN.name())
                     .requestMatchers(GET, "/detectionJobs", "/detectionJobs/**")
                     .hasAuthority(ROLE_ADMIN.name())
                     .requestMatchers(GET, "/detectionJobs/*/taskStatistics")

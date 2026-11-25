@@ -8,6 +8,7 @@ import app.bpartners.geojobs.endpoint.rest.controller.mapper.CreateDetectionMapp
 import app.bpartners.geojobs.endpoint.rest.controller.mapper.DetectionFileObjectMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionRestMapper;
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.DetectionSurfaceUnitMapper;
+import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.DetectionAuthorizer;
@@ -21,6 +22,7 @@ import app.bpartners.geojobs.model.page.PageFromOne;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CommunityUsedSurfaceService;
+import app.bpartners.geojobs.service.DetectionCreditGuard;
 import app.bpartners.geojobs.service.DetectionExportService;
 import app.bpartners.geojobs.service.DetectionService;
 import app.bpartners.geojobs.validator.ConfigureAddressValidator;
@@ -50,6 +52,7 @@ public class DetectionController {
   private final MediaTypeGuesser mediaTypeGuesser;
   private final ConfigureAddressValidator configureAddressValidator;
   private final CreateDetectionValidator createDetectionValidator;
+  private final DetectionCreditGuard detectionCreditGuard;
   private final DetectionService detectionService;
   private final DetectionFileObjectMapper detectionFileObjectMapper;
   private final CreateDetectionMapper createDetectionMapper;
@@ -122,6 +125,11 @@ public class DetectionController {
     var communityAuthorization =
         communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword());
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId).orElse(null);
+    detectionCreditGuard.accept(
+        communityOwnerId,
+        detectionId,
+        createDetection.getProjectKey(),
+        providedFeaturesOf(createDetection));
     return detectionRestMapper.toRest(
         detectionService.processDetection(
             detectionId,
@@ -212,6 +220,11 @@ public class DetectionController {
             "community authorization lookup",
             () -> communityAuthRepository.findByApiKey(authProvider.getPrincipal().getPassword()));
     var communityOwnerId = communityAuthorization.map(CommunityAuthorization::getId).orElse(null);
+    detectionCreditGuard.accept(
+        communityOwnerId,
+        detectionId,
+        createDetection.getProjectKey(),
+        providedFeaturesOf(createDetection));
     return detectionRestMapper.toRest(
         detectionService.processDetectionSynchronously(
             detectionId,
@@ -269,5 +282,16 @@ public class DetectionController {
     return detectionRestMapper.toRest(
         detectionService.getDetectionsByCriteria(
             communityOwnerId, page, pageSize, from, to, optionalZoneName));
+  }
+
+  private static List<app.bpartners.geojobs.repository.model.Feature> providedFeaturesOf(
+      CreateDetection createDetection) {
+    var geoJsonZone = createDetection.getGeoJsonZone();
+    return geoJsonZone == null
+        ? List.of()
+        : geoJsonZone.stream()
+            .filter(feature -> feature.getGeometry() != null)
+            .map(FeatureMapper::toDomainFeature)
+            .toList();
   }
 }

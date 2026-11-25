@@ -17,8 +17,8 @@ import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.ParcelDetectionTask;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import app.bpartners.geojobs.service.detection.TileObjectDetector;
-import app.bpartners.geojobs.service.detection.TileObjectDetectorConf;
 import java.io.File;
 import java.time.Instant;
 import java.util.List;
@@ -42,11 +42,11 @@ class ObjectsDetectorIT extends FacadeIT {
           + "image-to-detect.jpg";
   @MockBean CustomBucketComponent bucketComponent;
   @Autowired TileObjectDetector objectsDetector;
-  @MockBean TileObjectDetectorConf tileObjectDetectorConfMock;
+  @MockBean ModelVersionConf modelVersionConfMock;
 
   @BeforeEach
   void setUp() {
-    when(tileObjectDetectorConfMock.getTileDetectionApiUrls()).thenReturn("[]");
+    when(modelVersionConfMock.getTileDetectorUrls(any(), any())).thenReturn(List.of());
   }
 
   @Test
@@ -55,7 +55,8 @@ class ObjectsDetectorIT extends FacadeIT {
         objectsDetector.apply(
             detectionTask(),
             null,
-            List.of(DetectableObjectConfiguration.builder().objectType(PASSAGE_PIETON).build()));
+            List.of(DetectableObjectConfiguration.builder().objectType(PASSAGE_PIETON).build()),
+            List.of());
 
     assertNotNull(actual);
     assertNotNull(actual.getImages());
@@ -72,7 +73,8 @@ class ObjectsDetectorIT extends FacadeIT {
                 null,
                 List.of(
                     DetectableObjectConfiguration.builder().objectType(TOITURE_REVETEMENT).build(),
-                    DetectableObjectConfiguration.builder().objectType(PASSAGE_PIETON).build())));
+                    DetectableObjectConfiguration.builder().objectType(PASSAGE_PIETON).build()),
+                List.of()));
   }
 
   public TileDetectionTask detectionTask() {

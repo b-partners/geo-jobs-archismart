@@ -6,6 +6,7 @@ import app.bpartners.geojobs.endpoint.rest.model.Prospect;
 import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.mail.Email;
 import app.bpartners.geojobs.mail.Mailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import jakarta.mail.internet.InternetAddress;
 import java.io.File;
@@ -26,12 +27,14 @@ public class RoofAnalysisMailer implements BiConsumer<Prospect, File> {
   private final HTMLTemplateParser htmlTemplateParser;
   private final Mailer mailer;
   private final AuthProvider authProvider;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   @SneakyThrows
   @Override
   public void accept(Prospect prospect, File detectionResultPdf) {
-    var communityEmailAddress = authProvider.getAuthenticatedCommunity().getEmail();
-    var cc = new InternetAddress("tech@birdia.fr");
+    var community = authProvider.getAuthenticatedCommunity();
+    var communityEmailAddress = emailRecipientResolver.resolve(community, community.getEmail());
+    var cc = emailRecipientResolver.adminCopyUnless(communityEmailAddress);
     var emailBody = computeEmailHtmlBody(prospect);
     var emailSubject =
         String.format(
@@ -42,7 +45,7 @@ public class RoofAnalysisMailer implements BiConsumer<Prospect, File> {
     mailer.accept(
         new Email(
             new InternetAddress(communityEmailAddress),
-            List.of(cc),
+            cc,
             List.of(),
             emailSubject,
             emailBody,

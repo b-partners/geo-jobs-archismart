@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class DetectionFinishedMailer implements TriConsumer<String, String, String> {
-  public static final String ADMIN_EMAIL = "tech@birdia.fr";
   private final Mailer mailer;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   @Override
   @SneakyThrows
@@ -21,7 +21,7 @@ public class DetectionFinishedMailer implements TriConsumer<String, String, Stri
     mailer.accept(
         new Email(
             new InternetAddress(emailReceiver),
-            List.of(new InternetAddress(ADMIN_EMAIL)),
+            emailRecipientResolver.adminCopyUnless(emailReceiver),
             List.of(),
             subject,
             body,

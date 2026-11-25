@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.tiling;
 import app.bpartners.geojobs.mail.Email;
 import app.bpartners.geojobs.mail.Mailer;
 import app.bpartners.geojobs.repository.model.DuplicatedTilingJob;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import jakarta.mail.internet.InternetAddress;
 import java.util.List;
@@ -20,6 +21,7 @@ public class TilingJobDuplicatedMailer implements Consumer<DuplicatedTilingJob> 
   private final Mailer mailer;
   private static final String TEMPLATE_NAME = "tiling_duplicated";
   private final HTMLTemplateParser htmlTemplateParser;
+  private final EmailRecipientResolver emailRecipientResolver;
   private final String env = System.getenv("ENV");
 
   @SneakyThrows
@@ -32,9 +34,12 @@ public class TilingJobDuplicatedMailer implements Consumer<DuplicatedTilingJob> 
     context.setVariable("duplicatedJob", duplicatedJob);
     String emailBody = htmlTemplateParser.apply(TEMPLATE_NAME, context);
 
+    var to =
+        emailRecipientResolver.resolveByJobId(
+            originalJob.getId(), duplicatedJob.getEmailReceiver());
     mailer.accept(
         new Email(
-            new InternetAddress(duplicatedJob.getEmailReceiver()),
+            new InternetAddress(to),
             List.of(),
             List.of(),
             "[geo-jobs/"
@@ -44,6 +49,6 @@ public class TilingJobDuplicatedMailer implements Consumer<DuplicatedTilingJob> 
                 + ") términée",
             emailBody,
             List.of()));
-    log.info("TilingJob duplication finished. Email sent to {}", duplicatedJob.getEmailReceiver());
+    log.info("TilingJob duplication finished. Email sent to {}", to);
   }
 }

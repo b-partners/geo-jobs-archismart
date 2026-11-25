@@ -19,6 +19,7 @@ public class JobFilteredMailer<J extends Job> implements Consumer<FilteredJob<J>
   private final Mailer mailer;
   public static final String TEMPLATE_NAME = "job_filtering";
   private final HTMLTemplateParser htmlTemplateParser;
+  private final EmailRecipientResolver emailRecipientResolver;
   private final String env = System.getenv("ENV");
 
   @SneakyThrows
@@ -33,9 +34,10 @@ public class JobFilteredMailer<J extends Job> implements Consumer<FilteredJob<J>
     context.setVariable("notSucceededJob", notSucceededJob);
     String emailBody = htmlTemplateParser.apply(TEMPLATE_NAME, context);
 
+    var to = emailRecipientResolver.resolveByJobId(initialJobId, succeededJob.getEmailReceiver());
     mailer.accept(
         new Email(
-            new InternetAddress(succeededJob.getEmailReceiver()),
+            new InternetAddress(to),
             List.of(),
             List.of(),
             "[geo-jobs/"

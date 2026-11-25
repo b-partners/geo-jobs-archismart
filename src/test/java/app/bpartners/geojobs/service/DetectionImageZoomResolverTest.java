@@ -5,6 +5,9 @@ import static app.bpartners.geojobs.repository.model.detection.DetectableType.PI
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.TOITURE_REVETEMENT;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.USURE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,11 +29,18 @@ class DetectionImageZoomResolverTest {
   @BeforeEach
   void setUp() {
     when(modelCardResolverMock.tilingZoomOf(TOITURE_REVETEMENT, null)).thenReturn(21);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(TOITURE_REVETEMENT), isNull()))
+        .thenReturn(21);
     when(modelCardResolverMock.tilingZoomOf(USURE, null)).thenReturn(21);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(USURE), isNull())).thenReturn(21);
     when(modelCardResolverMock.tilingZoomOf(ARBRE, null)).thenReturn(20);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(ARBRE), isNull())).thenReturn(20);
     when(modelCardResolverMock.tilingZoomOf(PISCINE, null)).thenReturn(22);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(PISCINE), isNull())).thenReturn(22);
     when(modelCardResolverMock.tilingZoomOf(PISCINE, 20.0)).thenReturn(18);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(PISCINE), eq(20.0))).thenReturn(18);
     when(modelCardResolverMock.tilingZoomOf(ARBRE, 20.0)).thenReturn(20);
+    when(modelCardResolverMock.tilingZoomOf(any(), eq(ARBRE), eq(20.0))).thenReturn(20);
   }
 
   @Test

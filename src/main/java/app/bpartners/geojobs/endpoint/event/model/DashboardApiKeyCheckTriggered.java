@@ -13,7 +13,7 @@ import lombok.*;
 public class DashboardApiKeyCheckTriggered extends PojaEvent {
   private String communityAuthorizationId;
   private String email;
-  private String dashboardApiKey;
+  @ToString.Exclude private String dashboardApiKey;
 
   // position in the ordered list of authorizations to check, the lane then continues with
   // index + LANES. null means a standalone check

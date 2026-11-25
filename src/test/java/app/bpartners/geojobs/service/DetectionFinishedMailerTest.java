@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+import app.bpartners.geojobs.conf.EnvConf;
 import app.bpartners.geojobs.mail.Email;
 import app.bpartners.geojobs.mail.Mailer;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import jakarta.mail.internet.InternetAddress;
 import java.util.List;
 import lombok.SneakyThrows;
@@ -14,7 +16,8 @@ import org.mockito.ArgumentCaptor;
 
 class DetectionFinishedMailerTest {
   Mailer mailerMock = mock(Mailer.class);
-  DetectionFinishedMailer subject = new DetectionFinishedMailer(mailerMock);
+  DetectionFinishedMailer subject =
+      new DetectionFinishedMailer(mailerMock, new PassThroughEmailRecipientResolver());
 
   @SneakyThrows
   @Test
@@ -31,7 +34,7 @@ class DetectionFinishedMailerTest {
     assertEquals(
         new Email(
             new InternetAddress(emailReceiver),
-            List.of(new InternetAddress("tech@birdia.fr")),
+            List.of(new InternetAddress(EnvConf.ADMIN_EMAIL)),
             List.of(),
             emailSubject,
             emailBody,

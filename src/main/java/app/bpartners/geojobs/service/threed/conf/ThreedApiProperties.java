@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ThreedApiProperties {
   private static final int CONNECT_TIMEOUT_MS = 50_000;
-  private static final int READ_TIMEOUT_MS = 300_000;
+  private static final int READ_TIMEOUT_MS = 840_000;
 
   private final String baseUrl;
   private final String apiKey;

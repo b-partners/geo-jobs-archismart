@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.detection.inference;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.repository.model.ArcgisImageZoom;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
@@ -13,11 +14,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 public class ModelCardResolver {
   public static final int DEFAULT_TILING_ZOOM = ArcgisImageZoom.HOUSES_0.getZoomLevel();
   public static final double DEFAULT_SPATIAL_RESOLUTION_IN_CM = 5.0;
@@ -46,9 +49,32 @@ public class ModelCardResolver {
   }
 
   public int tilingZoomOf(DetectableType objectType, Double spatialResolutionInCm) {
-    return mappingOf(mappingsByType(), objectType, spatialResolutionInCm)
+    return tilingZoomOf(List.of(), objectType, spatialResolutionInCm);
+  }
+
+  public int tilingZoomOf(
+      List<DetectableObjectModel> models, DetectableType objectType, Double spatialResolutionInCm) {
+    return mappingOf(mappingsByType(models), objectType, spatialResolutionInCm)
         .map(ModelCardMapping::zoomLevel)
         .orElse(DEFAULT_TILING_ZOOM);
+  }
+
+  public List<ModelCardMapping> mappingsUsedBy(
+      List<DetectableObjectConfiguration> objectConfigurations, Double spatialResolutionInCm) {
+    return mappingsUsedBy(List.of(), objectConfigurations, spatialResolutionInCm);
+  }
+
+  public List<ModelCardMapping> mappingsUsedBy(
+      List<DetectableObjectModel> models,
+      List<DetectableObjectConfiguration> objectConfigurations,
+      Double spatialResolutionInCm) {
+    var mappingsByType = mappingsByType(models);
+    return objectConfigurations.stream()
+        .map(
+            configuration ->
+                mappingOf(mappingsByType, configuration.getObjectType(), spatialResolutionInCm))
+        .flatMap(Optional::stream)
+        .toList();
   }
 
   public Set<Double> supportedSpatialResolutionsInCm(
@@ -58,7 +84,12 @@ public class ModelCardResolver {
   }
 
   public Set<Double> supportedSpatialResolutionsInCmOfTypes(Collection<DetectableType> types) {
-    var mappingsByType = mappingsByType();
+    return supportedSpatialResolutionsInCmOfTypes(List.of(), types);
+  }
+
+  public Set<Double> supportedSpatialResolutionsInCmOfTypes(
+      List<DetectableObjectModel> models, Collection<DetectableType> types) {
+    var mappingsByType = mappingsByType(models);
     Set<Double> supported = null;
     for (var type : types) {
       var typeResolutions = resolutionsOf(mappingsByType, type);
@@ -73,7 +104,14 @@ public class ModelCardResolver {
 
   public List<Integer> tilingZoomLevels(
       List<DetectableObjectConfiguration> objectConfigurations, Double spatialResolutionInCm) {
-    var mappingsByType = mappingsByType();
+    return tilingZoomLevels(List.of(), objectConfigurations, spatialResolutionInCm);
+  }
+
+  public List<Integer> tilingZoomLevels(
+      List<DetectableObjectModel> models,
+      List<DetectableObjectConfiguration> objectConfigurations,
+      Double spatialResolutionInCm) {
+    var mappingsByType = mappingsByType(models);
     var zoomLevels =
         objectConfigurations.stream()
             .map(
@@ -92,7 +130,16 @@ public class ModelCardResolver {
       Double spatialResolutionInCm,
       int tileZoom,
       Predicate<DeployedModelCard> compatible) {
-    var mappingsByType = mappingsByType();
+    return resolve(List.of(), objectConfigurations, spatialResolutionInCm, tileZoom, compatible);
+  }
+
+  public Resolution resolve(
+      List<DetectableObjectModel> models,
+      List<DetectableObjectConfiguration> objectConfigurations,
+      Double spatialResolutionInCm,
+      int tileZoom,
+      Predicate<DeployedModelCard> compatible) {
+    var mappingsByType = mappingsByType(models);
     var modelCardsById = new LinkedHashMap<String, DeployedModelCard>();
     var usableModelCardsById = new LinkedHashMap<String, ResolvedModelCard>();
     var unmappedTypes = new LinkedHashSet<DetectableType>();
@@ -113,9 +160,18 @@ public class ModelCardResolver {
       var modelCard =
           modelCardsById.computeIfAbsent(mapping.modelCardId(), id -> findRunnable(objectType, id));
       if (compatible.test(modelCard)) {
+        if (mapping.isInferenceSpatialResolutionForced()
+            && !usableModelCardsById.containsKey(mapping.modelCardId())) {
+          log.warn(
+              "Model card {} is run on {} cm imagery but declared as {} cm to the inference API",
+              mapping.modelCardId(),
+              mapping.spatialResolution(),
+              mapping.inferenceSpatialResolution());
+        }
         usableModelCardsById.putIfAbsent(
             mapping.modelCardId(),
-            new ResolvedModelCard(modelCard, mapping.zoomLevel(), mapping.spatialResolution()));
+            new ResolvedModelCard(
+                modelCard, mapping.zoomLevel(), mapping.spatialResolutionSentToInference()));
       } else {
         unsupportedTypes.add(objectType);
       }
@@ -126,12 +182,13 @@ public class ModelCardResolver {
         Set.copyOf(unsupportedTypes));
   }
 
-  private Map<DetectableType, List<ModelCardMapping>> mappingsByType() {
+  private Map<DetectableType, List<ModelCardMapping>> mappingsByType(
+      List<DetectableObjectModel> models) {
     var mappingsByType = new LinkedHashMap<DetectableType, List<ModelCardMapping>>();
     if (!inferenceApiEnabled) {
       return mappingsByType;
     }
-    conf.getMappings()
+    (models == null || models.isEmpty() ? conf.getMappings() : conf.getMappings(models))
         .forEach(
             mapping ->
                 mappingsByType

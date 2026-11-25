@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.service.detection;
 
+import static app.bpartners.geojobs.repository.model.detection.DetectableType.OBSTACLE;
 import static app.bpartners.geojobs.repository.model.detection.DetectableType.TOITURE_REVETEMENT;
 import static app.bpartners.geojobs.repository.model.detection.RoofCoveringType.ROOF_ARDOISE;
 import static app.bpartners.geojobs.repository.model.detection.RoofCoveringType.ROOF_TUILES;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.*;
 import app.bpartners.geojobs.endpoint.rest.model.TileCoordinates;
 import app.bpartners.geojobs.file.bucket.BucketConf;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
+import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.RoofCoveringType;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.inference.DeployedModelCard;
@@ -83,7 +85,7 @@ class RoofCoveringDetectorTest {
             any(String.class), any(), eq(RoofCoveringDetector.RoofCoveringDetectionResponse.class)))
         .thenReturn(new ResponseEntity<>(expected, HttpStatus.OK));
 
-    var actual = subject.apply(tileMock, maskFile, null);
+    var actual = subject.apply(tileMock, maskFile, null, List.of());
 
     var requestCaptor = ArgumentCaptor.forClass(HttpEntity.class);
     verify(restTemplateMock)
@@ -111,7 +113,7 @@ class RoofCoveringDetectorTest {
     mockInference(imageFile);
     when(inferenceApiClientMock.infer(any(InferenceRequest.class))).thenReturn(inferenceResponse());
 
-    var actual = subject.apply(tileAtZoom(21), maskFile, 5.0);
+    var actual = subject.apply(tileAtZoom(21), maskFile, 5.0, List.of());
 
     var requestCaptor = ArgumentCaptor.forClass(InferenceRequest.class);
     verify(inferenceApiClientMock).infer(requestCaptor.capture());
@@ -130,11 +132,57 @@ class RoofCoveringDetectorTest {
 
   @SneakyThrows
   @Test
+  void derive_the_covering_from_the_detection_response_without_calling_the_inference_api() {
+    mockInference(tileImageFile());
+    var detectionResponse =
+        detectionResponseWith(
+            Map.of(
+                "r1", regionFrom("inference:bp-toiture-revetements-v2.0", "roof_tuiles", 0, 100),
+                "r2", regionFrom("inference:bp-toiture-revetements-v2.0", "roof_ardoise", 0, 10),
+                "r3", regionFrom("inference:damages-ignore-index-c4", "roof_zinc", 0, 500)));
+
+    var actual =
+        subject.apply(
+            tileAtZoom(21),
+            tileMaskFile(),
+            5.0,
+            List.of(),
+            List.of(DetectableObjectConfiguration.builder().objectType(TOITURE_REVETEMENT).build()),
+            detectionResponse);
+
+    verifyNoInteractions(inferenceApiClientMock, restTemplateMock);
+    assertEquals(
+        new RoofCoveringDetector.RoofCoveringDetectionResponse(
+            new RoofCovering(ROOF_TUILES, 10000L), new RoofCovering(ROOF_ARDOISE, 100L)),
+        actual);
+  }
+
+  @SneakyThrows
+  @Test
+  void call_the_inference_api_when_the_roof_type_was_not_detected_by_the_detector() {
+    mockInference(tileImageFile());
+    when(inferenceApiClientMock.infer(any(InferenceRequest.class))).thenReturn(inferenceResponse());
+
+    var actual =
+        subject.apply(
+            tileAtZoom(21),
+            tileMaskFile(),
+            5.0,
+            List.of(),
+            List.of(DetectableObjectConfiguration.builder().objectType(OBSTACLE).build()),
+            detectionResponseWith(Map.of()));
+
+    verify(inferenceApiClientMock).infer(any(InferenceRequest.class));
+    assertNotNull(actual);
+  }
+
+  @SneakyThrows
+  @Test
   void invoke_the_20cm_model_card_when_the_image_precision_is_20cm() {
     mockInference(tileImageFile());
     when(inferenceApiClientMock.infer(any(InferenceRequest.class))).thenReturn(inferenceResponse());
 
-    subject.apply(tileAtZoom(19), tileMaskFile(), 20.0);
+    subject.apply(tileAtZoom(19), tileMaskFile(), 20.0, List.of());
 
     var requestCaptor = ArgumentCaptor.forClass(InferenceRequest.class);
     verify(inferenceApiClientMock).infer(requestCaptor.capture());
@@ -151,7 +199,7 @@ class RoofCoveringDetectorTest {
     when(inferenceApiClientMock.infer(any(InferenceRequest.class)))
         .thenThrow(new IllegalStateException("inference failure"));
 
-    assertNull(subject.apply(tileAtZoom(21), tileMaskFile(), 5.0));
+    assertNull(subject.apply(tileAtZoom(21), tileMaskFile(), 5.0, List.of()));
     verifyNoInteractions(restTemplateMock);
   }
 
@@ -164,7 +212,7 @@ class RoofCoveringDetectorTest {
             inferenceResponse(
                 Map.of("0", region("background", 0, 50), "1", region("roof_x", 0, 5))));
 
-    assertNull(subject.apply(tileAtZoom(21), tileMaskFile(), 5.0));
+    assertNull(subject.apply(tileAtZoom(21), tileMaskFile(), 5.0, List.of()));
   }
 
   @SneakyThrows
@@ -187,7 +235,7 @@ class RoofCoveringDetectorTest {
     when(inferenceApiClientMock.infer(any(InferenceRequest.class)))
         .thenReturn(inferenceResponse(Map.of("0", region(modelClass, 0, 10))));
 
-    var actual = subject.apply(tileAtZoom(21), tileMaskFile(), 5.0);
+    var actual = subject.apply(tileAtZoom(21), tileMaskFile(), 5.0, List.of());
 
     assertNotNull(actual);
     assertEquals(RoofCoveringType.valueOf(modelClass.toUpperCase()), actual.primary().coating());
@@ -211,7 +259,7 @@ class RoofCoveringDetectorTest {
     when(inferenceApiClientMock.infer(any(InferenceRequest.class)))
         .thenReturn(inferenceResponse(Map.of("0", region(modelClass, 0, 10))));
 
-    var actual = subject.apply(tileAtZoom(19), tileMaskFile(), 20.0);
+    var actual = subject.apply(tileAtZoom(19), tileMaskFile(), 20.0, List.of());
 
     assertNotNull(actual);
     assertEquals(expected, actual.primary().coating());
@@ -230,7 +278,7 @@ class RoofCoveringDetectorTest {
             any(String.class), any(), eq(RoofCoveringDetector.RoofCoveringDetectionResponse.class)))
         .thenReturn(new ResponseEntity<>(getRoofCoveringDetectionBody(), HttpStatus.OK));
 
-    var actual = subject.apply(tileAtZoom(21), tileMaskFile(), 10.0);
+    var actual = subject.apply(tileAtZoom(21), tileMaskFile(), 10.0, List.of());
 
     verifyNoInteractions(inferenceApiClientMock);
     assertEquals(getRoofCoveringDetectionBody(), actual);
@@ -294,6 +342,19 @@ class RoofCoveringDetectorTest {
     return DetectionResponseV2.builder()
         .images(
             Map.of("tile.jpg", DetectionResponseV2.ImageData.builder().regions(regions).build()))
+        .build();
+  }
+
+  private static DetectionResponseV2 detectionResponseWith(
+      Map<String, DetectionResponseV2.ImageData.Region> regions) {
+    return inferenceResponse(regions);
+  }
+
+  private static DetectionResponseV2.ImageData.Region regionFrom(
+      String sourceUrl, String label, int min, int max) {
+    return DetectionResponseV2.ImageData.Region.builder()
+        .regionAttributes(Map.of("label", label, "source_url", sourceUrl))
+        .shapeAttributes(region(label, min, max).getShapeAttributes())
         .build();
   }
 

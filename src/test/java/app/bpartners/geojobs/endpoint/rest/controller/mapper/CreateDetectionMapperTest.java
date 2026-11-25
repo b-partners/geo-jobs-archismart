@@ -27,7 +27,9 @@ class CreateDetectionMapperTest {
             .geoJsonOutput(GeoJsonOutput.GEO_JSON)
             .needsImageOutput(true)
             .geoJsonDelimitationType(DelimitationType.ROOF)
-            .toNotify(true);
+            .toNotify(true)
+            .projectKey("session-1")
+            .externalReference("crm-42");
 
     var actual = subject.fromDebugMode(debugMode);
 
@@ -38,7 +40,9 @@ class CreateDetectionMapperTest {
             .geoJsonOutput(GeoJsonOutput.GEO_JSON)
             .needsImageOutput(true)
             .geoJsonDelimitationType(DelimitationType.ROOF)
-            .toNotify(true),
+            .toNotify(true)
+            .projectKey("session-1")
+            .externalReference("crm-42"),
         actual);
   }
 }

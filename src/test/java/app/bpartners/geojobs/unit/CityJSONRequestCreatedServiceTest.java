@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.model.lidar.LidarProcessorType.SAFE_MODE;
 import static app.bpartners.geojobs.model.lidar.LidarProcessorType.THREE_D_BAG_ROOFER;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FAILED;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.FINISHED;
+import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.PROCESSING;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStatus.UNAVAILABLE;
 import static app.bpartners.geojobs.repository.model.cityjson.CityJSONRequestStep.GEOMETRY_CONSTRUCTION;
 import static java.util.UUID.randomUUID;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.*;
 
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
+import app.bpartners.geojobs.endpoint.event.model.ThreeDRequestMonitoringTriggered;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSON;
@@ -213,9 +215,39 @@ class CityJSONRequestCreatedServiceTest {
                 "No lidar data found",
                 "Threed API error (HTTP 422) : No lidar data found"));
 
-    var builder = runWithRequest(subject, request, UNAVAILABLE, GEOMETRY_CONSTRUCTION, true);
+    var builder = runWithRequest(subject, request, UNAVAILABLE, GEOMETRY_CONSTRUCTION, false);
 
     verify(builder).message("Threed API error (HTTP 422) : No lidar data found");
+  }
+
+  @Test
+  void monitoring_is_triggered_on_the_first_delivery() {
+    var request = mock(CityJSONRequest.class);
+    when(request.getStatus()).thenReturn(PROCESSING);
+    when(request.getLidarProcessorType()).thenReturn(DEFAULT);
+    when(cityJSONThreedProcessorMock.applyWithDiagnostics(request))
+        .thenReturn(new ThreedGenerationResult(List.of(mock(CityJSON.class)), null, null));
+
+    runWithRequest(subject, request, FINISHED, GEOMETRY_CONSTRUCTION, false);
+
+    verify(eventProducerMock)
+        .accept(
+            argThat((List<?> events) -> events.get(0) instanceof ThreeDRequestMonitoringTriggered));
+  }
+
+  @Test
+  void monitoring_is_not_triggered_again_when_the_event_is_redelivered() {
+    var request = mock(CityJSONRequest.class);
+    when(request.getStatus()).thenReturn(FAILED);
+    when(request.getLidarProcessorType()).thenReturn(DEFAULT);
+    when(cityJSONThreedProcessorMock.applyWithDiagnostics(request))
+        .thenThrow(new RuntimeException("boom"));
+
+    runWithRequest(subject, request, FAILED, GEOMETRY_CONSTRUCTION, true);
+
+    verify(eventProducerMock, never())
+        .accept(
+            argThat((List<?> events) -> events.get(0) instanceof ThreeDRequestMonitoringTriggered));
   }
 
   @Test

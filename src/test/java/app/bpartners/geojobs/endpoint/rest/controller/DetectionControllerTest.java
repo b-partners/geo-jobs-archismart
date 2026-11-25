@@ -25,6 +25,7 @@ import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CommunityUsedSurfaceService;
+import app.bpartners.geojobs.service.DetectionCreditGuard;
 import app.bpartners.geojobs.service.DetectionExportService;
 import app.bpartners.geojobs.service.DetectionService;
 import app.bpartners.geojobs.validator.ConfigureAddressValidator;
@@ -50,6 +51,7 @@ class DetectionControllerTest {
   ConfigureAddressValidator configureAddressValidatorMock = mock();
   DetectionAuthorizer detectionAuthorizerMock = mock();
   CreateDetectionValidator createDetectionValidatorMock = mock(CreateDetectionValidator.class);
+  DetectionCreditGuard detectionCreditGuardMock = mock();
   DetectionService detectionServiceMock = mock();
   DetectionFileObjectMapper detectionFileObjectMapperMock = mock();
   CreateDetectionMapper createDetectionMapperMock = mock();
@@ -68,6 +70,7 @@ class DetectionControllerTest {
           mediaTypeGuesserMock,
           configureAddressValidatorMock,
           createDetectionValidatorMock,
+          detectionCreditGuardMock,
           detectionServiceMock,
           detectionFileObjectMapperMock,
           createDetectionMapperMock,

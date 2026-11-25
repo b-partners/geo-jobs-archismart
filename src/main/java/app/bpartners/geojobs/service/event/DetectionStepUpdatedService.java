@@ -6,6 +6,7 @@ import app.bpartners.geojobs.endpoint.event.model.DetectionStepUpdated;
 import app.bpartners.geojobs.mail.Email;
 import app.bpartners.geojobs.mail.Mailer;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
@@ -22,7 +23,7 @@ import org.thymeleaf.context.Context;
 @AllArgsConstructor
 public class DetectionStepUpdatedService implements Consumer<DetectionStepUpdated> {
   public final Mailer mailer;
-  private static final String ADMIN_EMAIL = "tech@birdia.fr";
+  private final EmailRecipientResolver emailRecipientResolver;
   private static final String DETECTION_STEP_UPDATED = "detection_step_updated";
 
   @Override
@@ -40,11 +41,12 @@ public class DetectionStepUpdatedService implements Consumer<DetectionStepUpdate
                 .format(now().atZone(ZoneId.of("Europe/Paris"))));
     String htmlBody = computeStaticDetectionStepUpdateEmailBody(detection);
     List<File> attachments = List.of();
+    var to = emailRecipientResolver.resolve(detection, detection.getEmailReceiver());
     try {
       mailer.accept(
           new Email(
-              new InternetAddress(detection.getEmailReceiver()),
-              List.of(new InternetAddress(ADMIN_EMAIL)),
+              new InternetAddress(to),
+              emailRecipientResolver.adminCopyUnless(to),
               bcc,
               subject,
               htmlBody,

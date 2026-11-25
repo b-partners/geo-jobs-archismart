@@ -14,6 +14,7 @@ import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.service.CityJSONRequestService;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
 import app.bpartners.geojobs.service.RoofIntersectionsService;
+import app.bpartners.geojobs.service.ThreeDCreditGuard;
 import app.bpartners.geojobs.validator.CreateCityJSONRequestValidator;
 import app.bpartners.geojobs.validator.CreateRoofIntersectionsValidator;
 import app.bpartners.geojobs.validator.ThreeDAddressesRequestValidator;
@@ -33,6 +34,7 @@ public class CityJSONController {
   private final FeatureAddressConverter featureAddressConverter;
   private final CreateRoofIntersectionsValidator createRoofIntersectionsValidator;
   private final RoofIntersectionsService roofIntersectionsService;
+  private final ThreeDCreditGuard threeDCreditGuard;
 
   @GetMapping("/3d/{id}")
   public ThreeDResponseStatus getRequested3DFileById(@PathVariable(name = "id") String requestId) {
@@ -52,6 +54,7 @@ public class CityJSONController {
 
     var toProcess =
         cityJSONRequestMapper.createToDomain(requestIdentifier, threeDRequest, communityOwnerId);
+    threeDCreditGuard.accept(toProcess);
 
     return cityJSONRequestMapper.toRestThreeDResponseStatus(
         cityJSONRequestService.process(toProcess));
@@ -67,6 +70,7 @@ public class CityJSONController {
 
     var toProcess =
         cityJSONRequestMapper.createToDomain(requestIdentifier, threeDRequest, communityOwnerId);
+    threeDCreditGuard.accept(toProcess);
 
     return cityJSONRequestMapper.toRestThreeDResponseStatus(
         cityJSONRequestService.processSync(toProcess));
@@ -90,6 +94,7 @@ public class CityJSONController {
       var request = new ThreeDRequest().delimitations(convertedAddressesToDelimitations);
       var toProcess =
           cityJSONRequestMapper.createToDomain(requestIdentifier, request, communityOwnerId);
+      threeDCreditGuard.accept(toProcess);
       return cityJSONRequestMapper.toRestThreeDResponseStatus(
           cityJSONRequestService.process(toProcess));
     }

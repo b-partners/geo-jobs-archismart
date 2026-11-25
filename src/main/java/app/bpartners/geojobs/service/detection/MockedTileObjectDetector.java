@@ -3,6 +3,7 @@ package app.bpartners.geojobs.service.detection;
 import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_CONFIDENCE_PROPERTY;
 import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION_LABEL_PROPERTY;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.repository.model.TileDetectionTask;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
@@ -21,7 +22,8 @@ public class MockedTileObjectDetector implements TileObjectDetector {
   public DetectionResponseV2 apply(
       TileDetectionTask tileDetectionTask,
       File mask,
-      List<DetectableObjectConfiguration> detectableObjectConfigurations) {
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      List<DetectableObjectModel> detectableObjectModels) {
     double randomConfidence = new SecureRandom().nextDouble();
     var detectableTypes =
         detectableObjectConfigurations.stream()

@@ -89,6 +89,13 @@ public class InternalToRestExceptionHandler {
         toRest(e, HttpStatus.TOO_MANY_REQUESTS), HttpStatus.TOO_MANY_REQUESTS);
   }
 
+  @ExceptionHandler(value = {PaymentRequiredException.class})
+  ResponseEntity<RestException> handlePaymentRequired(PaymentRequiredException e) {
+    log.info("Payment required", e);
+    return new ResponseEntity<>(
+        toRest(e, HttpStatus.PAYMENT_REQUIRED), HttpStatus.PAYMENT_REQUIRED);
+  }
+
   @ExceptionHandler(value = {ForbiddenException.class})
   ResponseEntity<RestException> handleDefault(ForbiddenException e) {
     log.error("Authentication error", e);

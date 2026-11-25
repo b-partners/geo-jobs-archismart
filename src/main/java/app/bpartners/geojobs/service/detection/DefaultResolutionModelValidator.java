@@ -10,13 +10,24 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DefaultResolutionModelValidator {
   private static final Set<ModelName> MODELS_REQUIRING_DEFAULT_RESOLUTION = Set.of(TOITURE);
 
+  private final boolean toiture20CmEnabled;
+
+  public DefaultResolutionModelValidator(
+      @Value("${detection.toiture.20cm.enabled}") boolean toiture20CmEnabled) {
+    this.toiture20CmEnabled = toiture20CmEnabled;
+  }
+
   public void accept(List<ModelName> modelNames, Integer precisionLevelInCm, String layer) {
+    if (toiture20CmEnabled) {
+      return;
+    }
     if (precisionLevelInCm != null
         && precisionLevelInCm.doubleValue() == ModelCardResolver.DEFAULT_SPATIAL_RESOLUTION_IN_CM) {
       return;

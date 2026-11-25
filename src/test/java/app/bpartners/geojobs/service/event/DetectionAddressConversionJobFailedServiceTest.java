@@ -16,6 +16,7 @@ import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.DetectionAddressConversionTaskToCsvConverter;
 import app.bpartners.geojobs.service.ExcelAddressWriter;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import jakarta.mail.internet.InternetAddress;
 import java.io.File;
 import java.util.List;
@@ -43,7 +44,8 @@ class DetectionAddressConversionJobFailedServiceTest {
           detectionRepositoryMock,
           ADMIN_EMAIL,
           taskToCsvConverterMock,
-          excelAddressWriterMock);
+          excelAddressWriterMock,
+          new PassThroughEmailRecipientResolver());
 
   @SneakyThrows
   @Test

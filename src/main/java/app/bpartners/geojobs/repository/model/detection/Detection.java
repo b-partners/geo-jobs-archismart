@@ -172,6 +172,37 @@ public class Detection implements Serializable {
   @Column(name = "dashboard_registration_datetime")
   private Instant dashboardRegistrationDatetime;
 
+  @Column(name = "project_key")
+  private String projectKey;
+
+  @Column(name = "external_reference")
+  private String externalReference;
+
+  @Column(name = "zone_hash")
+  private String zoneHash;
+
+  @Column(name = "inference_signature")
+  private String inferenceSignature;
+
+  @Column(name = "zone_min_lon")
+  private Double zoneMinLon;
+
+  @Column(name = "zone_min_lat")
+  private Double zoneMinLat;
+
+  @Column(name = "zone_max_lon")
+  private Double zoneMaxLon;
+
+  @Column(name = "zone_max_lat")
+  private Double zoneMaxLat;
+
+  @Column(name = "source_detection_id")
+  private String sourceDetectionId;
+
+  public boolean isReusedFromAnotherDetection() {
+    return sourceDetectionId != null;
+  }
+
   public boolean isDashboardRegistrationCompleted() {
     return dashboardRegistrationDatetime != null;
   }
@@ -231,6 +262,13 @@ public class Detection implements Serializable {
     }
     if (detectableObjectModel != null) return detectableObjectModel;
     return null;
+  }
+
+  public List<DetectableObjectModel> getDetectableObjectModels() {
+    if (detectableObjectModelList != null && !detectableObjectModelList.isEmpty()) {
+      return detectableObjectModelList;
+    }
+    return detectableObjectModel != null ? List.of(detectableObjectModel) : List.of();
   }
 
   @PrePersist

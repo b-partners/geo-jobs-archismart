@@ -11,6 +11,11 @@ import lombok.*;
 @ToString
 public class DetectionTrackingRegistrationRequested extends PojaEvent {
   private String detectionIdentifier;
+  private String failureId;
+
+  public DetectionTrackingRegistrationRequested(String detectionIdentifier) {
+    this(detectionIdentifier, null);
+  }
 
   @Override
   public Duration maxConsumerDuration() {

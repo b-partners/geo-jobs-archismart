@@ -5,6 +5,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -18,6 +19,7 @@ public class ZoneTilingJobFailedService implements Consumer<ZoneTilingJobFailed>
   private static final String ZONE_TILING_JOB_FAILED_TEMPLATE = "zone_tiling_job_failed_template";
   private final DetectionFinishedMailer mailer;
   private final DetectionRepository detectionRepository;
+  private final EmailRecipientResolver emailRecipientResolver;
   private final HTMLTemplateParser htmlTemplateParser;
 
   @Override
@@ -37,7 +39,7 @@ public class ZoneTilingJobFailedService implements Consumer<ZoneTilingJobFailed>
           .append(")");
     }
     mailer.accept(
-        failedJob.getEmailReceiver(),
+        emailRecipientResolver.resolve(optionalDetection, failedJob.getEmailReceiver()),
         subjectBuilder.toString(),
         getBody(optionalDetection, failedJob));
   }

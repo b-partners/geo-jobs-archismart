@@ -32,7 +32,9 @@ public class DetectionTilingCreation
     var imageZooms =
         modelCardResolver
             .tilingZoomLevels(
-                detection.getDetectableObjectConfigurations(), detection.spatialResolutionInCm())
+                detection.getDetectableObjectModels(),
+                detection.getDetectableObjectConfigurations(),
+                detection.spatialResolutionInCm())
             .stream()
             .map(ArcgisImageZoom::fromZoomLevel)
             .toList();

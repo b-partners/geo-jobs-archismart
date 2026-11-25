@@ -14,6 +14,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.geojson.GeoJsonConversionJobService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
@@ -43,6 +44,7 @@ public class ZoneDetectionJobSucceededService implements Consumer<ZoneDetectionJ
   private final DetectionFinishedMailer detectionFinishedMailer;
   private final HTMLTemplateParser htmlTemplateParser;
   private final DetectionRepository detectionRepository;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   @Override
   @Transactional
@@ -81,7 +83,9 @@ public class ZoneDetectionJobSucceededService implements Consumer<ZoneDetectionJ
           detectionWithoutResultBody(
               detection, succeededZoneDetectionJob, detectableObjectConfigurations);
       detectionFinishedMailer.accept(
-          succeededZoneDetectionJob.getEmailReceiver(), emailSubject, emailBody);
+          emailRecipientResolver.resolve(detection, succeededZoneDetectionJob.getEmailReceiver()),
+          emailSubject,
+          emailBody);
       return;
     }
 

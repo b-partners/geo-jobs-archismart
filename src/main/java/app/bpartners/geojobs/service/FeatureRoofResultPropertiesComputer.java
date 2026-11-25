@@ -42,7 +42,8 @@ public class FeatureRoofResultPropertiesComputer {
       Geometry geometryUsedForAreaComputing,
       Geometry roofGeometryUsedForRateComputing,
       Collection<PolygonObjectType> detectedObjectPolygonGeometriesUsedForRateComputing,
-      @Nullable MutationContext mutationContext) {
+      @Nullable MutationContext mutationContext,
+      boolean vegetationRequested) {
 
     var actualProperties = new HashMap<String, Object>();
 
@@ -72,7 +73,7 @@ public class FeatureRoofResultPropertiesComputer {
     var humiditeRate = rateComputer.getHumidityAreaRate();
     var moisissureRate = rateComputer.getMoisissureAreaRate();
     var roofAssessment = computeRoofAssessment(vegetationEvaluator);
-    var vegetationFeu = toVegetationFeu(roofAssessment, vegetationEvaluator.hasVegetationData());
+    var vegetationFeu = toVegetationFeu(roofAssessment, vegetationRequested);
     var globalRateValue = rateComputer.getGlobalRate(vegetationFeu);
     var globalRateType = rateComputer.getRate(vegetationFeu);
 
@@ -81,7 +82,11 @@ public class FeatureRoofResultPropertiesComputer {
     actualProperties.put("moisissure_rate", moisissureRate);
     actualProperties.put("global_rate_value", globalRateValue);
     actualProperties.put("global_rate_type", globalRateType);
-    if (roofAssessment != null) {
+    // Vegetation detection isn't requested for every job (the TOITURE model alone doesn't
+    // request it): without it the assessment is computed from zero vegetation input and is not a
+    // confirmed "no risk". When it was requested, finding nothing near the roof is a measured
+    // absence and the resulting low levels are worth exposing.
+    if (roofAssessment != null && vegetationRequested) {
       actualProperties.put("vegetation_index", roofAssessment.vegetationIndex());
       actualProperties.put("fire_risk", roofAssessment.fireRiskLevel());
       actualProperties.put("maintenance_vegetation", roofAssessment.maintenancePriority());
@@ -147,11 +152,9 @@ public class FeatureRoofResultPropertiesComputer {
 
   @Nullable
   private static Boolean toVegetationFeu(
-      @Nullable RoofAssessmentResult roofAssessment, boolean hasVegetationData) {
-    // Vegetation detection isn't requested for every job (e.g. the TOITURE model alone doesn't
-    // request it), so absence of vegetation data is not proof of "no risk" - only assert a value
-    // when real vegetation was actually detected near the roof, otherwise stay null.
-    if (roofAssessment == null || roofAssessment.fireRiskLevel() == null || !hasVegetationData) {
+      @Nullable RoofAssessmentResult roofAssessment, boolean vegetationRequested) {
+    // Same gate as the exposed properties above: no value unless vegetation was requested.
+    if (roofAssessment == null || roofAssessment.fireRiskLevel() == null || !vegetationRequested) {
       return null;
     }
     return roofAssessment.fireRiskLevel() != FireRiskLevel.NULL;

@@ -55,6 +55,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.tiling.ZoneTilingJob;
 import app.bpartners.geojobs.service.annotator.AnnotationService;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.service.detection.inference.InferenceModelCardConf;
 import app.bpartners.geojobs.service.detection.inference.ModelCardMapping;
@@ -105,6 +106,7 @@ class DetectionControllerIT extends FacadeIT {
   @Autowired FileWriter fileWriter;
   @MockBean CustomBucketComponent customBucketComponent;
   @MockBean InferenceModelCardConf inferenceModelCardConf;
+  @MockBean ModelVersionConf modelVersionConf;
   @MockBean MapLayerResolver mapLayerResolver;
   FeatureCreator featureCreator = new FeatureCreator();
   DetectionCreator detectionCreator = new DetectionCreator(featureCreator);
@@ -118,6 +120,7 @@ class DetectionControllerIT extends FacadeIT {
     when(principalMock.isAdmin()).thenReturn(false);
     when(authProviderMock.getPrincipal()).thenReturn(principalMock);
     doNothing().when(detectionAuthorizer).accept(any(), any(), any());
+    when(modelVersionConf.hasConfiguration(any(), any())).thenReturn(true);
     when(inferenceModelCardConf.getMappings())
         .thenReturn(
             List.of(new ModelCardMapping(DetectableType.TOITURE_REVETEMENT, "toiture", 21, 5.0)));

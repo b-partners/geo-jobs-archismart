@@ -16,6 +16,7 @@ import app.bpartners.geojobs.service.TileImagesAssembler;
 import app.bpartners.geojobs.service.detection.DetectionMaskCreator;
 import app.bpartners.geojobs.service.detection.DetectionPayloadV2;
 import app.bpartners.geojobs.service.detection.DetectionResponseV2;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -54,6 +55,7 @@ public class DetectionPathPrimer implements Resource {
   private final GeometryConverter geometryConverter;
   private final ObjectMapper objectMapper;
   private final RestTemplate restTemplate;
+  private final ModelVersionConf modelVersionConf;
 
   public DetectionPathPrimer(
       DetectionMaskCreator maskCreator,
@@ -61,13 +63,15 @@ public class DetectionPathPrimer implements Resource {
       TileImagesAssembler imagesAssembler,
       GeometryConverter geometryConverter,
       ObjectMapper objectMapper,
-      RestTemplate restTemplate) {
+      RestTemplate restTemplate,
+      ModelVersionConf modelVersionConf) {
     this.maskCreator = maskCreator;
     this.polygonDrawer = polygonDrawer;
     this.imagesAssembler = imagesAssembler;
     this.geometryConverter = geometryConverter;
     this.objectMapper = objectMapper;
     this.restTemplate = restTemplate;
+    this.modelVersionConf = modelVersionConf;
     Core.getGlobalContext().register(this);
   }
 
@@ -93,6 +97,7 @@ public class DetectionPathPrimer implements Resource {
       primeGeometryConversion();
       primeJsonMapping(tileImage);
       primeDetectionApiCall();
+      modelVersionConf.warmUp();
       log.info("Detection path primed in {} ms", Duration.between(start, now()).toMillis());
       return true;
     } catch (Exception | LinkageError e) {

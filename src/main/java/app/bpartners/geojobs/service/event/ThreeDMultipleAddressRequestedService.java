@@ -12,12 +12,14 @@ import app.bpartners.geojobs.endpoint.event.model.CityJSONRequestCreated;
 import app.bpartners.geojobs.endpoint.event.model.ThreeDMultipleAddressRequested;
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.model.exception.ApiException;
+import app.bpartners.geojobs.model.exception.PaymentRequiredException;
 import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
+import app.bpartners.geojobs.service.ThreeDCreditGuard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ public class ThreeDMultipleAddressRequestedService
   private final FeatureAddressConverter featureAddressConverter;
   private final CityJSONRequestRepository cityJSONRequestRepository;
   private final EventProducer eventProducer;
+  private final ThreeDCreditGuard threeDCreditGuard;
 
   @Override
   public void accept(ThreeDMultipleAddressRequested requestEvent) {
@@ -92,12 +95,25 @@ public class ThreeDMultipleAddressRequestedService
           skippedAddresses);
     }
 
+    var requestWithDelimitations =
+        persistedRequest.toBuilder().delimitations(convertedFeatures).build();
+    try {
+      threeDCreditGuard.accept(requestWithDelimitations);
+    } catch (PaymentRequiredException e) {
+      log.warn(
+          "Insufficient credits for CityJSONRequest(id={}) once its addresses are converted",
+          persistedRequest.getId());
+      cityJSONRequestRepository.save(
+          persistedRequest.toBuilder()
+              .step(REQUEST_ACCEPTED)
+              .status(FAILED)
+              .message(e.getMessage())
+              .build());
+      return;
+    }
     var saved =
         cityJSONRequestRepository.save(
-            persistedRequest.toBuilder()
-                .delimitations(convertedFeatures)
-                .step(POINTS_CLOUD_PRE_PROCESSING)
-                .build());
+            requestWithDelimitations.toBuilder().step(POINTS_CLOUD_PRE_PROCESSING).build());
 
     eventProducer.accept(
         List.of(

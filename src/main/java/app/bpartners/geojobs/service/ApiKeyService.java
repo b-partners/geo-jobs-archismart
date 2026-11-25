@@ -3,13 +3,14 @@ package app.bpartners.geojobs.service;
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
 
+import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.security.ApiKey;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorizationApiKey;
 import app.bpartners.geojobs.service.dashboard.UserAccountsApi;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -29,66 +30,66 @@ public class ApiKeyService {
   }
 
   public List<ApiKey> generateApiKeys(List<CommunityAuthorization> authorizations) {
-    for (CommunityAuthorization auth : authorizations) {
-      Optional<CommunityAuthorization> optionalCommunityAuthorization =
-          communityAuthorizationRepository.findByEmail(auth.getEmail());
-      if (optionalCommunityAuthorization.isPresent()) {
-        var communityAuthorization = optionalCommunityAuthorization.get();
-        if (auth.getDashboardApiKey() != null
-            && !auth.getDashboardApiKey().equals(communityAuthorization.getDashboardApiKey())) {
-          communityAuthorization.setDashboardApiKey(auth.getDashboardApiKey());
-          communityAuthorizationRepository.save(communityAuthorization);
-        }
-        return List.of(
-            new ApiKey(
-                communityAuthorization.getMostRecentApiKey().getKeyValue(),
-                communityAuthorization.getMostRecentApiKey().getCreationDatetime()));
-      }
-    }
-
-    var communityAuthorizations = handleExistingCommunities(authorizations);
-
-    communityAuthorizations.stream()
-        .filter(authorization -> authorization.getDashboardApiKey() == null)
-        .forEach(
-            authorization -> {
-              var dashboardUserApiKeyList =
-                  userAccountsApi.getOrGenerateApiKey(
-                      authorization.getEmail(), authorization.getApiKey(), adminApiKey);
-              authorization.setDashboardApiKey(dashboardUserApiKeyList.key());
-            });
-
-    return communityAuthorizationRepository.saveAll(authorizations).stream()
-        .map(
-            communityAuthorization ->
-                new ApiKey(
-                    communityAuthorization.getMostRecentApiKey().getKeyValue(),
-                    communityAuthorization.getMostRecentApiKey().getCreationDatetime()))
-        .toList();
+    return authorizations.stream().map(this::generateApiKey).toList();
   }
 
-  private List<CommunityAuthorization> handleExistingCommunities(
-      List<CommunityAuthorization> authorizations) {
-    return authorizations.stream()
-        .map(
-            newCommunity -> {
-              var optionalCommunityAuthorization =
-                  communityAuthorizationRepository.findByEmail(newCommunity.getEmail());
-              if (optionalCommunityAuthorization.isPresent()) {
-                var existingCommunity = optionalCommunityAuthorization.get();
-                existingCommunity
-                    .getApiKeys()
-                    .add(
-                        CommunityAuthorizationApiKey.builder()
-                            .id(randomUUID().toString())
-                            .keyValue(newCommunity.getApiKey())
-                            .communityOwnerId(existingCommunity.getId())
-                            .creationDatetime(now())
-                            .build());
-                return existingCommunity;
-              }
-              return newCommunity;
-            })
-        .toList();
+  private ApiKey generateApiKey(CommunityAuthorization requested) {
+    var requestedApiKey = requested.getMostRecentApiKey();
+    if (requestedApiKey == null) {
+      throw new BadRequestException("No API key to generate for " + requested.getEmail());
+    }
+    var stored =
+        communityAuthorizationRepository
+            .findByEmail(requested.getEmail())
+            .map(existing -> updateExisting(existing, requested, requestedApiKey))
+            .orElseGet(() -> createNew(requested));
+    var mostRecentApiKey = stored.getMostRecentApiKey();
+    if (mostRecentApiKey == null) {
+      throw new BadRequestException("The requested API key is revoked for " + requested.getEmail());
+    }
+    return new ApiKey(mostRecentApiKey.getKeyValue(), mostRecentApiKey.getCreationDatetime());
+  }
+
+  private CommunityAuthorization updateExisting(
+      CommunityAuthorization existing,
+      CommunityAuthorization requested,
+      CommunityAuthorizationApiKey requestedApiKey) {
+    var changed = false;
+    if (requested.getDashboardApiKey() != null
+        && !requested.getDashboardApiKey().equals(existing.getDashboardApiKey())) {
+      existing.setDashboardApiKey(requested.getDashboardApiKey());
+      changed = true;
+    }
+    if (existing.getMostRecentApiKey() == null) {
+      addRequestedApiKey(existing, requestedApiKey);
+      changed = true;
+    }
+    return changed ? communityAuthorizationRepository.save(existing) : existing;
+  }
+
+  private void addRequestedApiKey(
+      CommunityAuthorization existing, CommunityAuthorizationApiKey requestedApiKey) {
+    if (existing.getApiKeys() == null) {
+      existing.setApiKeys(new ArrayList<>());
+    }
+    existing
+        .getApiKeys()
+        .add(
+            CommunityAuthorizationApiKey.builder()
+                .id(randomUUID().toString())
+                .keyValue(requestedApiKey.getKeyValue())
+                .communityOwnerId(existing.getId())
+                .creationDatetime(now())
+                .build());
+  }
+
+  private CommunityAuthorization createNew(CommunityAuthorization requested) {
+    if (requested.getDashboardApiKey() == null) {
+      var dashboardUserApiKey =
+          userAccountsApi.getOrGenerateApiKey(
+              requested.getEmail(), requested.getApiKey(), adminApiKey);
+      requested.setDashboardApiKey(dashboardUserApiKey.key());
+    }
+    return communityAuthorizationRepository.save(requested);
   }
 }

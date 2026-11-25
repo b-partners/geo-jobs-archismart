@@ -19,6 +19,7 @@ import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfigur
 import app.bpartners.geojobs.repository.model.detection.DetectableType;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.BuildingFinder;
+import app.bpartners.geojobs.service.dashboard.AnalysisProjectKeys;
 import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import app.bpartners.geojobs.service.geodata.MapLayerResolver;
 import app.bpartners.geojobs.service.geodata.model.GeodataMapLayer;
@@ -46,6 +47,11 @@ public class DetectionCreationMapper {
   private static final Set<DetectableType> TYPES_COVERED_BY_OBSTACLE_AT_DEFAULT_RESOLUTION =
       Set.of(DetectableType.LUMINEUX);
 
+  private static final Set<String> TOITURE_TYPE_NAMES =
+      DetectableObjectTypeMapper.detectableObjectTypeForToitureModel().stream()
+          .map(DetectableObjectType::name)
+          .collect(Collectors.toUnmodifiableSet());
+
   private final DetectableObjectTypeMapper detectableObjectTypeMapper;
   private final FeatureTypeChecker featureTypeChecker;
   private final MapLayerResolver mapLayerResolver;
@@ -55,14 +61,30 @@ public class DetectionCreationMapper {
   private final BuildingFinder buildingFinder;
   private final DefaultResolutionModelValidator defaultResolutionModelValidator;
 
+  private final ModelVersionConf modelVersionConf;
+
+  private DetectableObjectModel withVersion(DetectableObjectModel model) {
+    if (model == null || (model.getModelVersion() != null && !model.getModelVersion().isBlank())) {
+      return model;
+    }
+    return new DetectableObjectModel()
+        .modelName(model.getModelName())
+        .modelVersion(modelVersionConf.defaultVersion(model.getModelName()));
+  }
+
   public Detection apply(
       CreateDetection createDetection,
       String detectionE2Id,
       @Nullable String communityOwnerId,
       boolean isSynchronous,
       Boolean debugMode) {
-    var detectableObjectModel = createDetection.getDetectableObjectModel();
-    var detectableObjectModelList = createDetection.getDetectableObjectModelList();
+    var detectableObjectModel = withVersion(createDetection.getDetectableObjectModel());
+    var detectableObjectModelList =
+        createDetection.getDetectableObjectModelList() == null
+            ? null
+            : createDetection.getDetectableObjectModelList().stream()
+                .map(this::withVersion)
+                .toList();
     var detectionId = randomUUID().toString();
     var detectableObjectConfigurations =
         getDetectableObjectConfigurations(detectionId, createDetection);
@@ -111,6 +133,9 @@ public class DetectionCreationMapper {
                     && createDetection.getNeedsImageOutput())
             .geoJsonDelimitationType(createDetection.getGeoJsonDelimitationType())
             .debugMode(debugMode)
+            .projectKey(AnalysisProjectKeys.providedOrNull(createDetection.getProjectKey()))
+            .externalReference(
+                AnalysisProjectKeys.providedOrNull(createDetection.getExternalReference()))
             .build();
     detection.addFeatures(domainProvidedGeoJsonZone, PROVIDED_FEATURE);
     return detection;
@@ -195,7 +220,8 @@ public class DetectionCreationMapper {
       var precisionLevelInCm = mapLayer.precisionLevelInCm();
       defaultResolutionModelValidator.accept(modelNames, precisionLevelInCm, layer);
       var requestedConfigurations =
-          requestedConfigurationsAt(detectableObjectConfigurations, precisionLevelInCm, layer);
+          requestedConfigurationsAt(
+              detectableObjectConfigurations, precisionLevelInCm, layer, modelNames);
 
       // TODO: save other layers to be used in failure case
       return new GeoServerSelection(
@@ -223,7 +249,8 @@ public class DetectionCreationMapper {
         requestedConfigurationsAt(
             detectableObjectConfigurations,
             providedPrecisionLevelInCm,
-            geoServerProperties.getGeoServerParameter().getLayers()));
+            geoServerProperties.getGeoServerParameter().getLayers(),
+            modelNames));
   }
 
   private Integer providedOrDeducedPrecisionLevelInCm(
@@ -254,7 +281,8 @@ public class DetectionCreationMapper {
   private List<DetectableObjectConfiguration> requestedConfigurationsAt(
       List<DetectableObjectConfiguration> detectableObjectConfigurations,
       Integer precisionLevelInCm,
-      String layer) {
+      String layer,
+      List<ModelName> modelNames) {
     var requestedConfigurations =
         precisionLevelInCm != null
                 && precisionLevelInCm.doubleValue()
@@ -265,7 +293,8 @@ public class DetectionCreationMapper {
                         !TYPES_COVERED_BY_OBSTACLE_AT_DEFAULT_RESOLUTION.contains(
                             configuration.getObjectType()))
                 .toList()
-            : detectableObjectConfigurations;
+            : withoutToitureTypesMissingAt(
+                detectableObjectConfigurations, precisionLevelInCm, layer, modelNames);
     var supportedResolutions =
         modelCardResolver.supportedSpatialResolutionsInCm(requestedConfigurations);
     if (precisionLevelInCm == null
@@ -277,6 +306,38 @@ public class DetectionCreationMapper {
               describeRequiredResolution(supportedResolutions), layer, precisionLevelInCm));
     }
     return requestedConfigurations;
+  }
+
+  private List<DetectableObjectConfiguration> withoutToitureTypesMissingAt(
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      Integer precisionLevelInCm,
+      String layer,
+      List<ModelName> modelNames) {
+    if (precisionLevelInCm == null || !modelNames.contains(TOITURE)) {
+      return detectableObjectConfigurations;
+    }
+    var skippedTypes =
+        detectableObjectConfigurations.stream()
+            .map(DetectableObjectConfiguration::getObjectType)
+            .filter(type -> TOITURE_TYPE_NAMES.contains(type.name()))
+            .filter(
+                type ->
+                    !modelCardResolver
+                        .supportedSpatialResolutionsInCmOfTypes(List.of(type))
+                        .contains(precisionLevelInCm.doubleValue()))
+            .toList();
+    if (skippedTypes.isEmpty()) {
+      return detectableObjectConfigurations;
+    }
+    log.warn(
+        "Layer {} has a precision of {} cm, skipping object types without any model at this"
+            + " precision: {}",
+        layer,
+        precisionLevelInCm,
+        skippedTypes);
+    return detectableObjectConfigurations.stream()
+        .filter(configuration -> !skippedTypes.contains(configuration.getObjectType()))
+        .toList();
   }
 
   private record GeoServerSelection(

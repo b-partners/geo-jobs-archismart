@@ -7,6 +7,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.service.StatusChangedHandler;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import java.util.List;
@@ -28,6 +29,7 @@ public class GeoJsonConversionJobStatusChangedService
   private final DetectionRepository detectionRepository;
   private final DetectionFinishedMailer mailer;
   private final HTMLTemplateParser htmlTemplateParser;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   @Override
   public void accept(GeoJsonConversionJobStatusChanged event) {
@@ -36,7 +38,8 @@ public class GeoJsonConversionJobStatusChangedService
 
     var onSucceededHandler = new OnSucceededHandler(newJob, eventProducer);
     var onFailedHandler =
-        new OnFailedHandler(mailer, detectionRepository, newJob, htmlTemplateParser);
+        new OnFailedHandler(
+            mailer, detectionRepository, newJob, htmlTemplateParser, emailRecipientResolver);
 
     statusChangedHandler.handle(
         event, newJob.getStatus(), oldJob.getStatus(), onSucceededHandler, onFailedHandler);
@@ -60,7 +63,8 @@ public class GeoJsonConversionJobStatusChangedService
       DetectionFinishedMailer mailer,
       DetectionRepository detectionRepository,
       GeoJsonConversionJob failedJob,
-      HTMLTemplateParser htmlTemplateParser)
+      HTMLTemplateParser htmlTemplateParser,
+      EmailRecipientResolver emailRecipientResolver)
       implements Runnable {
 
     @Override
@@ -69,7 +73,9 @@ public class GeoJsonConversionJobStatusChangedService
       var detection = detectionRepository.findByZdjId(zoneDetectionJobId).orElse(null);
       var emailSubject = getEmailSubject(detection);
       var emailReceiver =
-          detection == null ? failedJob.getEmailReceiver() : detection.getEmailReceiver();
+          emailRecipientResolver.resolve(
+              detection,
+              detection == null ? failedJob.getEmailReceiver() : detection.getEmailReceiver());
       var emailBody = getEmailBody(detection);
 
       mailer.accept(emailReceiver, emailSubject, emailBody);

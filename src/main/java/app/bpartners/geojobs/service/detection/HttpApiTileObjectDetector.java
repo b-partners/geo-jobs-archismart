@@ -12,6 +12,7 @@ import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.file.FileWriter;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
@@ -27,7 +28,6 @@ import app.bpartners.geojobs.service.detection.inference.InferenceApiClient;
 import app.bpartners.geojobs.service.detection.inference.InferenceRequest;
 import app.bpartners.geojobs.service.detection.inference.ModelCardResolver;
 import app.bpartners.geojobs.service.detection.inference.ResolvedModelCard;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.awt.Dimension;
 import java.io.File;
@@ -59,7 +59,8 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
   private final ObjectMapper om;
   private final CustomBucketComponent customBucketComponent;
   private final String defaultDetectionApiUrl;
-  private final TileObjectDetectorConf tileObjectDetectorConf;
+  private final ModelVersionConf modelVersionConf;
+  private final LambdaFallbackConf lambdaFallbackConf;
   private final DetectionResponseAggregator detectionResponseAggregator;
   private final DetectionResponseAggregatorV1 detectionResponseAggregatorV1;
   private final DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper;
@@ -76,7 +77,8 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       ObjectMapper om,
       CustomBucketComponent customBucketComponent,
       @Value("${tile.detection.api.url}") String defaultApiUrl,
-      TileObjectDetectorConf tileObjectDetectorConf,
+      ModelVersionConf modelVersionConf,
+      LambdaFallbackConf lambdaFallbackConf,
       DetectionResponseAggregator detectionResponseAggregator,
       DetectionResponseAggregatorV1 detectionResponseAggregatorV1,
       DetectionResponseV1ToV2Mapper detectionResponseV1ToV2Mapper,
@@ -90,7 +92,8 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     this.om = om;
     this.customBucketComponent = customBucketComponent;
     this.defaultDetectionApiUrl = defaultApiUrl;
-    this.tileObjectDetectorConf = tileObjectDetectorConf;
+    this.modelVersionConf = modelVersionConf;
+    this.lambdaFallbackConf = lambdaFallbackConf;
     this.detectionResponseAggregator = detectionResponseAggregator;
     this.detectionResponseAggregatorV1 = detectionResponseAggregatorV1;
     this.detectionResponseV1ToV2Mapper = detectionResponseV1ToV2Mapper;
@@ -108,7 +111,8 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
   public DetectionResponseV2 apply(
       TileDetectionTask tileDetectionTask,
       File mask,
-      List<DetectableObjectConfiguration> detectableObjectConfigurations) {
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      List<DetectableObjectModel> detectableObjectModels) {
     Tile tile = tileDetectionTask.getTile();
     var isDebugMode = tileDetectionTask.isDebugMode();
     if (tile == null) {
@@ -125,6 +129,7 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     var tileSize = readImageSize(tileImageFile);
     var resolution =
         modelCardResolver.resolve(
+            detectableObjectModels,
             detectableObjectConfigurations,
             tileDetectionTask.getSpatialResolutionInCm(),
             tileZoom(tile),
@@ -185,6 +190,7 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
           base64ImgData,
           base64MaskData,
           lambdaConfigurations,
+          detectableObjectModels,
           v1Responses,
           v2Responses);
     }
@@ -247,6 +253,7 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
       String base64ImgData,
       String base64MaskData,
       List<DetectableObjectConfiguration> lambdaConfigurations,
+      List<DetectableObjectModel> detectableObjectModels,
       List<DetectionResponseAggregatorV1.DetectionResponseUrl> v1Responses,
       List<DetectionResponseAggregator.DetectionResponseUrl> v2Responses) {
     var isDebugMode = tileDetectionTask.isDebugMode();
@@ -269,7 +276,7 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
                     vegetation)),
             headers);
 
-    var detectionApiUrls = getApiUrls(lambdaConfigurations);
+    var detectionApiUrls = getApiUrls(lambdaConfigurations, detectableObjectModels);
     var detectionApiCalls = callApisInParallel(detectionApiUrls, requestV1, requestV2);
     for (var detectionApiCall : detectionApiCalls) {
       var apiUrl = detectionApiCall.apiUrl().getUrl();
@@ -509,24 +516,32 @@ public class HttpApiTileObjectDetector implements TileObjectDetector {
     return builder.build();
   }
 
-  @SneakyThrows
   private List<TileDetectorUrl> getApiUrls(
-      List<DetectableObjectConfiguration> objectConfigurations) {
-    List<TileDetectorUrl> tileDetectionApiUrls =
-        om.readValue(tileObjectDetectorConf.getTileDetectionApiUrls(), new TypeReference<>() {});
+      List<DetectableObjectConfiguration> objectConfigurations,
+      List<DetectableObjectModel> detectableObjectModels) {
+    Map<DetectableType, TileDetectorUrl> urlByType = new EnumMap<>(DetectableType.class);
+    lambdaFallbackConf
+        .getTileDetectorUrls()
+        .forEach(url -> urlByType.put(url.getObjectType(), url));
+    detectableObjectModels.stream()
+        .filter(model -> model.getModelName() != null)
+        .flatMap(
+            model ->
+                modelVersionConf
+                    .getTileDetectorUrls(model.getModelName(), model.getModelVersion())
+                    .stream())
+        .forEach(url -> urlByType.put(url.getObjectType(), url));
     Map<String, TileDetectorUrl> urlsByUrl = new LinkedHashMap<>();
+    var hasUncoveredType = false;
     for (var conf : objectConfigurations) {
-      for (var url : tileDetectionApiUrls) {
-        if (conf.getObjectType().equals(url.getObjectType())) {
-          urlsByUrl.putIfAbsent(url.getUrl(), url);
-        }
+      var url = urlByType.get(conf.getObjectType());
+      if (url == null) {
+        hasUncoveredType = true;
+      } else {
+        urlsByUrl.putIfAbsent(url.getUrl(), url);
       }
     }
-    var detectableTypes =
-        tileDetectionApiUrls.stream().map(TileDetectorUrl::getObjectType).toList();
-    var detectableTypesFromObjectConfiguration =
-        objectConfigurations.stream().map(DetectableObjectConfiguration::getObjectType).toList();
-    if (!new HashSet<>(detectableTypes).containsAll(detectableTypesFromObjectConfiguration)) {
+    if (hasUncoveredType) {
       urlsByUrl.putIfAbsent(
           defaultDetectionApiUrl,
           TileDetectorUrl.builder().url(defaultDetectionApiUrl).version(V2).build());

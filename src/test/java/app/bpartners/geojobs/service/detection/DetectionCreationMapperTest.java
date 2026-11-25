@@ -63,6 +63,7 @@ class DetectionCreationMapperTest {
   MapLayerResolver mapLayerResolverMock = mock();
   GeoServerConfiguration geoServerConfigurationMock = mock();
   ModelCardResolver modelCardResolverMock = mock();
+  ModelVersionConf modelVersionConfMock = defaultVersionConf();
 
   DetectionCreationMapper subject =
       new DetectionCreationMapper(
@@ -73,7 +74,14 @@ class DetectionCreationMapperTest {
           geoServerConfigurationMock,
           geometryConverterMock,
           buildingFinderMock,
-          new DefaultResolutionModelValidator());
+          new DefaultResolutionModelValidator(false),
+          modelVersionConfMock);
+
+  private static ModelVersionConf defaultVersionConf() {
+    var conf = mock(ModelVersionConf.class);
+    when(conf.defaultVersion(any())).thenReturn(ModelVersionConf.DEFAULT_VERSION);
+    return conf;
+  }
 
   @Test
   void map_detection_with_detectable_object_model_list_ok() {
@@ -83,8 +91,63 @@ class DetectionCreationMapperTest {
 
     var actual = subject.apply(createDetection, detectionE2Id, communityOwnerId, false, null);
 
-    assertTrue(actual.getDetectableObjectModelList().containsAll(detectableObjectModelList()));
+    assertEquals(
+        List.of(
+            new DetectableObjectModel().modelName(TOITURE).modelVersion("1.1.0"),
+            new DetectableObjectModel().modelName(VEGETATION).modelVersion("1.1.0")),
+        actual.getDetectableObjectModelList());
     assertFalse(actual.getDetectableObjectConfigurations().isEmpty()); // TODO
+  }
+
+  @Test
+  void keep_the_provided_model_version_and_default_the_missing_one() {
+    var createDetection =
+        createDetection()
+            .detectableObjectModelList(
+                List.of(
+                    new DetectableObjectModel().modelName(TOITURE).modelVersion("1.0.0"),
+                    new DetectableObjectModel().modelName(VEGETATION).modelVersion(" ")));
+
+    var actual = subject.apply(createDetection, randomUUID().toString(), null, false, null);
+
+    assertEquals(
+        List.of("1.0.0", "1.1.0"),
+        actual.getDetectableObjectModelList().stream()
+            .map(DetectableObjectModel::getModelVersion)
+            .toList());
+  }
+
+  @Test
+  void default_the_version_of_the_single_model_without_mutating_the_request() {
+    var createDetection =
+        createDetection()
+            .detectableObjectModelList(null)
+            .detectableObjectModel(new DetectableObjectModel().modelName(TOITURE));
+
+    var actual = subject.apply(createDetection, randomUUID().toString(), null, false, null);
+
+    assertEquals("1.1.0", actual.getDetectableObjectModel().getModelVersion());
+    assertNull(createDetection.getDetectableObjectModel().getModelVersion());
+  }
+
+  @Test
+  void map_the_analysis_project_of_the_detection() {
+    var createDetection = createDetection().projectKey("session-1").externalReference("crm-42");
+
+    var actual = subject.apply(createDetection, randomUUID().toString(), null, false, null);
+
+    assertEquals("session-1", actual.getProjectKey());
+    assertEquals("crm-42", actual.getExternalReference());
+  }
+
+  @Test
+  void map_blank_analysis_project_as_none() {
+    var createDetection = createDetection().projectKey(" ").externalReference("");
+
+    var actual = subject.apply(createDetection, randomUUID().toString(), null, false, null);
+
+    assertNull(actual.getProjectKey());
+    assertNull(actual.getExternalReference());
   }
 
   @Test
@@ -378,6 +441,30 @@ class DetectionCreationMapperTest {
   }
 
   @Test
+  void toiture_model_on_a_20_cm_layer_keeps_only_the_types_mapped_at_20_cm_when_enabled() {
+    var realSubject =
+        subjectWith(new ModelCardResolver(roofObstacleConf(), mock(ModelCardRegistry.class)), true);
+    givenLayerWithPrecision(20);
+
+    var actual =
+        realSubject.apply(toiturePointDetection(), randomUUID().toString(), null, false, null);
+
+    assertEquals(Set.of(OBSTACLE, CHEMINEE, VELUX, PANNEAU_PHOTOVOLTAIQUE), typesOf(actual));
+  }
+
+  @Test
+  void toiture_model_keeps_every_type_on_a_5_cm_layer_when_enabled() {
+    var realSubject =
+        subjectWith(new ModelCardResolver(roofObstacleConf(), mock(ModelCardRegistry.class)), true);
+    givenLayerWithPrecision(5);
+
+    var actual =
+        realSubject.apply(toiturePointDetection(), randomUUID().toString(), null, false, null);
+
+    assertTrue(typesOf(actual).containsAll(Set.of(TOITURE_REVETEMENT, USURE, MOISISSURE)));
+  }
+
+  @Test
   void toiture_model_requires_a_5_cm_layer() {
     var realSubject =
         subjectWith(new ModelCardResolver(roofObstacleConf(), mock(ModelCardRegistry.class)));
@@ -470,6 +557,11 @@ class DetectionCreationMapperTest {
   }
 
   private DetectionCreationMapper subjectWith(ModelCardResolver resolver) {
+    return subjectWith(resolver, false);
+  }
+
+  private DetectionCreationMapper subjectWith(
+      ModelCardResolver resolver, boolean toiture20CmEnabled) {
     return new DetectionCreationMapper(
         detectableObjectTypeMapper,
         featureTypeChecker,
@@ -478,7 +570,8 @@ class DetectionCreationMapperTest {
         geoServerConfigurationMock,
         geometryConverterMock,
         buildingFinderMock,
-        new DefaultResolutionModelValidator());
+        new DefaultResolutionModelValidator(toiture20CmEnabled),
+        modelVersionConfMock);
   }
 
   private static InferenceModelCardConf roofObstacleConf() {

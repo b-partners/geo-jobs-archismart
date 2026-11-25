@@ -13,6 +13,7 @@ import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.repository.model.tiling.Tile;
 import app.bpartners.geojobs.service.detection.RoofCovering;
 import app.bpartners.geojobs.service.detection.RoofCoveringDetector;
+import java.util.List;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,8 @@ class RoofCoveringDetectorIT extends FacadeIT {
                 .coordinates(new TileCoordinates().x(544680).y(383095).z(20))
                 .build(),
             maskFile,
-            null);
+            null,
+            List.of());
 
     assertEquals(expectedCovering(), actual);
   }

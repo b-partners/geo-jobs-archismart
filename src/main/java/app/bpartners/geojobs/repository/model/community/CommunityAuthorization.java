@@ -52,6 +52,8 @@ public class CommunityAuthorization implements Serializable {
 
   @Column private boolean integrationTestUsage;
 
+  @Column private boolean clientEmailNotificationEnabled;
+
   private @CreationTimestamp Instant creationDatetime;
 
   @OneToMany(fetch = EAGER, mappedBy = "communityAuthorizationId", cascade = ALL)

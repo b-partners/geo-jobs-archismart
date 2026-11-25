@@ -24,6 +24,6 @@ public class DetectionTrackingRegistrationRequestedService
             .orElseThrow(
                 () -> new NotFoundException("Detection not found for id=" + detectionIdentifier));
 
-    detectionTrackingRegister.accept(detection);
+    detectionTrackingRegister.accept(detection, event.getFailureId());
   }
 }

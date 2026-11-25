@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import app.bpartners.geojobs.service.FilePolygonDrawer;
 import app.bpartners.geojobs.service.TileImagesAssembler;
 import app.bpartners.geojobs.service.detection.DetectionMaskCreator;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -28,6 +30,7 @@ class DetectionPathPrimerTest {
   private final FilePolygonDrawer polygonDrawer = spy(new FilePolygonDrawer());
   private final TileImagesAssembler imagesAssembler = spy(new TileImagesAssembler());
   private final GeometryConverter geometryConverter = spy(new GeometryConverter());
+  private final ModelVersionConf modelVersionConf = mock(ModelVersionConf.class);
   private final List<File> producedFiles = new CopyOnWriteArrayList<>();
 
   private final DetectionPathPrimer subject =
@@ -37,7 +40,8 @@ class DetectionPathPrimerTest {
           imagesAssembler,
           geometryConverter,
           new ObjectMapper().findAndRegisterModules(),
-          new RestTemplate());
+          new RestTemplate(),
+          modelVersionConf);
 
   @Test
   void prime_runs_every_step_through_to_the_detection_api_call() {
@@ -48,6 +52,7 @@ class DetectionPathPrimerTest {
     verify(imagesAssembler, times(1)).apply(any());
     verify(geometryConverter, times(1)).getMultiPolygonFromTile(523561, 370292, 20);
     verify(geometryConverter, times(1)).readGeometryFromString(any());
+    verify(modelVersionConf, times(1)).warmUp();
   }
 
   @Test

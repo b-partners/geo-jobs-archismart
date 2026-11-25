@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.security.model.Authority.Role.
 import static app.bpartners.geojobs.endpoint.rest.security.model.Authority.Role.ROLE_COMMUNITY;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -19,6 +20,7 @@ import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.endpoint.rest.model.ModelName;
 import app.bpartners.geojobs.endpoint.rest.security.model.Authority;
 import app.bpartners.geojobs.endpoint.rest.security.model.Principal;
+import app.bpartners.geojobs.model.exception.ForbiddenException;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
@@ -73,8 +75,7 @@ class DetectionAuthorizerTest {
 
   @Test
   void should_accept_community_if_authorization_is_correct() {
-    when(detectionRepository.findByEndToEndIdAndCommunityOwnerId(any(), any()))
-        .thenReturn(Optional.empty());
+    when(detectionRepository.findByEndToEndId(any())).thenReturn(Optional.empty());
     doNothing().when(communityZoneSurfaceAuthorizer).accept(any(), any());
     doNothing().when(communityZoneAuthorizer).accept(any(), any(), any());
     doNothing().when(communityDetectableObjectTypeAuthorizer).accept(any(), any());
@@ -92,8 +93,7 @@ class DetectionAuthorizerTest {
     when(model.getModelName()).thenReturn(ModelName.TOITURE);
     when(createDetection.getDetectableObjectModel()).thenReturn(model);
     communityAuthorization.setDetectableModels(List.of(ModelName.TOITURE));
-    when(detectionRepository.findByEndToEndIdAndCommunityOwnerId(any(), any()))
-        .thenReturn(Optional.empty());
+    when(detectionRepository.findByEndToEndId(any())).thenReturn(Optional.empty());
 
     assertDoesNotThrow(
         () -> subject.accept(randomUUID().toString(), createDetection, useRole(ROLE_COMMUNITY)));
@@ -104,12 +104,38 @@ class DetectionAuthorizerTest {
 
   @Test
   void should_check_only_owner_if_endToEndId_already_exist_and_accept_it() {
-    when(detectionRepository.findByEndToEndIdAndCommunityOwnerId(any(), any()))
+    when(detectionRepository.findByEndToEndId(any()))
         .thenReturn(Optional.of(Detection.builder().communityOwnerId(COMMUNITY_ID).build()));
     assertDoesNotThrow(
         () -> subject.authorizeCommunity(randomUUID().toString(), useRole(ROLE_COMMUNITY)));
 
     verify(detectionOwnerAuthorizer, times(1)).accept(any(), any());
+  }
+
+  @Test
+  void should_refuse_a_detection_owned_by_another_community() {
+    var subjectWithRealOwnerCheck =
+        new DetectionAuthorizer(
+            communityDetectableObjectTypeAuthorizer,
+            communityDetectableModelAuthorizer,
+            communityAuthRepository,
+            communityZoneAuthorizer,
+            communityZoneSurfaceAuthorizer,
+            new DetectionOwnerAuthorizer(),
+            detectionRepository,
+            detectableObjectTypeMapperMock,
+            featureTypeChecker);
+    var detectionId = randomUUID().toString();
+    var community = useRole(ROLE_COMMUNITY);
+    when(detectionRepository.findByEndToEndId(detectionId))
+        .thenReturn(Optional.of(Detection.builder().communityOwnerId("otherCommunity").build()));
+
+    assertThrows(
+        ForbiddenException.class,
+        () -> subjectWithRealOwnerCheck.authorizeCommunity(detectionId, community));
+    assertThrows(
+        ForbiddenException.class,
+        () -> subjectWithRealOwnerCheck.accept(detectionId, createDetection, community));
   }
 
   private Principal useRole(Authority.Role role) {

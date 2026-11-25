@@ -22,6 +22,8 @@ public class CreateDetectionMapper {
             .detectableObjectModelList(createDetectionDebugMode.getDetectableObjectModelList())
             .detectableObjectModel(createDetectionDebugMode.getDetectableObjectModel())
             .geoJsonDelimitationType(createDetectionDebugMode.getGeoJsonDelimitationType())
-            .toNotify(createDetectionDebugMode.getToNotify());
+            .toNotify(createDetectionDebugMode.getToNotify())
+            .projectKey(createDetectionDebugMode.getProjectKey())
+            .externalReference(createDetectionDebugMode.getExternalReference());
   }
 }

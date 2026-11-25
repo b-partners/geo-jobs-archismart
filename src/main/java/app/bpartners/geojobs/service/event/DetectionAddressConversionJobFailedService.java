@@ -13,6 +13,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.DetectionAddressConversionTask;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.service.DetectionAddressConversionTaskToCsvConverter;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.service.ExcelAddressWriter;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import jakarta.mail.internet.InternetAddress;
@@ -38,6 +39,7 @@ public class DetectionAddressConversionJobFailedService
   private final String adminEmail;
   private final DetectionAddressConversionTaskToCsvConverter csvConverter;
   private final ExcelAddressWriter excelAddressWriter;
+  private final EmailRecipientResolver emailRecipientResolver;
 
   public DetectionAddressConversionJobFailedService(
       DetectionAddressConversionTaskRepository detectionAddressConversionTaskRepository,
@@ -47,7 +49,8 @@ public class DetectionAddressConversionJobFailedService
       DetectionRepository detectionRepository,
       @Value("${admin.email}") String adminEmail,
       DetectionAddressConversionTaskToCsvConverter csvConverter,
-      ExcelAddressWriter excelAddressWriter) {
+      ExcelAddressWriter excelAddressWriter,
+      EmailRecipientResolver emailRecipientResolver) {
     this.detectionAddressConversionTaskRepository = detectionAddressConversionTaskRepository;
     this.mailer = mailer;
     this.htmlTemplateParser = htmlTemplateParser;
@@ -56,6 +59,7 @@ public class DetectionAddressConversionJobFailedService
     this.adminEmail = adminEmail;
     this.csvConverter = csvConverter;
     this.excelAddressWriter = excelAddressWriter;
+    this.emailRecipientResolver = emailRecipientResolver;
   }
 
   @SneakyThrows
@@ -74,8 +78,12 @@ public class DetectionAddressConversionJobFailedService
         String.format(
             "BirdIA | Anomalie détectée sur %d adresses - Détection" + " portant l'ID %s le %s",
             failedTasks.size(), detection.getEndToEndId(), actualDatetime);
-    var to = new InternetAddress(job.getEmailReceiver());
-    var cc = List.of(new InternetAddress(adminEmail));
+    var recipient = emailRecipientResolver.resolve(detection, job.getEmailReceiver());
+    var to = new InternetAddress(recipient);
+    var cc =
+        adminEmail.equalsIgnoreCase(recipient)
+            ? List.<InternetAddress>of()
+            : List.of(new InternetAddress(adminEmail));
     var bcc = new ArrayList<InternetAddress>();
     var htmlBody = computeHtmlBody(detection, failedTasks);
     var failedAddressesCsvFile = getFailedAddressesCsvFile(failedTasks, detection);

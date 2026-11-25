@@ -36,7 +36,7 @@ public class RevokedApiKeyService {
       throw new BadRequestException("Cannot revoke apikey as it is already revoked");
     }
 
-    return revokeRawApiKey(communityAuthorization);
+    return revokeRawApiKey(communityAuthorization, communityAuthorization.getApiKey());
   }
 
   @Transactional
@@ -59,7 +59,7 @@ public class RevokedApiKeyService {
     Optional<RevokedApiKey> optionalRevokedApiKey =
         revokeDomainCommunityApiKey(targetAuthorization, apiKeyValue);
 
-    return optionalRevokedApiKey.orElseGet(() -> revokeRawApiKey(targetAuthorization));
+    return optionalRevokedApiKey.orElseGet(() -> revokeRawApiKey(targetAuthorization, apiKeyValue));
   }
 
   private Optional<RevokedApiKey> revokeDomainCommunityApiKey(
@@ -77,16 +77,19 @@ public class RevokedApiKeyService {
    *     deprecated API key system and should no longer be used.
    */
   @Deprecated
-  private RevokedApiKey revokeRawApiKey(CommunityAuthorization communityAuthorization) {
+  private RevokedApiKey revokeRawApiKey(
+      CommunityAuthorization communityAuthorization, String apiKeyValue) {
     var revokedApiKey =
         RevokedApiKey.builder()
             .id(randomUUID().toString())
             .revokedAt(now())
-            .revokedApiKeyValue(communityAuthorization.getApiKey())
+            .revokedApiKeyValue(apiKeyValue)
             .communityOwnerId(communityAuthorization.getId())
             .build();
 
-    communityAuthorization.setApiKeyRevoked(true);
+    if (apiKeyValue.equals(communityAuthorization.getApiKey())) {
+      communityAuthorization.setApiKeyRevoked(true);
+    }
     repository.save(revokedApiKey);
     communityAuthRepository.save(communityAuthorization);
 
@@ -95,7 +98,7 @@ public class RevokedApiKeyService {
 
   static String hide(String apiKey) {
     int keyLength = apiKey.length();
-    int hideRange = keyLength / (keyLength / 6);
+    int hideRange = Math.min(6, keyLength / 3);
     String shownPart = apiKey.substring(hideRange, (keyLength - hideRange));
     String hider = "*".repeat(hideRange);
 

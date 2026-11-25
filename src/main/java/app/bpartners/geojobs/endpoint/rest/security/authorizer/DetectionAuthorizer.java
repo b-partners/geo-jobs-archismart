@@ -68,9 +68,7 @@ public class DetectionAuthorizer implements TriConsumer<String, CreateDetection,
     var optionalDetection =
         logDurationOf(
             "authorizer: detection lookup",
-            () ->
-                detectionRepository.findByEndToEndIdAndCommunityOwnerId(
-                    detectionId, communityAuthorization.getId()));
+            () -> detectionRepository.findByEndToEndId(detectionId));
     optionalDetection.ifPresent(
         detection -> detectionOwnerAuthorizer.accept(communityAuthorization, detection));
     return communityAuthorization;

@@ -46,6 +46,7 @@ import app.bpartners.geojobs.job.model.statistic.TaskStatistic;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotFoundException;
+import app.bpartners.geojobs.model.exception.PaymentRequiredException;
 import app.bpartners.geojobs.repository.*;
 import app.bpartners.geojobs.repository.CachedAreaPictureMapLayerRepository;
 import app.bpartners.geojobs.repository.model.Feature;
@@ -198,6 +199,8 @@ class DetectionServiceTest {
   DetectionRoofSlopeValidator detectionRoofSlopeValidatorMock = mock();
   BuildingFinder buildingFinderMock = mock();
   FeatureVggRequestedService featureVggRequestedServiceMock = mock();
+  DetectionCreditGuard detectionCreditGuardMock = mock();
+  DetectionReuseService detectionReuseServiceMock = mock();
 
   DetectionService subject =
       spy(
@@ -230,10 +233,13 @@ class DetectionServiceTest {
                   geoServerConfiguration,
                   geometryConverterMock,
                   buildingFinderMock,
-                  new DefaultResolutionModelValidator()),
+                  new DefaultResolutionModelValidator(false),
+                  mock(ModelVersionConf.class)),
               fileWriterMock,
               detectionRoofSlopeValidatorMock,
-              featureVggRequestedServiceMock));
+              featureVggRequestedServiceMock,
+              detectionCreditGuardMock,
+              detectionReuseServiceMock));
 
   private static MapLayerActual latestDefaultLayer() {
     return new MapLayerActual(
@@ -243,6 +249,8 @@ class DetectionServiceTest {
 
   @BeforeEach
   void setUp() {
+    when(detectionReuseServiceMock.fingerprintOf(any()))
+        .thenReturn(new DetectionReuseFingerprint(null, null));
     when(featureImageRetrieverMock.apply(any()))
         .thenAnswer(
             invocation ->
@@ -310,6 +318,90 @@ class DetectionServiceTest {
         new DetectionTilingRequested(
             actualEvent.getDetectionIdentifier()), // internal detection no retrieved here
         actualEvent);
+  }
+
+  @Test
+  void admin_role_process_request_is_finished_without_tiling_when_results_are_reused() {
+    var detectionIdentifier = randomUUID().toString();
+    var createDetection =
+        new CreateDetection()
+            .detectableObjectModel(new DetectableObjectModel().modelName(TOITURE))
+            .geoServerProperties(null)
+            .geoJsonZone(featureCreator.defaultFeatures());
+    String communityOwnerId = randomUUID().toString();
+    setUpAuthorityRoleProcessingMock(detectionIdentifier, null, ROLE_ADMIN);
+    when(communityUsedSurfaceServiceMock.persistDetectionWithSurfaceUsage(any(), any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    var jtsMultiPolygonFrameMock = mock(MultiPolygon.class);
+    when(jtsMultiPolygonFrameMock.contains(any())).thenReturn(true);
+    var longitude = BigDecimal.valueOf(0);
+    var latitude = BigDecimal.valueOf(1);
+    when(geometryConverterMock.centroidFromGeometry(any()))
+        .thenReturn(List.of(longitude, latitude));
+    when(tileMultiPolygonFrameMock.apply(longitude, latitude))
+        .thenReturn(Optional.of(jtsMultiPolygonFrameMock));
+    when(communityAuthRepositoryMock.findById(any(String.class)))
+        .thenReturn(
+            Optional.<CommunityAuthorization>of(
+                new CommunityAuthorization().builder().dashboardApiKey("apiKey").build()));
+    when(mapLayerClientMock.getActualMapLayer(anyDouble(), anyDouble()))
+        .thenReturn(Optional.of(latestDefaultLayer()));
+    when(detectionReuseServiceMock.fingerprintOf(any()))
+        .thenReturn(new DetectionReuseFingerprint("zone-hash", "signature"));
+    when(detectionReuseServiceMock.reuseResultsOf(any()))
+        .thenAnswer(
+            invocation ->
+                Optional.of(
+                    ((app.bpartners.geojobs.repository.model.detection.Detection)
+                            invocation.getArgument(0))
+                        .toBuilder()
+                            .sourceDetectionId("source")
+                            .geojsonS3FileKey("geoJson/x.zip")
+                            .build()));
+
+    var actual =
+        detectionRestMapper.toRest(
+            subject.processDetection(detectionIdentifier, createDetection, communityOwnerId, null));
+
+    var savedCaptor =
+        ArgumentCaptor.forClass(app.bpartners.geojobs.repository.model.detection.Detection.class);
+    verify(communityUsedSurfaceServiceMock)
+        .persistDetectionWithSurfaceUsage(savedCaptor.capture(), any());
+    assertEquals("zone-hash", savedCaptor.getValue().getZoneHash());
+    assertEquals("signature", savedCaptor.getValue().getInferenceSignature());
+    var listCaptor = ArgumentCaptor.forClass(List.class);
+    verify(eventProducerMock, times(1)).accept(listCaptor.capture());
+    assertFalse(listCaptor.getValue().getFirst() instanceof DetectionTilingRequested);
+    assertEquals(
+        app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING,
+        actual.getStep().getName());
+    assertEquals(Status.ProgressionEnum.FINISHED, actual.getStep().getStatus().getProgression());
+    assertEquals(SUCCEEDED, actual.getStep().getStatus().getHealth());
+  }
+
+  @Test
+  void asking_again_a_reused_detection_does_not_process_it() {
+    var detectionId = randomUUID().toString();
+    var detection =
+        detectionCreator.create(detectionId, null, null).toBuilder()
+            .sourceDetectionId("source")
+            .geojsonS3FileKey("geoJson/x.zip")
+            .geoServerProperties(new GeoServerProperties())
+            .multiPolygonGeoJsonZone(List.of(new Feature()))
+            .build();
+    var createDetection = new CreateDetection().geoJsonZone(featureCreator.defaultFeatures());
+    setUpAuthorityRoleProcessingMock(detectionId, detection, ROLE_ADMIN);
+
+    var actual =
+        detectionRestMapper.toRest(
+            subject.processDetection(detectionId, createDetection, null, null));
+
+    verify(tilingJobServiceMock, never()).create(any(), any());
+    assertEquals(
+        app.bpartners.geojobs.endpoint.rest.model.DetectionStepName.POST_PROCESSING,
+        actual.getStep().getName());
+    assertEquals(Status.ProgressionEnum.FINISHED, actual.getStep().getStatus().getProgression());
+    assertEquals(SUCCEEDED, actual.getStep().getStatus().getHealth());
   }
 
   @Test
@@ -488,6 +580,49 @@ class DetectionServiceTest {
         computedStep.getProgression());
     assertEquals(
         app.bpartners.geojobs.job.model.Status.HealthStatus.SUCCEEDED, computedStep.getHealth());
+  }
+
+  @Test
+  void process_synchronously_skips_the_pipeline_when_results_are_reused() {
+    var detectionId = randomUUID().toString();
+    String communityOwnerId = null;
+    var existing =
+        detectionCreator.create(detectionId, randomUUID().toString(), randomUUID().toString());
+    var createDetection = new CreateDetection().geoJsonZone(featureCreator.defaultFeatures());
+    when(synchronousDetectionValidatorMock.apply(any())).thenReturn(createDetection);
+    when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(detectionId, communityOwnerId))
+        .thenReturn(Optional.of(existing));
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(detectionRepositoryMock.findById(detectionId)).thenReturn(Optional.of(existing));
+    when(detectionReuseServiceMock.reuseResultsOf(any())).thenReturn(Optional.of(existing));
+
+    var actual =
+        subject.processDetectionSynchronously(
+            detectionId, createDetection, communityOwnerId, false);
+
+    verifyNoInteractions(synchronousDetectionServiceMock);
+    assertEquals(existing.getId(), actual.getId());
+    assertEquals(MACHINE_DETECTION, actual.getComputedStep().getName());
+  }
+
+  @Test
+  void process_synchronously_runs_the_pipeline_when_no_result_can_be_reused() {
+    var detectionId = randomUUID().toString();
+    var existing =
+        detectionCreator.create(detectionId, randomUUID().toString(), randomUUID().toString());
+    var createDetection = new CreateDetection().geoJsonZone(featureCreator.defaultFeatures());
+    when(synchronousDetectionValidatorMock.apply(any())).thenReturn(createDetection);
+    when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(detectionId, null))
+        .thenReturn(Optional.of(existing));
+    when(detectionRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    when(detectionRepositoryMock.findById(detectionId)).thenReturn(Optional.of(existing));
+    when(detectionReuseServiceMock.reuseResultsOf(any())).thenReturn(Optional.empty());
+
+    subject.processDetectionSynchronously(detectionId, createDetection, null, false);
+
+    verify(synchronousDetectionServiceMock).apply(any());
   }
 
   @Test
@@ -1110,6 +1245,30 @@ class DetectionServiceTest {
         .taskStatusStatistics(new ArrayList<>())
         .jobType(geoJobType)
         .build();
+  }
+
+  @Test
+  void configure_addresses_is_refused_when_credits_are_insufficient() {
+    var detectionId = randomUUID().toString();
+    var communityOwnerId = randomUUID().toString();
+    var detection =
+        detectionCreator.create(detectionId, randomUUID().toString(), communityOwnerId, null);
+    var addresses = List.of("11-7 Rue Mot, 94120 Fontenay-sous-Bois, France", "1 Rue de Rivoli");
+    when(detectionRepositoryMock.findByEndToEndIdAndCommunityOwnerId(any(), any()))
+        .thenReturn(Optional.of(detection));
+    var principalMock = mock(Principal.class);
+    when(principalMock.getPassword()).thenReturn("dummy");
+    when(authProviderMock.getPrincipal()).thenReturn(principalMock);
+    doThrow(new PaymentRequiredException("Not enough analysis credits"))
+        .when(detectionCreditGuardMock)
+        .accept(detection.getCommunityOwnerId(), detectionId, detection.getProjectKey(), List.of());
+
+    assertThrows(
+        PaymentRequiredException.class,
+        () -> subject.configureDetectionAddresses(detectionId, addresses));
+
+    verify(detectionRepositoryMock, never()).save(any());
+    verify(detectionAddressConsumerMock, never()).accept(any());
   }
 
   @Test

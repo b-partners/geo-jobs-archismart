@@ -170,7 +170,7 @@ class ParcelDetectionTaskCreatedServiceIT extends FacadeIT {
   void process_detection() {
     when(machineDetectedTileRepository.save(any())).thenReturn(new MachineDetectedTile());
     when(bucketComponent.download(any())).thenReturn(new File(FILE_NAME));
-    when(objectsDetector.apply(any(), any(), any())).thenReturn(detectionResponse());
+    when(objectsDetector.apply(any(), any(), any(), any())).thenReturn(detectionResponse());
     when(zoneDetectionJobService.findById(any())).thenReturn(zoneDetectionJob());
     when(parcelDetectionTaskRepository.save(any()))
         .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));

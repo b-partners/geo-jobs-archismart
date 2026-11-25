@@ -15,6 +15,7 @@ import app.bpartners.geojobs.mail.Mailer;
 import app.bpartners.geojobs.repository.model.DuplicatedTilingJob;
 import app.bpartners.geojobs.service.tiling.TilingJobDuplicatedMailer;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import jakarta.mail.internet.InternetAddress;
 import java.util.List;
 import lombok.SneakyThrows;
@@ -25,7 +26,8 @@ class TilingJobDuplicatedMailerTest {
   HTMLTemplateParser htmlTemplateParserMock = mock();
   Mailer mailerMock = mock();
   TilingJobDuplicatedMailer subject =
-      new TilingJobDuplicatedMailer(mailerMock, htmlTemplateParserMock);
+      new TilingJobDuplicatedMailer(
+          mailerMock, htmlTemplateParserMock, new PassThroughEmailRecipientResolver());
 
   @SneakyThrows
   @Test

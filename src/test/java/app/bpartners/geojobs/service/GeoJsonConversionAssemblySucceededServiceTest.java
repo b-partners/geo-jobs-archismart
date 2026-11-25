@@ -18,6 +18,7 @@ import app.bpartners.geojobs.repository.model.geojson.GeoJsonConversionJob;
 import app.bpartners.geojobs.service.event.DetectionSucceededService;
 import app.bpartners.geojobs.service.event.GeoJsonConversionAssemblySucceededService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
+import app.bpartners.geojobs.utils.PassThroughEmailRecipientResolver;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -43,7 +44,8 @@ class GeoJsonConversionAssemblySucceededServiceTest {
               htmlTemplateParser,
               detectionRepositoryMock,
               bucketComponentMock,
-              zoneDetectionJobRepositoryMock),
+              zoneDetectionJobRepositoryMock,
+              new PassThroughEmailRecipientResolver()),
           eventProducerMock,
           detectionRepositoryMock);
   private final String zoneDetectionJobId = randomUUID().toString();

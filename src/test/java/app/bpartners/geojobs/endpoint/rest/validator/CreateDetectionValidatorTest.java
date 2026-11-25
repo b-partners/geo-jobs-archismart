@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.endpoint.rest.validator;
 
+import static app.bpartners.geojobs.endpoint.rest.model.ModelName.LOM;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.TOITURE;
 import static app.bpartners.geojobs.endpoint.rest.model.ModelName.VEGETATION;
 import static org.junit.jupiter.api.Assertions.*;
@@ -9,24 +10,59 @@ import static org.mockito.Mockito.when;
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetection;
 import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.endpoint.rest.model.Feature;
+import app.bpartners.geojobs.file.bucket.BucketConf;
+import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.service.DetectionImageZoomResolver;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import app.bpartners.geojobs.validator.CreateDetectionValidator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 class CreateDetectionValidatorTest {
+  private static final String DUMMY_CONF =
+      """
+{
+  "BP_TOITURE": [
+    {"objectType": "TOITURE_REVETEMENT", "url": "https://dummy-toiture-v2", "version": "V2"}
+  ],
+  "BP_VEGETATION": [],
+  "BP_STATIONNEMENT": [
+    {"objectType": "PLACE_STANDARD", "url": "https://dummy-stationnement-v1", "version": "V1"}
+  ]
+}""";
+
+  private static final String BUCKET_NAME = "dummyBucket";
+  private static final String CONF_PREFIX = "conf/null/model-versions/";
 
   DetectionImageZoomResolver detectionImageZoomResolverMock = mock();
-  CreateDetectionValidator subject = new CreateDetectionValidator(detectionImageZoomResolverMock);
+  CustomBucketComponent bucketComponentMock = mock(CustomBucketComponent.class);
+  BucketConf bucketConfMock = mock(BucketConf.class);
+  CreateDetectionValidator subject =
+      new CreateDetectionValidator(
+          detectionImageZoomResolverMock,
+          new ModelVersionConf(bucketComponentMock, new ObjectMapper()));
 
   @BeforeEach
+  @SneakyThrows
   void setUp() {
     when(detectionImageZoomResolverMock.toitureZoom()).thenReturn(21);
+    var confFile = Files.createTempFile("model-version", ".json");
+    Files.writeString(confFile, DUMMY_CONF);
+    when(bucketComponentMock.getBucketConf()).thenReturn(bucketConfMock);
+    when(bucketConfMock.getBucketName()).thenReturn(BUCKET_NAME);
+    when(bucketComponentMock.listObjects(BUCKET_NAME, CONF_PREFIX))
+        .thenReturn(List.of(S3Object.builder().key(CONF_PREFIX + "1.1.0.json").build()));
+    when(bucketComponentMock.download(BUCKET_NAME, CONF_PREFIX + "1.1.0.json"))
+        .thenReturn(confFile.toFile());
   }
 
   @Test
@@ -149,5 +185,47 @@ class CreateDetectionValidatorTest {
         .detectableObjectModel(new DetectableObjectModel().modelName(TOITURE))
         .emailReceiver("email@receiver.com")
         .zoneName("dummy zone name");
+  }
+
+  @Test
+  void do_not_throws_when_defined_model_version_provided() {
+    var createDetection =
+        new CreateDetection()
+            .detectableObjectModelList(
+                List.of(new DetectableObjectModel().modelName(TOITURE).modelVersion("1.1.0")))
+            .emailReceiver("email@receiver.com")
+            .zoneName("dummy zone name");
+
+    assertDoesNotThrow(() -> subject.accept(createDetection));
+  }
+
+  @Test
+  void throws_bad_request_exception_when_unsupported_model_version_provided() {
+    var createDetection =
+        new CreateDetection()
+            .detectableObjectModelList(
+                List.of(new DetectableObjectModel().modelName(TOITURE).modelVersion("9.9.9")))
+            .emailReceiver("email@receiver.com")
+            .zoneName("dummy zone name");
+
+    var actual = assertThrows(BadRequestException.class, () -> subject.accept(createDetection));
+    assertEquals(
+        "Model BP_TOITURE has no configuration for version 9.9.9. Available versions: [1.1.0]. ",
+        actual.getMessage());
+  }
+
+  @Test
+  void throws_bad_request_exception_when_model_version_not_defined_for_model() {
+    var createDetection =
+        new CreateDetection()
+            .detectableObjectModelList(
+                List.of(new DetectableObjectModel().modelName(LOM).modelVersion("1.1.0")))
+            .emailReceiver("email@receiver.com")
+            .zoneName("dummy zone name");
+
+    var actual = assertThrows(BadRequestException.class, () -> subject.accept(createDetection));
+    assertEquals(
+        "Model BP_LOM has no configuration for version 1.1.0. Available versions: []. ",
+        actual.getMessage());
   }
 }

@@ -1,6 +1,5 @@
 package app.bpartners.geojobs.service.event;
 
-import static app.bpartners.geojobs.service.DetectionFinishedMailer.ADMIN_EMAIL;
 import static java.time.Instant.now;
 
 import app.bpartners.geojobs.endpoint.event.model.zone.DetectionQualityControlFinished;
@@ -8,6 +7,7 @@ import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.mail.Email;
 import app.bpartners.geojobs.mail.Mailer;
 import app.bpartners.geojobs.repository.model.detection.Detection;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
@@ -26,6 +26,7 @@ import org.thymeleaf.context.Context;
 public class DetectionQualityControlFinishedService
     implements Consumer<DetectionQualityControlFinished> {
   private Mailer mailer;
+  private EmailRecipientResolver emailRecipientResolver;
   private BucketComponent bucketComponent;
   private HTMLTemplateParser htmlTemplateParser;
   private static final String FILE_RESULT_SUBMISSION_FINISHED = "detection_cq_finished_template";
@@ -40,11 +41,12 @@ public class DetectionQualityControlFinishedService
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
                 .format(now().atZone(ZoneId.of("Europe/Paris"))));
 
+    var to = emailRecipientResolver.resolve(detection, detection.getEmailReceiver());
     try {
       mailer.accept(
           new Email(
-              new InternetAddress(detection.getEmailReceiver()),
-              List.of(new InternetAddress(ADMIN_EMAIL)),
+              new InternetAddress(to),
+              emailRecipientResolver.adminCopyUnless(to),
               List.of(),
               emailSubject,
               apply(detection),

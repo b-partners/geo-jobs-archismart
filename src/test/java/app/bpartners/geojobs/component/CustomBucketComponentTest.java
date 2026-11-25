@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import lombok.NonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -74,6 +76,22 @@ public class CustomBucketComponentTest {
     var actual = subject.download(bucketName, bucketKey);
 
     assertNotNull(actual);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"conf/prod/model-versions/1.0.0.json", "a.json", "x"})
+  void download_file_with_short_name_ok(String bucketKey) {
+    S3TransferManager s3TransferManagerMock = mock();
+    FileDownload mockFileDownload = mock();
+    when(mockFileDownload.completionFuture()).thenReturn(CompletableFuture.completedFuture(null));
+    when(s3TransferManagerMock.downloadFile(any(DownloadFileRequest.class)))
+        .thenReturn(mockFileDownload);
+    when(bucketConfMock.getS3TransferManager()).thenReturn(s3TransferManagerMock);
+
+    var actual = subject.download("bucketName", bucketKey);
+
+    assertNotNull(actual);
+    actual.delete();
   }
 
   @NonNull

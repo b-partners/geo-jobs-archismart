@@ -126,6 +126,7 @@ public class DashboardApiKeyCheckTriggeredService
         userApiKeys.stream()
             .filter(apiKey -> DASHBOARD.equals(apiKey.type()))
             .map(UserApiKey::key)
+            .filter(key -> key != null && !key.isBlank())
             .toList();
 
     if (dashboardApiKeys.isEmpty()) {
@@ -141,9 +142,8 @@ public class DashboardApiKeyCheckTriggeredService
     String actualDashboardApiKey = event.getDashboardApiKey();
     if (!dashboardApiKeys.contains(actualDashboardApiKey)) {
       var exceptionMessage =
-          "Actual dashboard api "
-              + actualDashboardApiKey
-              + " key doesn't match any of the api keys in the users account api for : "
+          "Actual dashboard api key doesn't match any of the api keys in the users account api"
+              + " for : "
               + formatIdList(retrievedUserIds);
       log.error(FAILURE_LOG_PREFIX + "{}", exceptionMessage);
       updateCommunityAuthorizationDashboardApiKey(userId, dashboardApiKeys.getFirst());

@@ -5,6 +5,7 @@ import app.bpartners.geojobs.repository.DetectionRepository;
 import app.bpartners.geojobs.repository.model.detection.Detection;
 import app.bpartners.geojobs.repository.model.detection.ZoneDetectionJob;
 import app.bpartners.geojobs.service.DetectionFinishedMailer;
+import app.bpartners.geojobs.service.EmailRecipientResolver;
 import app.bpartners.geojobs.service.detection.ZoneDetectionJobService;
 import app.bpartners.geojobs.template.HTMLTemplateParser;
 import java.util.Optional;
@@ -20,10 +21,10 @@ import org.thymeleaf.context.Context;
 public class ZoneDetectionJobFailedService implements Consumer<ZoneDetectionJobFailed> {
   private static final String ZONE_DETECTION_JOB_FAILED_MAIL_TEMPLATE =
       "zone_detection_job_failed_template";
-  private static final String ADMIN_EMAIL = "tech@birdia.fr";
   private final DetectionFinishedMailer mailer;
   private final ZoneDetectionJobService zoneDetectionJobService;
   private final DetectionRepository detectionRepository;
+  private final EmailRecipientResolver emailRecipientResolver;
   private final HTMLTemplateParser htmlTemplateParser;
 
   @Override
@@ -44,7 +45,7 @@ public class ZoneDetectionJobFailedService implements Consumer<ZoneDetectionJobF
     }
 
     mailer.accept(
-        optionalDetection.isPresent() ? zoneDetectionJob.getEmailReceiver() : ADMIN_EMAIL,
+        emailRecipientResolver.resolve(optionalDetection, zoneDetectionJob.getEmailReceiver()),
         subjectBuilder.toString(),
         getBody(optionalDetection, zoneDetectionJob));
   }

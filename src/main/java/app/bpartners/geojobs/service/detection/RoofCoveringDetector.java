@@ -5,6 +5,7 @@ import static app.bpartners.geojobs.service.detection.DetectionResponseV2.REGION
 import static java.util.UUID.randomUUID;
 import static org.apache.commons.io.FileUtils.readFileToByteArray;
 
+import app.bpartners.geojobs.endpoint.rest.model.DetectableObjectModel;
 import app.bpartners.geojobs.file.bucket.CustomBucketComponent;
 import app.bpartners.geojobs.repository.model.detection.DetectableObjectConfiguration;
 import app.bpartners.geojobs.repository.model.detection.RoofCoveringType;
@@ -20,6 +21,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.SneakyThrows;
@@ -35,6 +37,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 @Slf4j
 public class RoofCoveringDetector {
+  private static final String INFERENCE_SOURCE_PREFIX = "inference:";
   private final ObjectMapper om;
   private final RestTemplate restTemplate;
   private final String roofCoveringDetectionApiUrl;
@@ -57,17 +60,37 @@ public class RoofCoveringDetector {
     this.modelCardResolver = modelCardResolver;
   }
 
+  public RoofCoveringDetectionResponse apply(
+      Tile tile,
+      File maskFile,
+      Double spatialResolutionInCm,
+      List<DetectableObjectModel> detectableObjectModels) {
+    return apply(tile, maskFile, spatialResolutionInCm, detectableObjectModels, List.of(), null);
+  }
+
   @SneakyThrows
   public RoofCoveringDetectionResponse apply(
-      Tile tile, File maskFile, Double spatialResolutionInCm) {
+      Tile tile,
+      File maskFile,
+      Double spatialResolutionInCm,
+      List<DetectableObjectModel> detectableObjectModels,
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      DetectionResponseV2 detectionResponse) {
     var tileImageFile =
         bucketComponent.download(
             bucketComponent.getBucketConf().getBucketName(), tile.getBucketPath());
     var imageBase64 = Base64.getEncoder().encodeToString(readFileToByteArray(tileImageFile));
     var maskBase64 =
         maskFile == null ? null : Base64.getEncoder().encodeToString(readFileToByteArray(maskFile));
-    var resolvedModelCard = resolveModelCard(tile, tileImageFile, spatialResolutionInCm);
+    var resolvedModelCard =
+        resolveModelCard(tile, tileImageFile, spatialResolutionInCm, detectableObjectModels);
     if (resolvedModelCard != null) {
+      if (isAlreadyDetected(detectableObjectConfigurations, detectionResponse)) {
+        return toRoofCoveringResponse(
+            keepRegionsOf(
+                detectionResponse,
+                INFERENCE_SOURCE_PREFIX + resolvedModelCard.modelCard().modelCardId()));
+      }
       return applyWithInferenceApi(
           resolvedModelCard, tileImageFile.getName(), imageBase64, maskBase64);
     }
@@ -86,11 +109,58 @@ public class RoofCoveringDetector {
                 : tile.getDetectionE2Id()));
   }
 
+  private static boolean isAlreadyDetected(
+      List<DetectableObjectConfiguration> detectableObjectConfigurations,
+      DetectionResponseV2 detectionResponse) {
+    return detectionResponse != null
+        && detectableObjectConfigurations != null
+        && detectableObjectConfigurations.stream()
+            .anyMatch(configuration -> TOITURE_REVETEMENT.equals(configuration.getObjectType()));
+  }
+
+  private static DetectionResponseV2 keepRegionsOf(
+      DetectionResponseV2 detectionResponse, String sourceUrl) {
+    var images = new HashMap<String, DetectionResponseV2.ImageData>();
+    if (detectionResponse.getImages() != null) {
+      detectionResponse
+          .getImages()
+          .forEach(
+              (key, image) -> {
+                if (image.getRegions() == null) {
+                  return;
+                }
+                var regions = new HashMap<String, DetectionResponseV2.ImageData.Region>();
+                image
+                    .getRegions()
+                    .forEach(
+                        (regionKey, region) -> {
+                          if (region.getRegionAttributes() != null
+                              && sourceUrl.equals(region.getRegionAttributes().get("source_url"))) {
+                            regions.put(regionKey, region);
+                          }
+                        });
+                images.put(
+                    key,
+                    DetectionResponseV2.ImageData.builder()
+                        .fileref(image.getFileref())
+                        .size(image.getSize())
+                        .filename(image.getFilename())
+                        .regions(regions)
+                        .build());
+              });
+    }
+    return DetectionResponseV2.builder().images(images).build();
+  }
+
   private ResolvedModelCard resolveModelCard(
-      Tile tile, File tileImageFile, Double spatialResolutionInCm) {
+      Tile tile,
+      File tileImageFile,
+      Double spatialResolutionInCm,
+      List<DetectableObjectModel> detectableObjectModels) {
     var tileSize = HttpApiTileObjectDetector.readImageSize(tileImageFile);
     return modelCardResolver
         .resolve(
+            detectableObjectModels,
             List.of(DetectableObjectConfiguration.builder().objectType(TOITURE_REVETEMENT).build()),
             spatialResolutionInCm,
             HttpApiTileObjectDetector.tileZoom(tile),

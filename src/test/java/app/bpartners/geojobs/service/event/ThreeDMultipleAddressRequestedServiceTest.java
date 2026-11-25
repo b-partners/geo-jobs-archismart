@@ -18,11 +18,13 @@ import app.bpartners.geojobs.endpoint.event.model.ThreeDMultipleAddressRequested
 import app.bpartners.geojobs.endpoint.rest.model.Point;
 import app.bpartners.geojobs.model.exception.ApiException;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import app.bpartners.geojobs.model.exception.PaymentRequiredException;
 import app.bpartners.geojobs.repository.CityJSONRequestRepository;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.cityjson.CityJSONRequest;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
+import app.bpartners.geojobs.service.ThreeDCreditGuard;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -37,9 +39,13 @@ class ThreeDMultipleAddressRequestedServiceTest {
   FeatureAddressConverter featureAddressConverterMock = mock();
   CityJSONRequestRepository cityJSONRequestRepositoryMock = mock();
   EventProducer eventProducerMock = mock();
+  ThreeDCreditGuard threeDCreditGuardMock = mock();
   ThreeDMultipleAddressRequestedService subject =
       new ThreeDMultipleAddressRequestedService(
-          featureAddressConverterMock, cityJSONRequestRepositoryMock, eventProducerMock);
+          featureAddressConverterMock,
+          cityJSONRequestRepositoryMock,
+          eventProducerMock,
+          threeDCreditGuardMock);
 
   @Test
   void do_not_produces_event_computing_when_address_conversion_fails() {
@@ -246,6 +252,75 @@ class ThreeDMultipleAddressRequestedServiceTest {
             .communityOwnerId(communityOwnerId)
             .build(),
         actualRequestCreatedEvent);
+  }
+
+  @Test
+  void checks_the_credits_of_the_request_once_its_addresses_are_converted() {
+    var requestIdentifier = randomUUID().toString();
+    var communityOwnerId = randomUUID().toString();
+    var someAddress = "random " + randomUUID();
+    var request =
+        CityJSONRequest.builder().id(requestIdentifier).communityOwnerId(communityOwnerId).build();
+    var convertedAddressFeature = mock(Feature.class);
+    when(cityJSONRequestRepositoryMock.findByIdAndCommunityOwnerId(
+            requestIdentifier, communityOwnerId))
+        .thenReturn(Optional.of(request));
+    when(featureAddressConverterMock.apply(someAddress, BUILDING))
+        .thenReturn(convertedAddressFeature);
+    when(cityJSONRequestRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    var requestedEvent =
+        ThreeDMultipleAddressRequested.builder()
+            .requestIdentifier(requestIdentifier)
+            .communityOwnerId(communityOwnerId)
+            .addresses(List.of(someAddress))
+            .build();
+
+    subject.accept(requestedEvent);
+
+    var checkedRequestCaptor = ArgumentCaptor.forClass(CityJSONRequest.class);
+    verify(threeDCreditGuardMock).accept(checkedRequestCaptor.capture());
+    assertEquals(
+        List.of(convertedAddressFeature), checkedRequestCaptor.getValue().getDelimitations());
+  }
+
+  @Test
+  void fails_the_request_without_producing_event_when_credits_are_insufficient() {
+    var requestIdentifier = randomUUID().toString();
+    var communityOwnerId = randomUUID().toString();
+    var someAddress = "random " + randomUUID();
+    var request =
+        CityJSONRequest.builder().id(requestIdentifier).communityOwnerId(communityOwnerId).build();
+    when(cityJSONRequestRepositoryMock.findByIdAndCommunityOwnerId(
+            requestIdentifier, communityOwnerId))
+        .thenReturn(Optional.of(request));
+    when(featureAddressConverterMock.apply(someAddress, BUILDING)).thenReturn(mock(Feature.class));
+    when(cityJSONRequestRepositoryMock.save(any()))
+        .thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+    doThrow(new PaymentRequiredException("Not enough analysis credits"))
+        .when(threeDCreditGuardMock)
+        .accept(any());
+    var requestedEvent =
+        ThreeDMultipleAddressRequested.builder()
+            .requestIdentifier(requestIdentifier)
+            .communityOwnerId(communityOwnerId)
+            .addresses(List.of(someAddress))
+            .build();
+
+    assertDoesNotThrow(() -> subject.accept(requestedEvent));
+
+    var savedRequestCaptor = ArgumentCaptor.forClass(CityJSONRequest.class);
+    verify(cityJSONRequestRepositoryMock, times(1)).save(savedRequestCaptor.capture());
+    assertEquals(
+        CityJSONRequest.builder()
+            .id(requestIdentifier)
+            .communityOwnerId(communityOwnerId)
+            .status(FAILED)
+            .step(REQUEST_ACCEPTED)
+            .message("Not enough analysis credits")
+            .build(),
+        savedRequestCaptor.getValue());
+    verify(eventProducerMock, never()).accept(any());
   }
 
   @SneakyThrows

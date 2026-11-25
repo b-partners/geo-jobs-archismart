@@ -4,6 +4,7 @@ import static app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMa
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.ROOF;
 import static app.bpartners.geojobs.endpoint.rest.model.DelimitationType.USER_DEFINED_DELIMITATION;
 import static app.bpartners.geojobs.endpoint.rest.model.MultiPolygon.TypeEnum.MULTI_POLYGON;
+import static app.bpartners.geojobs.service.area.toiture.service.RoofVegetationContextEvaluator.VEGETATION_TYPES;
 import static app.bpartners.geojobs.service.geojson.GeoJsonMapper.convertPixelToGeographicalCoordinates;
 
 import app.bpartners.geojobs.endpoint.rest.model.*;
@@ -61,6 +62,7 @@ public class DetectionPropertiesService {
       return detection;
     }
     var geoJsonDelimitationType = detection.getGeoJsonDelimitationType();
+    var vegetationRequested = isVegetationRequested(detection);
     var delimitationFeatureWithResultProperties =
         delimitationsFeature.stream()
             .map(
@@ -77,7 +79,8 @@ public class DetectionPropertiesService {
                           latLonRoofGeometry,
                           latLonRoofGeometry,
                           detectedObjectPolygonGeometriesUsedForRateComputing,
-                          tryCreateMutationContext(detection, latLonRoofGeometry));
+                          tryCreateMutationContext(detection, latLonRoofGeometry),
+                          vegetationRequested);
 
                   HashMap<String, Object> actualProperties = new HashMap<>();
                   var featureProperties = delimitationFeature.getProperties();
@@ -98,6 +101,14 @@ public class DetectionPropertiesService {
         toDomainFeature(currentFeature), delimitationFeatureWithResultProperties);
 
     return detectionRepository.save(detection);
+  }
+
+  static boolean isVegetationRequested(
+      app.bpartners.geojobs.repository.model.detection.Detection detection) {
+    var configurations = detection.getDetectableObjectConfigurations();
+    return configurations != null
+        && configurations.stream()
+            .anyMatch(configuration -> VEGETATION_TYPES.contains(configuration.getObjectType()));
   }
 
   @Nullable

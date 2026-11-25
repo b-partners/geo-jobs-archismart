@@ -35,7 +35,10 @@ public class DetectionImageZoomResolver {
     var spatialResolutionInCm = detection.spatialResolutionInCm();
     return (referenceTypes.isEmpty() ? objectTypes : referenceTypes)
         .stream()
-            .mapToInt(type -> modelCardResolver.tilingZoomOf(type, spatialResolutionInCm))
+            .mapToInt(
+                type ->
+                    modelCardResolver.tilingZoomOf(
+                        detection.getDetectableObjectModels(), type, spatialResolutionInCm))
             .max()
             .orElseThrow();
   }

@@ -8,8 +8,11 @@ import app.bpartners.geojobs.endpoint.rest.model.Feature;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.model.exception.NotImplementedException;
 import app.bpartners.geojobs.service.DetectionImageZoomResolver;
+import app.bpartners.geojobs.service.detection.ModelVersionConf;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ public class CreateDetectionValidator implements Consumer<CreateDetection> {
   private static final int LEGACY_TOITURE_ZOOM = 20;
 
   private final DetectionImageZoomResolver detectionImageZoomResolver;
+  private final ModelVersionConf modelVersionConf;
 
   @Override
   public void accept(CreateDetection createDetection) {
@@ -43,6 +47,10 @@ public class CreateDetectionValidator implements Consumer<CreateDetection> {
           "Either CreateDetection.detectableObjectModel or"
               + " CreateDetection.detectableObjectModelList is mandatory.");
     }
+
+    modelsToValidate(createDetection)
+        .forEach(model -> appendModelVersionError(model, exceptionMessageBuilder));
+
     var exceptionMessage = exceptionMessageBuilder.toString();
     if (!exceptionMessage.isEmpty()) {
       throw new BadRequestException(exceptionMessage);
@@ -103,5 +111,30 @@ public class CreateDetectionValidator implements Consumer<CreateDetection> {
             .filter(Objects::nonNull)
             .toList();
     return !models.isEmpty() && models.stream().allMatch(TOITURE::equals);
+  }
+
+  private List<DetectableObjectModel> modelsToValidate(CreateDetection createDetection) {
+    return Stream.concat(
+            Stream.ofNullable(createDetection.getDetectableObjectModel()),
+            Optional.ofNullable(createDetection.getDetectableObjectModelList()).stream()
+                .flatMap(List::stream))
+        .toList();
+  }
+
+  private void appendModelVersionError(
+      DetectableObjectModel model, StringBuilder exceptionMessageBuilder) {
+    if (model.getModelName() == null) {
+      return;
+    }
+    if (!modelVersionConf.hasConfiguration(model.getModelName(), model.getModelVersion())) {
+      exceptionMessageBuilder.append(
+          "Model "
+              + model.getModelName().getValue()
+              + " has no configuration for version "
+              + model.getModelVersion()
+              + ". Available versions: "
+              + modelVersionConf.getAvailableVersions(model.getModelName())
+              + ". ");
+    }
   }
 }
