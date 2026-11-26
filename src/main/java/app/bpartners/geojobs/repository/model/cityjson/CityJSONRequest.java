@@ -9,6 +9,7 @@ import static org.hibernate.type.SqlTypes.NAMED_ENUM;
 
 import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.FeatureMapper;
 import app.bpartners.geojobs.endpoint.rest.model.DelimitationType;
+import app.bpartners.geojobs.endpoint.rest.model.HealthStatus;
 import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.model.Feature;
 import app.bpartners.geojobs.repository.model.detection.FeatureWithDelimitation;
@@ -113,6 +114,12 @@ public class CityJSONRequest implements Serializable {
           .toList();
     }
     return getDelimitations();
+  }
+
+  public HealthStatus exportStatus() {
+    return CityJSONRequestStatus.FINISHED.equals(status)
+        ? HealthStatus.SUCCEEDED
+        : HealthStatus.FAILED;
   }
 
   public DelimitationType getDelimitationType() {

@@ -1,5 +1,7 @@
 package app.bpartners.geojobs.service;
 
+import static app.bpartners.geojobs.endpoint.rest.model.HealthStatus.FAILED;
+import static app.bpartners.geojobs.endpoint.rest.model.HealthStatus.SUCCEEDED;
 import static java.time.ZoneOffset.UTC;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -7,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.data.domain.Pageable.unpaged;
@@ -52,7 +56,7 @@ class DetectionExportServiceTest {
     var presignUrl = "https://bucket/presigned-url";
     when(communityAuthorizationRepositoryMock.findById(communityOwnerId))
         .thenReturn(Optional.of(community));
-    when(detectionRepositoryMock.findByCommunityOwnerIdAndCriteria(
+    when(detectionRepositoryMock.findSucceededByCommunityOwnerIdAndCriteria(
             eq(communityInternalId),
             eq(from.atStartOfDay().toInstant(UTC)),
             eq(to.atStartOfDay().plusDays(1L).minusSeconds(1L).toInstant(UTC)),
@@ -62,10 +66,68 @@ class DetectionExportServiceTest {
     when(bucketComponentMock.presign(exportId)).thenReturn(presignUrl);
 
     var actual =
-        subject.requestDetectionExport(communityOwnerId, exportId, from, to, additionalAttributes);
+        subject.requestDetectionExport(
+            communityOwnerId, exportId, from, to, additionalAttributes, List.of(SUCCEEDED));
 
     assertEquals(presignUrl, actual);
     verify(bucketComponentMock).upload(exportedFile, exportId);
+  }
+
+  @Test
+  void request_detection_export_defaults_to_succeeded_when_statuses_null_or_empty() {
+    var communityOwnerId = "community_owner_id";
+    var communityInternalId = "community_internal_id";
+    var exportId = randomUUID().toString();
+    var from = LocalDate.of(2024, 1, 1);
+    var to = LocalDate.of(2024, 1, 31);
+    var additionalAttributes = List.of(DetectionExportAttribute.AREA);
+    var detections = List.of(new Detection());
+    var exportedFile = new File("exported_detections.xlsx");
+    when(communityAuthorizationRepositoryMock.findById(communityOwnerId))
+        .thenReturn(Optional.of(CommunityAuthorization.builder().id(communityInternalId).build()));
+    when(detectionRepositoryMock.findSucceededByCommunityOwnerIdAndCriteria(
+            eq(communityInternalId), any(), any(), eq(unpaged())))
+        .thenReturn(detections);
+    when(detectionConverterMock.apply(detections, additionalAttributes)).thenReturn(exportedFile);
+
+    subject.requestDetectionExport(
+        communityOwnerId, exportId, from, to, additionalAttributes, null);
+    subject.requestDetectionExport(
+        communityOwnerId, exportId, from, to, additionalAttributes, List.of());
+
+    verify(detectionRepositoryMock, times(2))
+        .findSucceededByCommunityOwnerIdAndCriteria(any(), any(), any(), any());
+    verify(detectionRepositoryMock, never())
+        .findByCommunityOwnerIdAndCriteria(any(), any(), any(), any());
+  }
+
+  @Test
+  void request_detection_export_treats_detections_without_result_as_failed() {
+    var communityOwnerId = "community_owner_id";
+    var communityInternalId = "community_internal_id";
+    var exportId = randomUUID().toString();
+    var from = LocalDate.of(2024, 1, 1);
+    var to = LocalDate.of(2024, 1, 31);
+    var additionalAttributes = List.of(DetectionExportAttribute.AREA);
+    var succeeded = Detection.builder().id("succeeded").vggFileKey("vgg").build();
+    var failed = Detection.builder().id("failed").build();
+    var exportedFile = new File("exported_detections.xlsx");
+    when(communityAuthorizationRepositoryMock.findById(communityOwnerId))
+        .thenReturn(Optional.of(CommunityAuthorization.builder().id(communityInternalId).build()));
+    when(detectionRepositoryMock.findByCommunityOwnerIdAndCriteria(
+            eq(communityInternalId), any(), any(), eq(unpaged())))
+        .thenReturn(List.of(succeeded, failed));
+    when(detectionConverterMock.apply(any(), eq(additionalAttributes))).thenReturn(exportedFile);
+
+    subject.requestDetectionExport(
+        communityOwnerId, exportId, from, to, additionalAttributes, List.of(FAILED));
+    subject.requestDetectionExport(
+        communityOwnerId, exportId, from, to, additionalAttributes, List.of(SUCCEEDED, FAILED));
+
+    verify(detectionConverterMock).apply(List.of(failed), additionalAttributes);
+    verify(detectionConverterMock).apply(List.of(succeeded, failed), additionalAttributes);
+    verify(detectionRepositoryMock, never())
+        .findSucceededByCommunityOwnerIdAndCriteria(any(), any(), any(), any());
   }
 
   @Test
@@ -83,7 +145,12 @@ class DetectionExportServiceTest {
             NoSuchElementException.class,
             () ->
                 subject.requestDetectionExport(
-                    communityOwnerId, exportId, from, to, additionalAttributes));
+                    communityOwnerId,
+                    exportId,
+                    from,
+                    to,
+                    additionalAttributes,
+                    List.of(SUCCEEDED)));
 
     assertEquals("No value present", actual.getMessage());
     verify(bucketComponentMock, org.mockito.Mockito.never()).upload(any(), any());

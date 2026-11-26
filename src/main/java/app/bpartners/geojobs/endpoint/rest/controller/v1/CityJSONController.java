@@ -8,9 +8,11 @@ import app.bpartners.geojobs.endpoint.rest.controller.v1.mapper.cityjson.CityJSO
 import app.bpartners.geojobs.endpoint.rest.model.*;
 import app.bpartners.geojobs.endpoint.rest.security.AuthProvider;
 import app.bpartners.geojobs.endpoint.rest.security.authorizer.CityJSONRequestValidator;
+import app.bpartners.geojobs.endpoint.rest.validator.CreateDetectionExportRequestValidator;
 import app.bpartners.geojobs.model.lidar.LidarProcessorType;
 import app.bpartners.geojobs.repository.CommunityAuthorizationRepository;
 import app.bpartners.geojobs.repository.model.community.CommunityAuthorization;
+import app.bpartners.geojobs.service.CityJSONRequestExportService;
 import app.bpartners.geojobs.service.CityJSONRequestService;
 import app.bpartners.geojobs.service.FeatureAddressConverter;
 import app.bpartners.geojobs.service.RoofIntersectionsService;
@@ -35,6 +37,34 @@ public class CityJSONController {
   private final CreateRoofIntersectionsValidator createRoofIntersectionsValidator;
   private final RoofIntersectionsService roofIntersectionsService;
   private final ThreeDCreditGuard threeDCreditGuard;
+  private final CityJSONRequestExportService cityJSONRequestExportService;
+  private final CreateDetectionExportRequestValidator createDetectionExportRequestValidator;
+
+  @PutMapping("/communities/{id}/threeDRequestExport/{exportId}")
+  public DetectionExportRequest exportThreeDRequests(
+      @PathVariable(name = "id") String communityIdentifier,
+      @PathVariable(name = "exportId") String exportId,
+      @RequestBody CreateDetectionExportRequest createDetectionExportRequest) {
+    createDetectionExportRequestValidator.accept(createDetectionExportRequest);
+
+    var presignUrl =
+        cityJSONRequestExportService.requestExport(
+            communityIdentifier,
+            exportId,
+            createDetectionExportRequest.getFrom(),
+            createDetectionExportRequest.getTo(),
+            createDetectionExportRequest.getAdditionalExportedAttributes(),
+            createDetectionExportRequest.getDetectionStatuses());
+
+    return new DetectionExportRequest()
+        .id(exportId)
+        .from(createDetectionExportRequest.getFrom())
+        .to(createDetectionExportRequest.getTo())
+        .detectionStatuses(createDetectionExportRequest.getDetectionStatuses())
+        .additionalExportedAttributes(
+            createDetectionExportRequest.getAdditionalExportedAttributes())
+        .fileUrl(presignUrl);
+  }
 
   @GetMapping("/3d/{id}")
   public ThreeDResponseStatus getRequested3DFileById(@PathVariable(name = "id") String requestId) {

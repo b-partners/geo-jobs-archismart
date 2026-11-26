@@ -1,7 +1,11 @@
 package app.bpartners.geojobs.endpoint.rest.validator;
 
+import static app.bpartners.geojobs.endpoint.rest.model.HealthStatus.SUCCEEDED;
+
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetectionExportRequest;
 import app.bpartners.geojobs.model.exception.BadRequestException;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Component;
 
@@ -30,9 +34,17 @@ public class CreateDetectionExportRequestValidator
         }
       }
     }
+    var detectionStatuses = createDetectionExportRequest.getDetectionStatuses();
+    if (detectionStatuses != null && detectionStatuses.stream().anyMatch(Objects::isNull)) {
+      exceptionMessageBuilder.append(
+          "CreateDetectionExportRequest.detectionStatuses can not contain null value. ");
+    }
     var exceptionMessage = exceptionMessageBuilder.toString();
     if (!exceptionMessage.isEmpty()) {
       throw new BadRequestException(exceptionMessage);
+    }
+    if (detectionStatuses == null || detectionStatuses.isEmpty()) {
+      createDetectionExportRequest.setDetectionStatuses(List.of(SUCCEEDED));
     }
   }
 }

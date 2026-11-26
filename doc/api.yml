@@ -683,6 +683,41 @@ paths:
           $ref: '#/components/responses/400'
         '500':
           $ref: '#/components/responses/500'
+  '/communities/{communityId}/threeDRequestExport/{exportId}':
+    put:
+      tags:
+        - ThreeD
+      operationId: exportThreeDRequests
+      parameters:
+        - in: path
+          name: communityId
+          description: Community owner identifier
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: exportId
+          description: 3D request export identifier
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDetectionExportRequest'
+      responses:
+        '200':
+          description: 3D request export requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionExportRequest'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
   '/detectionJobs/{id}/geojsonsUrl':
     get:
       tags:
@@ -4031,6 +4066,10 @@ components:
         to:
           type: string
           format: date
+        detectionStatuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthStatus'
         additionalExportedAttributes:
           type: array
           items:

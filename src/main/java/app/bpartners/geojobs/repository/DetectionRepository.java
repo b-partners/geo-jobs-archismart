@@ -27,6 +27,19 @@ public interface DetectionRepository extends JpaRepository<Detection, String> {
       AND (d.geojsonS3FileKey IS NOT NULL or d.vggFileKey IS NOT NULL)
     ORDER BY d.creationDatetime DESC
 """)
+  List<Detection> findSucceededByCommunityOwnerIdAndCriteria(
+      @Param("communityOwnerId") String communityOwnerId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      Pageable pageable);
+
+  @Query(
+      """
+    SELECT d FROM Detection d
+    WHERE d.communityOwnerId = :communityOwnerId
+      AND d.creationDatetime BETWEEN :from AND :to
+    ORDER BY d.creationDatetime DESC
+""")
   List<Detection> findByCommunityOwnerIdAndCriteria(
       @Param("communityOwnerId") String communityOwnerId,
       @Param("from") Instant from,

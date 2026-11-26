@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import app.bpartners.geojobs.endpoint.rest.model.CreateDetectionExportRequest;
 import app.bpartners.geojobs.endpoint.rest.model.DetectionExportAttribute;
+import app.bpartners.geojobs.endpoint.rest.model.HealthStatus;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,59 @@ class CreateDetectionExportRequestValidatorTest {
             .additionalExportedAttributes(null);
 
     assertDoesNotThrow(() -> subject.accept(request));
+  }
+
+  @Test
+  void detection_statuses_default_to_succeeded_when_null_or_empty() {
+    var nullStatuses =
+        new CreateDetectionExportRequest()
+            .from(LocalDate.of(2024, 1, 1))
+            .to(LocalDate.of(2024, 12, 31))
+            .additionalExportedAttributes(List.of(DetectionExportAttribute.AREA))
+            .detectionStatuses(null);
+    var emptyStatuses =
+        new CreateDetectionExportRequest()
+            .from(LocalDate.of(2024, 1, 1))
+            .to(LocalDate.of(2024, 12, 31))
+            .additionalExportedAttributes(List.of(DetectionExportAttribute.AREA))
+            .detectionStatuses(new ArrayList<>());
+
+    subject.accept(nullStatuses);
+    subject.accept(emptyStatuses);
+
+    assertEquals(List.of(HealthStatus.SUCCEEDED), nullStatuses.getDetectionStatuses());
+    assertEquals(List.of(HealthStatus.SUCCEEDED), emptyStatuses.getDetectionStatuses());
+  }
+
+  @Test
+  void provided_detection_statuses_are_kept() {
+    var request =
+        new CreateDetectionExportRequest()
+            .from(LocalDate.of(2024, 1, 1))
+            .to(LocalDate.of(2024, 12, 31))
+            .additionalExportedAttributes(List.of(DetectionExportAttribute.AREA))
+            .detectionStatuses(List.of(HealthStatus.FAILED, HealthStatus.UNKNOWN));
+
+    subject.accept(request);
+
+    assertEquals(
+        List.of(HealthStatus.FAILED, HealthStatus.UNKNOWN), request.getDetectionStatuses());
+  }
+
+  @Test
+  void throws_null_valued_detection_statuses_exception() {
+    var request =
+        new CreateDetectionExportRequest()
+            .from(LocalDate.of(2024, 1, 1))
+            .to(LocalDate.of(2024, 12, 31))
+            .additionalExportedAttributes(List.of(DetectionExportAttribute.AREA))
+            .detectionStatuses(Arrays.asList(HealthStatus.SUCCEEDED, null));
+
+    var actualException = assertThrows(BadRequestException.class, () -> subject.accept(request));
+
+    assertEquals(
+        "CreateDetectionExportRequest.detectionStatuses can not contain null value. ",
+        actualException.getMessage());
   }
 
   @Test

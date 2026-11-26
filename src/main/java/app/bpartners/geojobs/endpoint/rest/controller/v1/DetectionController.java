@@ -76,12 +76,14 @@ public class DetectionController {
             exportId,
             createDetectionExportRequest.getFrom(),
             createDetectionExportRequest.getTo(),
-            createDetectionExportRequest.getAdditionalExportedAttributes());
+            createDetectionExportRequest.getAdditionalExportedAttributes(),
+            createDetectionExportRequest.getDetectionStatuses());
 
     return new DetectionExportRequest()
         .id(exportId)
         .from(createDetectionExportRequest.getFrom())
         .to(createDetectionExportRequest.getTo())
+        .detectionStatuses(createDetectionExportRequest.getDetectionStatuses())
         .additionalExportedAttributes(
             createDetectionExportRequest.getAdditionalExportedAttributes())
         .fileUrl(presignUrl);

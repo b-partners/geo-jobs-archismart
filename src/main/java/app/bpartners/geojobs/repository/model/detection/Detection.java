@@ -294,6 +294,12 @@ public class Detection implements Serializable {
             .orElse(null);
   }
 
+  public HealthStatus exportStatus() {
+    return vggFileKey != null || geojsonS3FileKey != null
+        ? HealthStatus.SUCCEEDED
+        : HealthStatus.FAILED;
+  }
+
   public DetectionStep getCurrentStep() {
     var persistedStep = getStep();
     return persistedStep != null ? persistedStep : computedStep;

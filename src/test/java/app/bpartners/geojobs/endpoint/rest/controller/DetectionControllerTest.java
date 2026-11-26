@@ -92,14 +92,16 @@ class DetectionControllerTest {
     var to = LocalDate.of(2024, 1, 31);
     var additionalAttributes =
         List.of(DetectionExportAttribute.AREA, DetectionExportAttribute.ZONE_NAME);
+    var detectionStatuses = List.of(HealthStatus.SUCCEEDED, HealthStatus.FAILED);
     var presignUrl = "https://bucket/presigned-url";
     var createDetectionExportRequest =
         new CreateDetectionExportRequest()
             .from(from)
             .to(to)
-            .additionalExportedAttributes(additionalAttributes);
+            .additionalExportedAttributes(additionalAttributes)
+            .detectionStatuses(detectionStatuses);
     when(detectionExportServiceMock.requestDetectionExport(
-            communityId, exportId, from, to, additionalAttributes))
+            communityId, exportId, from, to, additionalAttributes, detectionStatuses))
         .thenReturn(presignUrl);
 
     var actual = subject.exportDetections(communityId, exportId, createDetectionExportRequest);
@@ -110,10 +112,12 @@ class DetectionControllerTest {
             .from(from)
             .to(to)
             .additionalExportedAttributes(additionalAttributes)
+            .detectionStatuses(detectionStatuses)
             .fileUrl(presignUrl);
     assertEquals(expected, actual);
     verify(detectionExportServiceMock)
-        .requestDetectionExport(communityId, exportId, from, to, additionalAttributes);
+        .requestDetectionExport(
+            communityId, exportId, from, to, additionalAttributes, detectionStatuses);
   }
 
   @Test
