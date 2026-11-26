@@ -8,6 +8,7 @@ import app.bpartners.geojobs.service.geojson.GeometryConverter;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,10 @@ public class DetectionConverter
                   var unifiedProcessedGeoJson = getUnifiedProcessedGeoJson(detection);
                   var e2Id = detection.getEndToEndId();
                   var zoneName = detection.getZoneName();
-                  var areaInSquareMeters = geometrySquareMeterArea.apply(unifiedProcessedGeoJson);
+                  var areaInSquareMeters =
+                      unifiedProcessedGeoJson == null
+                          ? null
+                          : geometrySquareMeterArea.apply(unifiedProcessedGeoJson);
                   var creationDatetime = detection.getCreationDatetime();
                   return new ExportExcelWriter.ExportRow(
                       e2Id,
@@ -55,7 +59,7 @@ public class DetectionConverter
                 return geometryConverter.apply(multiPolygon.getCoordinates());
               } else if (geometry.getActualInstance() instanceof Point point) {
                 var featureDelimitations = detection.getDelimitationOf(feature);
-                if (featureDelimitations == null) {
+                if (featureDelimitations == null || featureDelimitations.isEmpty()) {
                   return buildingFinder.getBuildingMultiPolygon(point);
                 }
                 return featureDelimitations.stream()
@@ -82,10 +86,8 @@ public class DetectionConverter
               throw new IllegalStateException(
                   "Unexpected geometry type: " + geometry.getActualInstance().getClass());
             })
+        .filter(Objects::nonNull)
         .reduce(unifyMultiPolygon())
-        .orElseThrow(
-            () ->
-                new IllegalStateException(
-                    "Unable to combine provided geoJson into unique Feature"));
+        .orElse(null);
   }
 }
